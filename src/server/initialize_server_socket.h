@@ -30,6 +30,7 @@ void* SwiftNetHandlePackets() {
 
         int size = recvfrom(serverSocketData.sockfd, buffer, SwiftNetBufferSize + sizeof(ClientInfo), 0, NULL, NULL);
 
+        // Check if user set a function that will execute with the message received as arg
         Debug(
             if(SwiftNetMessageHandler == NULL) {
                 perror("Message Handler Not Set!!!!\n");
@@ -37,21 +38,23 @@ void* SwiftNetHandlePackets() {
             }
         )
 
-        for(unsigned int i = 0; i < size; i++) {
-            printf("%d ", buffer[i]);
-        }
+        Debug(
+            for(unsigned int i = 0; i < size; i++) {
+                printf("%d ", buffer[i]);
+            }
+            printf("\n");
+        )
 
-        printf("\n");
-
+        // Deserialize the clientInfo
         ClientInfo clientInfo;
         memcpy(&clientInfo, buffer + 20, sizeof(ClientInfo));
 
-        printf("client port: %d\nserver port: %d\n", clientInfo.port, serverSocketData.port);
-
+        // Check if the packet is meant to be for this server
         if(clientInfo.port != serverSocketData.port) {
             continue;
         }
 
+        // Execute function set by user
         SwiftNetMessageHandler(buffer + sizeof(ClientInfo) + 20);
     }
 
@@ -63,14 +66,17 @@ static inline void SwiftNetCreateServer(char* ip_address, uint16_t port) {
 
     serverSocketData.port = port;
 
+    // Create the socket
     serverSocketData.sockfd = socket(AF_INET, SOCK_RAW, 253);
     if (serverSocketData.sockfd < 0) {
         perror("Socket creation failed\n");
         exit(EXIT_FAILURE);
     }
 
+    // Set socket options to allow address reuse for the custom protocol
     int opt = 1;
     setsockopt(serverSocketData.sockfd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
 
+    // Create a new thread that will handle all packets received
     pthread_create(&handlePacketsThread, NULL, SwiftNetHandlePackets, NULL);
 }

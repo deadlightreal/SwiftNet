@@ -10,6 +10,7 @@
 #include <sys/socket.h>
 #include "../main.h"
 
+// Connection data
 typedef struct {
     int sockfd;
     ClientInfo clientInfo;
@@ -18,6 +19,7 @@ typedef struct {
 
 ClientSocketData SwiftNetClientSocketData;
 
+// Create the socket, and set client and server info
 void SwiftNetCreateClient(char* ip_address, int port) {
     SwiftNetClientSocketData.sockfd = socket(AF_INET, SOCK_RAW, 253);
     if (SwiftNetClientSocketData.sockfd < 0) {
