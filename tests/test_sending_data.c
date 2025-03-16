@@ -6,21 +6,32 @@
 #include <unistd.h>
 
 void* handleClient() {
+    SwiftNetInitializeClient();
+
+    SwiftNetCreateClient("192.168.1.64", 8080);
     SwiftNetCreateClient("192.168.1.64", 8080);
 
-    uint8_t* dataPointer = SwiftNetCreateDataArray(0);
-
-    printf("client info size: %lu\n", sizeof(ClientInfo));
-
     for(uint8_t i = 0; i < 10; i++) {
-        printf("sending data\n");
+        SwiftNetSetActiveConnection(0);
 
-        SwiftNetSendDataToServer(dataPointer, 0);
+        int num = 1;
 
-        usleep(50000);
+        SwiftNetAppendToPackage(&num);
+
+        SwiftNetSendDataToServer();
+
+        SwiftNetSetActiveConnection(1);
+
+        int num2 = 2;
+
+        SwiftNetAppendToPackage(&num2);
+
+        SwiftNetSendDataToServer();
+
+        usleep(5000);
     }
 
-    SwiftNetDeleteDataArray(dataPointer);
+    SwiftNetCleanup();
 
     return NULL;
 }
