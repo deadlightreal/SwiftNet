@@ -1,56 +1,57 @@
-#include "../src/client/include_client.h"
-#include "../src/server/include_server.h"
+#include "../src/include.h"
 #include <pthread.h>
 #include <stdint.h>
 #include <string.h>
 #include <unistd.h>
 
+SwiftNetClientConnection* con;
+
+void handleMessagesFromServer(uint8_t* data) {
+    printf("got message from server\n");
+}
+
 void* handleClient() {
-    SwiftNetInitializeClient();
+    mode = SWIFT_NET_CLIENT_MODE;
 
-    SwiftNetCreateClient("192.168.1.64", 8080);
-    SwiftNetCreateClient("192.168.1.64", 8080);
+    con = SwiftNetCreateClient("192.168.1.64", 8080);
+    SwiftNetSetMessageHandler(handleMessagesFromServer, con);
 
-    for(uint8_t i = 0; i < 10; i++) {
-        SwiftNetSetActiveConnection(0);
-
+    for(uint8_t i = 0; i < 1; i++) {
         int num = 1;
 
-        SwiftNetAppendToPackage(&num);
+        printf("sent message to server\n");
 
-        SwiftNetSendDataToServer();
-
-        SwiftNetSetActiveConnection(1);
-
-        int num2 = 2;
-
-        SwiftNetAppendToPackage(&num2);
-
-        SwiftNetSendDataToServer();
+        SwiftNetSendPacket(con);
 
         usleep(5000);
     }
 
-    SwiftNetCleanup();
-
     return NULL;
 }
 
+SwiftNetServer* server;
+
 void handleMessages(uint8_t* data) {
-    printf("Got message from server\n");
+    SwiftNetSendPacket(server, server->lastClientAddrData);
+
+    printf("got message from client\n");
 }
 
 void* handleServer() {
-    SwiftNetCreateServer("192.168.1.64", 8080);
+    mode = SWIFT_NET_SERVER_MODE;
 
-    SwiftNetSetBufferSize(2048);
+    server = SwiftNetCreateServer("192.168.1.64", 8080);
 
-    SwiftNetSetMessageHandler(handleMessages);
+    SwiftNetSetBufferSize(2048, server);
+
+    SwiftNetSetMessageHandler(handleMessages, server);
 
     return NULL;
 }
 
 int main() {
+    InitializeSwiftNet();
+
     pthread_t server_thread, client_thread;
 
     pthread_create(&server_thread, NULL, handleServer, NULL);
