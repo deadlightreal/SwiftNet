@@ -2,23 +2,24 @@
 triple:          'arm64-apple-darwin'
 binary-path:     test_sending_data
 relocations:
-  - { offset: 0x26, size: 0x8, addend: 0x0, symName: _SwiftNetSendPacket, symObjAddr: 0x0, symBinAddr: 0x100002EB8, symSize: 0x178 }
-  - { offset: 0x3F, size: 0x8, addend: 0x0, symName: _SwiftNetClientConnections, symObjAddr: 0xE50, symBinAddr: 0x100008000, symSize: 0x0 }
-  - { offset: 0x2A1, size: 0x8, addend: 0x0, symName: _SwiftNetServers, symObjAddr: 0x1120, symBinAddr: 0x1000082D0, symSize: 0x0 }
-  - { offset: 0x37C, size: 0x8, addend: 0x0, symName: _mode, symObjAddr: 0x1440, symBinAddr: 0x1000085F0, symSize: 0x0 }
+  - { offset: 0x26, size: 0x8, addend: 0x0, symName: _SwiftNetSendPacket, symObjAddr: 0x0, symBinAddr: 0x100002D94, symSize: 0x178 }
+  - { offset: 0x3F, size: 0x8, addend: 0x0, symName: _SwiftNetClientConnections, symObjAddr: 0xF68, symBinAddr: 0x100008000, symSize: 0x0 }
+  - { offset: 0x2A1, size: 0x8, addend: 0x0, symName: _SwiftNetServers, symObjAddr: 0x1238, symBinAddr: 0x1000082D0, symSize: 0x0 }
+  - { offset: 0x37C, size: 0x8, addend: 0x0, symName: _mode, symObjAddr: 0x1558, symBinAddr: 0x1000085F0, symSize: 0x0 }
   - { offset: 0x392, size: 0x8, addend: 0x0, symName: _con, symBinAddr: 0x100008610, symSize: 0x0 }
   - { offset: 0x3AC, size: 0x8, addend: 0x0, symName: _server, symBinAddr: 0x100008618, symSize: 0x0 }
-  - { offset: 0x3E7, size: 0x8, addend: 0x0, symName: _SwiftNetSendPacket, symObjAddr: 0x0, symBinAddr: 0x100002EB8, symSize: 0x178 }
-  - { offset: 0x46E, size: 0x8, addend: 0x0, symName: _SwiftNetHandlePackets, symObjAddr: 0x178, symBinAddr: 0x100003030, symSize: 0x40C }
-  - { offset: 0x5C2, size: 0x8, addend: 0x0, symName: _SwiftNetCreateServer, symObjAddr: 0x584, symBinAddr: 0x10000343C, symSize: 0x230 }
-  - { offset: 0x676, size: 0x8, addend: 0x0, symName: _SwiftNetCreateClient, symObjAddr: 0x7B4, symBinAddr: 0x10000366C, symSize: 0x2A4 }
-  - { offset: 0x71C, size: 0x8, addend: 0x0, symName: __OSSwapInt16, symObjAddr: 0xA58, symBinAddr: 0x100003910, symSize: 0x24 }
-  - { offset: 0x744, size: 0x8, addend: 0x0, symName: _InitializeSwiftNet, symObjAddr: 0xA7C, symBinAddr: 0x100003934, symSize: 0x1C }
-  - { offset: 0x759, size: 0x8, addend: 0x0, symName: _handleMessagesFromServer, symObjAddr: 0xA98, symBinAddr: 0x100003950, symSize: 0x28 }
-  - { offset: 0x77D, size: 0x8, addend: 0x0, symName: _handleClient, symObjAddr: 0xAC0, symBinAddr: 0x100003978, symSize: 0xBC }
-  - { offset: 0x7CF, size: 0x8, addend: 0x0, symName: _SwiftNetSetMessageHandler, symObjAddr: 0xB7C, symBinAddr: 0x100003A34, symSize: 0xC8 }
-  - { offset: 0x839, size: 0x8, addend: 0x0, symName: _handleMessages, symObjAddr: 0xC44, symBinAddr: 0x100003AFC, symSize: 0x8C }
-  - { offset: 0x85D, size: 0x8, addend: 0x0, symName: _handleServer, symObjAddr: 0xCD0, symBinAddr: 0x100003B88, symSize: 0x74 }
-  - { offset: 0x876, size: 0x8, addend: 0x0, symName: _SwiftNetSetBufferSize, symObjAddr: 0xD44, symBinAddr: 0x100003BFC, symSize: 0x90 }
-  - { offset: 0x8E0, size: 0x8, addend: 0x0, symName: _main, symObjAddr: 0xDD4, symBinAddr: 0x100003C8C, symSize: 0x78 }
+  - { offset: 0x3E7, size: 0x8, addend: 0x0, symName: _SwiftNetSendPacket, symObjAddr: 0x0, symBinAddr: 0x100002D94, symSize: 0x178 }
+  - { offset: 0x46E, size: 0x8, addend: 0x0, symName: _SwiftNetHandlePackets, symObjAddr: 0x178, symBinAddr: 0x100002F0C, symSize: 0x40C }
+  - { offset: 0x5C2, size: 0x8, addend: 0x0, symName: _SwiftNetAppendToPacket, symObjAddr: 0x584, symBinAddr: 0x100003318, symSize: 0xE4 }
+  - { offset: 0x63A, size: 0x8, addend: 0x0, symName: _SwiftNetCreateServer, symObjAddr: 0x668, symBinAddr: 0x1000033FC, symSize: 0x230 }
+  - { offset: 0x6EE, size: 0x8, addend: 0x0, symName: _SwiftNetCreateClient, symObjAddr: 0x898, symBinAddr: 0x10000362C, symSize: 0x2A4 }
+  - { offset: 0x794, size: 0x8, addend: 0x0, symName: __OSSwapInt16, symObjAddr: 0xB3C, symBinAddr: 0x1000038D0, symSize: 0x24 }
+  - { offset: 0x7BC, size: 0x8, addend: 0x0, symName: _InitializeSwiftNet, symObjAddr: 0xB60, symBinAddr: 0x1000038F4, symSize: 0x1C }
+  - { offset: 0x7D1, size: 0x8, addend: 0x0, symName: _handleMessagesFromServer, symObjAddr: 0xB7C, symBinAddr: 0x100003910, symSize: 0x28 }
+  - { offset: 0x7F5, size: 0x8, addend: 0x0, symName: _handleClient, symObjAddr: 0xBA4, symBinAddr: 0x100003938, symSize: 0xE8 }
+  - { offset: 0x847, size: 0x8, addend: 0x0, symName: _SwiftNetSetMessageHandler, symObjAddr: 0xC8C, symBinAddr: 0x100003A20, symSize: 0xC8 }
+  - { offset: 0x8B1, size: 0x8, addend: 0x0, symName: _handleMessages, symObjAddr: 0xD54, symBinAddr: 0x100003AE8, symSize: 0x98 }
+  - { offset: 0x8D5, size: 0x8, addend: 0x0, symName: _handleServer, symObjAddr: 0xDEC, symBinAddr: 0x100003B80, symSize: 0x74 }
+  - { offset: 0x8EE, size: 0x8, addend: 0x0, symName: _SwiftNetSetBufferSize, symObjAddr: 0xE60, symBinAddr: 0x100003BF4, symSize: 0x90 }
+  - { offset: 0x958, size: 0x8, addend: 0x0, symName: _main, symObjAddr: 0xEF0, symBinAddr: 0x100003C84, symSize: 0x78 }
 ...

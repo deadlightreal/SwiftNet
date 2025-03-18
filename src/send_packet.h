@@ -5,10 +5,7 @@
 #include <string.h>
 
 void SwiftNetSendPacket(void* connection, ...) {
-    va_list args;
-
-    va_start(args, connection);
-
+    
     SwiftNetClientCode(
         SwiftNetClientConnection* con = (SwiftNetClientConnection *)connection;
 
@@ -20,6 +17,10 @@ void SwiftNetSendPacket(void* connection, ...) {
     )
 
     SwiftNetServerCode(
+        va_list args;
+
+        va_start(args, connection);
+
         ClientAddrData clientAddr = va_arg(args, ClientAddrData);
 
         SwiftNetServer* server = (SwiftNetServer*)connection;

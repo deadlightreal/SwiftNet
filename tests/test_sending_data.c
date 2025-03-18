@@ -17,9 +17,9 @@ void* handleClient() {
     SwiftNetSetMessageHandler(handleMessagesFromServer, con);
 
     for(uint8_t i = 0; i < 1; i++) {
-        int num = 1;
+        char* message = "hello server";
 
-        printf("sent message to server\n");
+        SwiftNetAppendToPacket(con, message, strlen(message) + 1);
 
         SwiftNetSendPacket(con);
 
@@ -34,7 +34,7 @@ SwiftNetServer* server;
 void handleMessages(uint8_t* data) {
     SwiftNetSendPacket(server, server->lastClientAddrData);
 
-    printf("got message from client\n");
+    printf("got message from client : %s\n", data);
 }
 
 void* handleServer() {
