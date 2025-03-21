@@ -1,4 +1,5 @@
-#include "../src/include.h"
+#include "../src/swift_net.h"
+#include <stdio.h>
 #include <pthread.h>
 #include <stdint.h>
 #include <string.h>
@@ -7,7 +8,7 @@
 SwiftNetClientConnection* con;
 
 void handleMessagesFromServer(uint8_t* data) {
-    printf("got message from server\n");
+    printf("got message from server: %s\n", data);
 }
 
 void* handleClient() {
@@ -32,9 +33,13 @@ void* handleClient() {
 SwiftNetServer* server;
 
 void handleMessages(uint8_t* data) {
-    SwiftNetSendPacket(server, server->lastClientAddrData);
-
     printf("got message from client : %s\n", data);
+
+    char* message = "hello client";
+
+    SwiftNetAppendToPacket(server, message, strlen(message) + 1);
+
+    SwiftNetSendPacket(server, server->lastClientAddrData);
 }
 
 void* handleServer() {
@@ -50,6 +55,7 @@ void* handleServer() {
 }
 
 int main() {
+    printf("starting\n");
     InitializeSwiftNet();
 
     pthread_t server_thread, client_thread;

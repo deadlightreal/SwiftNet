@@ -4,16 +4,19 @@
 #include <stdint.h>
 #include <pthread.h>
 
-#define MAX_CLIENT_CONNECTIONS 10
-#define MAX_SERVERS 10
+#define MAX_CLIENT_CONNECTIONS 0x0A
+#define MAX_SERVERS 0x0A
 
-#define SWIFT_NET_CLIENT_MODE 1
-#define SWIFT_NET_SERVER_MODE 2
+#define SWIFT_NET_CLIENT_MODE 0x01
+#define SWIFT_NET_SERVER_MODE 0x02
 
-#define unlikely(x) __builtin_expect((x), 0)
-#define likely(x) __builtin_expect((x), 1)
+#define SWIFT_NET_SERVER mode = SWIFT_NET_SERVER_MODE;
+#define SWIFT_NET_CLIENT mode = SWIFT_NET_CLIENT_MODE;
 
-__thread uint8_t mode;
+#define unlikely(x) __builtin_expect((x), 0x00)
+#define likely(x) __builtin_expect((x), 0x01)
+
+extern __thread uint8_t mode;
 
 typedef struct {
     uint16_t destination_port;
@@ -33,7 +36,7 @@ typedef struct {
     uint8_t* packetDataStartPointer;
 } SwiftNetClientConnection;
 
-SwiftNetClientConnection SwiftNetClientConnections[MAX_CLIENT_CONNECTIONS] = {-1};
+extern SwiftNetClientConnection SwiftNetClientConnections[MAX_CLIENT_CONNECTIONS];
 
 typedef struct {
     struct sockaddr_in clientAddr;
@@ -52,7 +55,12 @@ typedef struct {
     uint8_t* packetDataStartPointer;
 } SwiftNetServer;
 
-SwiftNetServer SwiftNetServers[MAX_SERVERS] = {-1};
+extern SwiftNetServer SwiftNetServers[MAX_SERVERS];
+
+typedef struct {
+    void* connection;
+    uint8_t mode;
+} SwiftNetHandlePacketsArgs;
 
 #define SwiftNetClientCode(code) if(mode == SWIFT_NET_CLIENT_MODE) { code }
 #define SwiftNetServerCode(code) if(mode == SWIFT_NET_SERVER_MODE) { code }
@@ -62,3 +70,12 @@ SwiftNetServer SwiftNetServers[MAX_SERVERS] = {-1};
 #else
     #define SwiftNetDebug(code)
 #endif
+
+void SwiftNetSendPacket(void* connection, ...);
+void* SwiftNetHandlePackets(void* voidArgs);
+SwiftNetServer* SwiftNetCreateServer(char* ip_address, uint16_t port);
+SwiftNetClientConnection* SwiftNetCreateClient(char* ip_address, int port);
+void SwiftNetAppendToPacket(void* connection, void* data, unsigned int dataSize);
+void SwiftNetSetMessageHandler(void(*handler)(uint8_t* data), void* connection);
+void SwiftNetSetBufferSize(unsigned int newBufferSize, void* connection);
+void InitializeSwiftNet();
