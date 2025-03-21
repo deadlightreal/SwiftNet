@@ -10,13 +10,13 @@
 #define SWIFT_NET_CLIENT_MODE 0x01
 #define SWIFT_NET_SERVER_MODE 0x02
 
-#define SWIFT_NET_SERVER mode = SWIFT_NET_SERVER_MODE;
-#define SWIFT_NET_CLIENT mode = SWIFT_NET_CLIENT_MODE;
+#define SWIFT_NET_SERVER SwiftNetMode = SWIFT_NET_SERVER_MODE;
+#define SWIFT_NET_CLIENT SwiftNetMode = SWIFT_NET_CLIENT_MODE;
 
 #define unlikely(x) __builtin_expect((x), 0x00)
 #define likely(x) __builtin_expect((x), 0x01)
 
-extern __thread uint8_t mode;
+extern __thread uint8_t SwiftNetMode;
 
 typedef struct {
     uint16_t destination_port;
@@ -31,9 +31,9 @@ typedef struct {
     void (*packetHandler) (uint8_t* data);
     unsigned int bufferSize;
     pthread_t handlePacketsThread;
-    uint8_t* packetClientInfoPointer;
-    uint8_t* packetDataCurrentPointer;
-    uint8_t* packetDataStartPointer;
+    uint8_t* packetBufferStart;   // Start of the allocated buffer
+    uint8_t* packetDataStart;     // Start of the stored data
+    uint8_t* packetAppendPointer; // Current position to append new data
 } SwiftNetClientConnection;
 
 extern SwiftNetClientConnection SwiftNetClientConnections[MAX_CLIENT_CONNECTIONS];
@@ -50,9 +50,9 @@ typedef struct {
     void (*packetHandler)(uint8_t* data);
     pthread_t handlePacketsThread;
     ClientAddrData lastClientAddrData;
-    uint8_t* packetClientInfoPointer;
-    uint8_t* packetDataCurrentPointer;
-    uint8_t* packetDataStartPointer;
+    uint8_t* packetBufferStart;   // Start of the allocated buffer
+    uint8_t* packetDataStart;     // Start of the stored data
+    uint8_t* packetAppendPointer; // Current position to append new data
 } SwiftNetServer;
 
 extern SwiftNetServer SwiftNetServers[MAX_SERVERS];
@@ -62,8 +62,8 @@ typedef struct {
     uint8_t mode;
 } SwiftNetHandlePacketsArgs;
 
-#define SwiftNetClientCode(code) if(mode == SWIFT_NET_CLIENT_MODE) { code }
-#define SwiftNetServerCode(code) if(mode == SWIFT_NET_SERVER_MODE) { code }
+#define SwiftNetClientCode(code) if(SwiftNetMode == SWIFT_NET_CLIENT_MODE) { code }
+#define SwiftNetServerCode(code) if(SwiftNetMode == SWIFT_NET_SERVER_MODE) { code }
 
 #ifndef RELEASE_MODE
     #define SwiftNetDebug(code) { code }
@@ -71,7 +71,7 @@ typedef struct {
     #define SwiftNetDebug(code)
 #endif
 
-void SwiftNetSendPacket(void* connection, ...);
+void SwiftNetSendPacket(void* connection, void* clientAddress);
 void* SwiftNetHandlePackets(void* voidArgs);
 SwiftNetServer* SwiftNetCreateServer(char* ip_address, uint16_t port);
 SwiftNetClientConnection* SwiftNetCreateClient(char* ip_address, int port);

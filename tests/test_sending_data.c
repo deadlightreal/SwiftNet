@@ -12,17 +12,17 @@ void handleMessagesFromServer(uint8_t* data) {
 }
 
 void* handleClient() {
-    mode = SWIFT_NET_CLIENT_MODE;
+    SWIFT_NET_CLIENT;
 
     con = SwiftNetCreateClient("192.168.1.64", 8080);
     SwiftNetSetMessageHandler(handleMessagesFromServer, con);
 
-    for(uint8_t i = 0; i < 1; i++) {
+    for(uint8_t i = 0; i < 5; i++) {
         char* message = "hello server";
 
         SwiftNetAppendToPacket(con, message, strlen(message) + 1);
 
-        SwiftNetSendPacket(con);
+        SwiftNetSendPacket(con, NULL);
 
         usleep(5000);
     }
@@ -39,11 +39,11 @@ void handleMessages(uint8_t* data) {
 
     SwiftNetAppendToPacket(server, message, strlen(message) + 1);
 
-    SwiftNetSendPacket(server, server->lastClientAddrData);
+    SwiftNetSendPacket(server, &server->lastClientAddrData);
 }
 
 void* handleServer() {
-    mode = SWIFT_NET_SERVER_MODE;
+    SWIFT_NET_SERVER;
 
     server = SwiftNetCreateServer("192.168.1.64", 8080);
 

@@ -4,7 +4,5 @@
 #include <stdio.h>
 
 void InitializeSwiftNet() {
-    printf("initializing\n");
-
     return;
 }
