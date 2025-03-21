@@ -1,5 +1,3 @@
-#pragma once
-
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -9,8 +7,7 @@
 #include <netinet/ip.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
-#include "./main.h"
-#include "./handle_packets.h"
+#include "swift_net.h"
 
 // Create the socket, and set client and server info
 SwiftNetClientConnection* SwiftNetCreateClient(char* ip_address, int port) {
@@ -33,12 +30,12 @@ SwiftNetClientConnection* SwiftNetCreateClient(char* ip_address, int port) {
         }
     )
 
-    emptyConnection->sockfd = socket(AF_INET, SOCK_RAW, 253);
+    emptyConnection->sockfd = socket(AF_INET, SOCK_RAW, IPPROTO_RAW);
     if(unlikely(emptyConnection->sockfd < 0)) {
         perror("Socket creation failed\n");
         exit(EXIT_FAILURE);
     }
-
+    
     uint16_t clientPort = rand();
 
     printf("client port: %d\n", clientPort);

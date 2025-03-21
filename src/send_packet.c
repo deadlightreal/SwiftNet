@@ -1,17 +1,23 @@
-#pragma once
-
-#include "./main.h"
+#include "swift_net.h"
 #include <stdarg.h>
 #include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <errno.h>
 
 void SwiftNetSendPacket(void* connection, ...) {
-    
     SwiftNetClientCode(
+        printf("sending packet to server\n");
+
         SwiftNetClientConnection* con = (SwiftNetClientConnection *)connection;
 
         memcpy(con->packetClientInfoPointer, &con->clientInfo, sizeof(ClientInfo));
 
-        sendto(con->sockfd, con->packetClientInfoPointer, con->packetDataCurrentPointer - con->packetClientInfoPointer, 0, (const struct sockaddr *)&con->server_addr, sizeof(con->server_addr));
+        int sent_packet = sendto(con->sockfd, con->packetClientInfoPointer, con->packetDataCurrentPointer - con->packetClientInfoPointer, 0, (const struct sockaddr *)&con->server_addr, sizeof(con->server_addr));
+        if(sent_packet == -1) {
+            printf("errno = %s\n", strerror(errno));
+            exit(1);
+        }
 
         con->packetDataCurrentPointer = con->packetDataStartPointer;
     )

@@ -1,14 +1,8 @@
-#pragma once
-
-#include "./main.h"
+#include "swift_net.h"
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-
-typedef struct {
-    void* connection;
-    uint8_t mode;
-} SwiftNetHandlePacketsArgs;
+#include <netinet/ip.h>
 
 void* SwiftNetHandlePackets(void* voidArgs) {
     SwiftNetHandlePacketsArgs* args = (SwiftNetHandlePacketsArgs*)voidArgs;
@@ -25,12 +19,16 @@ void* SwiftNetHandlePackets(void* voidArgs) {
         SwiftNetServer* Server = (SwiftNetServer*)connection;
     
         while(1) {
-            // Skipping first 20 bytes - Ip header
-            uint8_t buffer[Server->bufferSize + sizeof(ClientInfo) + 20];
+            const unsigned int size = sizeof(ClientInfo) + sizeof(struct ip) + Server->bufferSize;
+
+            uint8_t buffer[size];
 
             Server->lastClientAddrData.clientAddrLen = sizeof(Server->lastClientAddrData.clientAddr);
+            printf("sock: %d\n", Server->sockfd);
     
-            int size = recvfrom(Server->sockfd, buffer, Server->bufferSize + sizeof(ClientInfo), 0, (struct sockaddr *)&Server->lastClientAddrData.clientAddr, &Server->lastClientAddrData.clientAddrLen);
+            int messageSize = recvfrom(Server->sockfd, buffer, sizeof(buffer), 0, (struct sockaddr *)&Server->lastClientAddrData.clientAddr, &Server->lastClientAddrData.clientAddrLen);
+
+            printf("got packet on server side\n");
 
             // Check if user set a function that will execute with the message received as arg
             SwiftNetDebug(
@@ -39,10 +37,13 @@ void* SwiftNetHandlePackets(void* voidArgs) {
                     exit(EXIT_FAILURE);
                 }
             )
+
+            struct ip ipHeader;
+            memcpy(&ipHeader, buffer, sizeof(struct ip));
     
             // Deserialize the clientInfo
             ClientInfo clientInfo;
-            memcpy(&clientInfo, buffer + 20, sizeof(ClientInfo));
+            memcpy(&clientInfo, buffer + sizeof(struct ip), sizeof(ClientInfo));
 
             Server->lastClientAddrData.clientAddr.sin_port = clientInfo.source_port;
     
@@ -53,14 +54,14 @@ void* SwiftNetHandlePackets(void* voidArgs) {
 
             SwiftNetDebug(
                 printf("s: \n");
-                for(unsigned int i = 0; i < size; i++) {
+                for(unsigned int i = 0; i < messageSize; i++) {
                     printf("%d ", buffer[i]);
                 }
                 printf("\n");
             )
     
             // Execute function set by user
-            Server->packetHandler(buffer + sizeof(ClientInfo) + 20);
+            Server->packetHandler(buffer + sizeof(ClientInfo) + sizeof(struct ip));
         }
     )
 
@@ -71,9 +72,9 @@ void* SwiftNetHandlePackets(void* voidArgs) {
     
         while(1) {
             // Skipping first 20 bytes - Ip header
-            uint8_t buffer[clientConnection->bufferSize + sizeof(ClientInfo) + 20];
+            uint8_t buffer[clientConnection->bufferSize + sizeof(ClientInfo) + sizeof(struct ip)];
     
-            int size = recvfrom(clientConnection->sockfd, buffer, clientConnection->bufferSize + sizeof(ClientInfo), 0, NULL, NULL);
+            int messageSize = recvfrom(clientConnection->sockfd, buffer, sizeof(buffer), 0, NULL, NULL);
     
             // Check if user set a function that will execute with the message received as arg
             SwiftNetDebug(
@@ -82,11 +83,14 @@ void* SwiftNetHandlePackets(void* voidArgs) {
                     exit(EXIT_FAILURE);
                 }
             )
+
+            // Deserialize ip header
+            struct ip ipHeader;
+            memcpy(&ipHeader, buffer, sizeof(struct ip));
     
             // Deserialize the clientInfo
             ClientInfo clientInfo;
-
-            memcpy(&clientInfo, buffer + 20, sizeof(ClientInfo));
+            memcpy(&clientInfo, buffer + sizeof(struct ip), sizeof(ClientInfo));
     
             // Check if the packet is meant to be for this server
             if(clientInfo.destination_port != clientConnection->clientInfo.source_port) {
@@ -95,14 +99,14 @@ void* SwiftNetHandlePackets(void* voidArgs) {
 
             SwiftNetDebug(
                 printf("c: \n");
-                for(unsigned int i = 0; i < size; i++) {
+                for(unsigned int i = 0; i < messageSize; i++) {
                     printf("%d ", buffer[i]);
                 }
                 printf("\n");
             )
     
             // Execute function set by user
-            clientConnection->packetHandler(buffer + sizeof(ClientInfo) + 20);
+            clientConnection->packetHandler(buffer + sizeof(ClientInfo) + sizeof(struct ip));
         }
     )
 

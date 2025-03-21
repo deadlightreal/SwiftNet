@@ -1,12 +1,10 @@
-#pragma once
-
-#include "./initialize_server_socket.h"
-#include "./main.h"
+#include "swift_net.h"
+#include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
 
 // Set the handler for incoming packets/messages on the server
-static inline void SwiftNetSetMessageHandler(void(*handler)(uint8_t* data), void* connection) {
+void SwiftNetSetMessageHandler(void(*handler)(uint8_t* data), void* connection) {
     SwiftNetDebug(
         if(unlikely(connection == NULL) || unlikely(handler == NULL)) {
             perror("Provided NULL handler or connection to set packet handler\n");
@@ -15,7 +13,6 @@ static inline void SwiftNetSetMessageHandler(void(*handler)(uint8_t* data), void
     )
 
     SwiftNetServerCode(
-        printf("buf size srvr\n");
         SwiftNetServer* Server = (SwiftNetServer*)connection;
         Server->packetHandler = handler;
     )
@@ -27,7 +24,7 @@ static inline void SwiftNetSetMessageHandler(void(*handler)(uint8_t* data), void
 }
 
 // Change the buffer size of a package
-static inline void SwiftNetSetBufferSize(unsigned int newBufferSize, void* connection) {
+void SwiftNetSetBufferSize(unsigned int newBufferSize, void* connection) {
     SwiftNetServerCode(
         SwiftNetServer* Server = (SwiftNetServer *)connection;
         Server->bufferSize = newBufferSize;

@@ -1,5 +1,3 @@
-#pragma once
-
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -11,8 +9,7 @@
 #include <sys/socket.h>
 #include <pthread.h>
 #include <stdbool.h>
-#include "./main.h"
-#include "./handle_packets.h"
+#include "swift_net.h"
 
 SwiftNetServer* SwiftNetCreateServer(char* ip_address, uint16_t port) {
     SwiftNetServer* emptyServer = NULL;
@@ -32,7 +29,7 @@ SwiftNetServer* SwiftNetCreateServer(char* ip_address, uint16_t port) {
     emptyServer->server_port = port;
 
     // Create the socket
-    emptyServer->sockfd = socket(AF_INET, SOCK_RAW, 253);
+    emptyServer->sockfd = socket(AF_INET, SOCK_RAW, IPPROTO_RAW);
     if (unlikely(emptyServer->sockfd < 0)) {
         perror("Socket creation failed\n");
         exit(EXIT_FAILURE);

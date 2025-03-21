@@ -1,6 +1,4 @@
-#pragma once
-
-#include "./main.h"
+#include "swift_net.h"
 #include <stdlib.h>
 #include <string.h>
 
