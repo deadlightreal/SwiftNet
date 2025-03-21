@@ -5,6 +5,7 @@ OBJ_DIR = ../build
 OBJS = $(foreach file, $(FILES), $(OBJ_DIR)/$(file:.c=.o))
 
 all:
+	rm ../build/*
 	$(foreach file, $(FILES), $(CC) $(CFLAGS) -c $(file) -o $(OBJ_DIR)/$(file:.c=.o);)
 	ar rcs ../build/libswift_net.a $(OBJS);
 
