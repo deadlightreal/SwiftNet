@@ -1,3 +1,5 @@
+#define SWIFT_NET_CLIENT
+
 #include "../../../src/swift_net.h"
 #include <stdio.h>
 #include <pthread.h>

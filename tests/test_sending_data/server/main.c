@@ -1,3 +1,5 @@
+#define SWIFT_NET_SERVER
+
 #include "../../../src/swift_net.h"
 #include <stdio.h>
 #include <pthread.h>
@@ -7,14 +9,14 @@
 
 SwiftNetServer* server;
 
-void handleMessages(uint8_t* data) {
+void handleMessages(uint8_t* data, ClientAddrData sender) {
     printf("got message from client : %s\n", data);
 
     char* message = "hello client";
 
     SwiftNetAppendToPacket(server, message, strlen(message) + 1);
 
-    SwiftNetSendPacket(server, &server->lastClientAddrData);
+    SwiftNetSendPacket(server, &sender);
 }
 
 int main() {

@@ -5,30 +5,31 @@
 
 // Set the handler for incoming packets/messages on the server or client
 
-static inline void SetMessageHandlerServer(void(*handler)(uint8_t* data), SwiftNetServer* server) {
-    server->packetHandler = handler;
-}
-
-static inline void SetMessageHandlerClient(void(*handler)(uint8_t* data), SwiftNetClientConnection* client) {
-    client->packetHandler = handler;
-}
-
-void SwiftNetSetMessageHandler(void(*handler)(uint8_t* data), void* connection) {
+SwiftNetServerCode(
+void SwiftNetSetMessageHandler(void(*handler)(uint8_t* data, ClientAddrData sender), SwiftNetServer* server) {
     SwiftNetDebug(
-        if(unlikely(connection == NULL || handler == NULL)) {
-            perror("Provided NULL handler or connection to set packet handler\n");
+        if(unlikely(handler == NULL)) {
+            fprintf(stderr, "Error: Invalid arguments given to function set message handler.\n");
             exit(EXIT_FAILURE);
         }
     )
 
-    SwiftNetServerCode(
-        SetMessageHandlerServer(handler, connection);
+    server->packetHandler = handler;
+}
+)
+
+SwiftNetClientCode(
+void SwiftNetSetMessageHandler(void(*handler)(uint8_t* data), SwiftNetClientConnection* client) {
+    SwiftNetDebug(
+        if(unlikely(handler == NULL)) {
+            fprintf(stderr, "Error: Invalid arguments given to function set message handler.\n");
+            exit(EXIT_FAILURE);
+        }
     )
 
-    SwiftNetClientCode(
-        SetMessageHandlerClient(handler, connection);
-    )
+    client->packetHandler = handler;
 }
+)
 
 // Adjusts the buffer size for a network packet, reallocating memory as needed.
 
