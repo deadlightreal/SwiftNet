@@ -1,11 +1,10 @@
 # SwiftNet - High-Performance Networking Library
 
-SwiftNet is a fast and easy-to-use networking library built using raw sockets. It is designed for developers who need low-level control over networking while maintaining simplicity and readability.
+### SwiftNet is a simple and easy-to-use networking library built using raw sockets. It is designed for developers who value simplicity, readability, and good performance.
 
 ## Features
 
-- **High Performance:** Built using raw sockets for direct control over packet transmission.
-- **Ease of Use:** Simple API designed to get up and running quickly.
+- **Ease of Use**: Simple API designed to get up and running quickly, without needing to deal directly with raw sockets.
 
 ## Contributing
 ### Contributions are very welcome! If you'd like to improve the library or fix any issues, feel free to fork the repository and submit a pull request.
@@ -15,7 +14,6 @@ We have simple guidelines for contributing:
 
 - Write clear and concise comments for your code.
 - Ensure that the code is easy to read and follows the existing style.
-- Avoid making overly complex changes; simplicity is key.
 
 We value collaboration and clean code!
 
