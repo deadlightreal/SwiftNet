@@ -1,0 +1,3 @@
+/Users/admin/Desktop/custom-ethernet-protocol/build/CMakeFiles/swift_net.dir
+/Users/admin/Desktop/custom-ethernet-protocol/build/CMakeFiles/edit_cache.dir
+/Users/admin/Desktop/custom-ethernet-protocol/build/CMakeFiles/rebuild_cache.dir
