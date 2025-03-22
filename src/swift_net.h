@@ -7,16 +7,8 @@
 #define MAX_CLIENT_CONNECTIONS 0x0A
 #define MAX_SERVERS 0x0A
 
-#define SWIFT_NET_CLIENT_MODE 0x01
-#define SWIFT_NET_SERVER_MODE 0x02
-
-#define SWIFT_NET_SERVER SwiftNetMode = SWIFT_NET_SERVER_MODE;
-#define SWIFT_NET_CLIENT SwiftNetMode = SWIFT_NET_CLIENT_MODE;
-
 #define unlikely(x) __builtin_expect((x), 0x00)
 #define likely(x) __builtin_expect((x), 0x01)
-
-extern __thread uint8_t SwiftNetMode;
 
 typedef struct {
     uint16_t destination_port;
@@ -62,8 +54,17 @@ typedef struct {
     uint8_t mode;
 } SwiftNetHandlePacketsArgs;
 
-#define SwiftNetClientCode(code) if(SwiftNetMode == SWIFT_NET_CLIENT_MODE) { code }
-#define SwiftNetServerCode(code) if(SwiftNetMode == SWIFT_NET_SERVER_MODE) { code }
+#ifdef SWIFT_NET_CLIENT
+    #define SwiftNetClientCode(code) code
+#else
+    #define SwiftNetClientCode(code)
+#endif
+
+#ifdef SWIFT_NET_SERVER
+    #define SwiftNetServerCode(code) code
+#else
+    #define SwiftNetServerCode(code)
+#endif
 
 #ifndef RELEASE_MODE
     #define SwiftNetDebug(code) { code }

@@ -50,17 +50,8 @@ SwiftNetServer* SwiftNetCreateServer(char* ip_address, uint16_t port) {
     emptyServer->packetDataStart = dataPointer + sizeof(ClientInfo);
     emptyServer->packetAppendPointer = emptyServer->packetDataStart;
 
-    SwiftNetHandlePacketsArgs* threadArgs = malloc(sizeof(SwiftNetHandlePacketsArgs));
-    if(unlikely(threadArgs == NULL)) {
-        perror("Failed to allocate memory for thread args\n");
-        exit(EXIT_FAILURE);
-    }
-
-    threadArgs->connection = emptyServer;
-    threadArgs->mode = SWIFT_NET_SERVER_MODE;
-
     // Create a new thread that will handle all packets received
-    pthread_create(&emptyServer->handlePacketsThread, NULL, SwiftNetHandlePackets, threadArgs);
+    pthread_create(&emptyServer->handlePacketsThread, NULL, SwiftNetHandlePackets, emptyServer);
 
     return emptyServer;
 }
