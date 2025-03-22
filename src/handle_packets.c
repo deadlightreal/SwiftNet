@@ -70,16 +70,8 @@ static inline void HandlePacketsClient(SwiftNetClientConnection* client) {
     }
 }
 
-void* SwiftNetHandlePackets(void* voidArgs) {
-    SwiftNetHandlePacketsArgs* args = (SwiftNetHandlePacketsArgs*)voidArgs;
+void* SwiftNetHandlePackets(void* connection) {
  
-    // Set the mode to either Server or Client based on the argument passed
-    SwiftNetMode = args->mode;
-
-    void* connection = args->connection;
-
-    free(args);
-
     SwiftNetServerCode(
         HandlePacketsServer(connection);
     )

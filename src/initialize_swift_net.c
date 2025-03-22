@@ -4,5 +4,13 @@
 #include <stdio.h>
 
 void InitializeSwiftNet() {
+    SwiftNetServerCode(
+        printf("initializing server\n");
+    )
+
+    SwiftNetClientCode(
+        printf("initializing client\n");
+    )
+
     return;
 }

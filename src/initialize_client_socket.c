@@ -60,17 +60,8 @@ SwiftNetClientConnection* SwiftNetCreateClient(char* ip_address, int port) {
     emptyConnection->server_addr.sin_family = AF_INET;
     emptyConnection->server_addr.sin_port = htons(port);
     emptyConnection->server_addr.sin_addr.s_addr = inet_addr(ip_address);
-
-    SwiftNetHandlePacketsArgs* threadArgs = malloc(sizeof(SwiftNetHandlePacketsArgs));
-    if(unlikely(threadArgs == NULL)) {
-        perror("Failed to allocate memory for thread args\n");
-        exit(EXIT_FAILURE);
-    }
-
-    threadArgs->connection = emptyConnection;
-    threadArgs->mode = SWIFT_NET_CLIENT_MODE;
-
-    pthread_create(&emptyConnection->handlePacketsThread, NULL, SwiftNetHandlePackets, threadArgs);
+ 
+    pthread_create(&emptyConnection->handlePacketsThread, NULL, SwiftNetHandlePackets, emptyConnection);
 
     return emptyConnection;
 }
