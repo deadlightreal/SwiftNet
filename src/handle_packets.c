@@ -10,10 +10,10 @@ static inline void HandlePacketsServer(SwiftNetServer* server) {
 
         uint8_t buffer[size];
 
-        server->lastClientAddrData.clientAddrLen = sizeof(server->lastClientAddrData.clientAddr);
+        struct sockaddr_in clientAddress;
+        socklen_t clientAddressLen = sizeof(clientAddress);
     
-        int messageSize = recvfrom(server->sockfd, buffer, sizeof(buffer), 0, (struct sockaddr *)&server->lastClientAddrData.clientAddr, &server->lastClientAddrData.clientAddrLen);
-
+        int messageSize = recvfrom(server->sockfd, buffer, sizeof(buffer), 0, (struct sockaddr *)&clientAddress, &clientAddressLen);
         // Check if user set a function that will execute with the packet data received as arg
         SwiftNetDebug(
             if(unlikely(server->packetHandler == NULL)) {
@@ -28,7 +28,9 @@ static inline void HandlePacketsServer(SwiftNetServer* server) {
         ClientInfo clientInfo;
         memcpy(&clientInfo, buffer + sizeof(struct ip), sizeof(ClientInfo));
 
-        server->lastClientAddrData.clientAddr.sin_port = clientInfo.source_port;
+        clientAddress.sin_port = clientInfo.source_port;
+
+        ClientAddrData sender = {clientAddress, clientAddressLen};
     
         // Check if the packet is meant to be for this server
         if(clientInfo.destination_port != server->server_port) {
@@ -36,7 +38,7 @@ static inline void HandlePacketsServer(SwiftNetServer* server) {
         }
     
         // Execute function set by user
-        server->packetHandler(buffer + sizeof(ClientInfo) + sizeof(struct ip));
+        server->packetHandler(buffer + sizeof(ClientInfo) + sizeof(struct ip), sender);
     }
 }
 

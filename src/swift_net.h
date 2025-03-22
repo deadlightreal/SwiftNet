@@ -39,9 +39,8 @@ typedef struct {
     int sockfd;
     uint16_t server_port;
     unsigned int bufferSize;
-    void (*packetHandler)(uint8_t* data);
+    void (*packetHandler)(uint8_t* data, ClientAddrData sender);
     pthread_t handlePacketsThread;
-    ClientAddrData lastClientAddrData;
     uint8_t* packetBufferStart;   // Start of the allocated buffer
     uint8_t* packetDataStart;     // Start of the stored data
     uint8_t* packetAppendPointer; // Current position to append new data
@@ -72,11 +71,18 @@ typedef struct {
     #define SwiftNetDebug(code)
 #endif
 
+SwiftNetServerCode(
+    void SwiftNetSetMessageHandler(void(*handler)(uint8_t* data, ClientAddrData sender), SwiftNetServer* connection);
+)
+
+SwiftNetClientCode(
+    void SwiftNetSetMessageHandler(void(*handler)(uint8_t* data), SwiftNetClientConnection* connection);
+)
+
 void SwiftNetSendPacket(void* connection, void* clientAddress);
 void* SwiftNetHandlePackets(void* voidArgs);
 SwiftNetServer* SwiftNetCreateServer(char* ip_address, uint16_t port);
 SwiftNetClientConnection* SwiftNetCreateClient(char* ip_address, int port);
 void SwiftNetAppendToPacket(void* connection, void* data, unsigned int dataSize);
-void SwiftNetSetMessageHandler(void(*handler)(uint8_t* data), void* connection);
 void SwiftNetSetBufferSize(unsigned int newBufferSize, void* connection);
 void InitializeSwiftNet();
