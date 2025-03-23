@@ -1,0 +1,12 @@
+---
+triple:          'arm64-apple-darwin'
+binary-path:     main
+relocations:
+  - { offset: 0x26, size: 0x8, addend: 0x0, symName: _quickhash64, symObjAddr: 0x0, symBinAddr: 0x100003644, symSize: 0xA8 }
+  - { offset: 0x3F, size: 0x8, addend: 0x0, symName: _started, symObjAddr: 0x14C7, symBinAddr: 0x100008660, symSize: 0x0 }
+  - { offset: 0x69, size: 0x8, addend: 0x0, symName: _server, symBinAddr: 0x100008668, symSize: 0x0 }
+  - { offset: 0x2F9, size: 0x8, addend: 0x0, symName: _start, symBinAddr: 0x100008670, symSize: 0x0 }
+  - { offset: 0x326, size: 0x8, addend: 0x0, symName: _quickhash64, symObjAddr: 0x0, symBinAddr: 0x100003644, symSize: 0xA8 }
+  - { offset: 0x394, size: 0x8, addend: 0x0, symName: _handleMessages, symObjAddr: 0xA8, symBinAddr: 0x1000036EC, symSize: 0xD0 }
+  - { offset: 0x3F1, size: 0x8, addend: 0x0, symName: _main, symObjAddr: 0x178, symBinAddr: 0x1000037BC, symSize: 0x5C }
+...
