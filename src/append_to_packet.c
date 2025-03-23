@@ -14,7 +14,7 @@ static inline void ValidateArgs(void* con, void* data, unsigned int dataSize) {
 
 SwiftNetServerCode(
 void SwiftNetAppendToPacket(SwiftNetServer* server, void* data, unsigned int dataSize) {
-    SwiftNetDebug(
+    SwiftNetErrorCheck(
         ValidateArgs(server, data, dataSize);
     )
 
@@ -26,7 +26,7 @@ void SwiftNetAppendToPacket(SwiftNetServer* server, void* data, unsigned int dat
 
 SwiftNetClientCode(
 void SwiftNetAppendToPacket(SwiftNetClientConnection* client, void* data, unsigned int dataSize) {
-    SwiftNetDebug(
+    SwiftNetErrorCheck(
         ValidateArgs(client, data, dataSize);
     )
 

@@ -53,6 +53,12 @@ typedef struct {
     uint8_t mode;
 } SwiftNetHandlePacketsArgs;
 
+#ifndef SWIFT_NET_DISABLE_ERROR_CHECKING
+    #define SwiftNetErrorCheck(code) code
+#else
+    #define SwiftNetErrorCheck(code)
+#endif
+
 #ifdef SWIFT_NET_CLIENT
     #define SwiftNetClientCode(code) code
 #else
@@ -63,12 +69,6 @@ typedef struct {
     #define SwiftNetServerCode(code) code
 #else
     #define SwiftNetServerCode(code)
-#endif
-
-#ifndef RELEASE_MODE
-    #define SwiftNetDebug(code) { code }
-#else
-    #define SwiftNetDebug(code)
 #endif
 
 SwiftNetServerCode(

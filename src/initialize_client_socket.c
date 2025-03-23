@@ -23,7 +23,7 @@ SwiftNetClientConnection* SwiftNetCreateClient(char* ip_address, int port) {
         break;
     }
 
-    SwiftNetDebug(
+    SwiftNetErrorCheck(
         if(unlikely(emptyConnection == NULL)) {
             perror("Failed to get an empty connection\n");
             exit(EXIT_FAILURE);
