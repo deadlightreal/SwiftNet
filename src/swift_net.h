@@ -3,6 +3,7 @@
 #include <arpa/inet.h>
 #include <stdint.h>
 #include <pthread.h>
+#include <string.h>
 
 #define MAX_CLIENT_CONNECTIONS 0x0A
 #define MAX_SERVERS 0x0A
@@ -15,6 +16,14 @@ typedef struct {
     uint16_t source_port;
 } ClientInfo;
 
+typedef struct {
+    unsigned int packetDataLen;
+    uint8_t* packetBufferStart;   // Start of the allocated buffer
+    uint8_t* packetDataStart;     // Start of the stored data
+    uint8_t* packetAppendPointer; // Current position to append new data
+    uint8_t* packetReadPointer;
+} Packet;
+
 // Connection data
 typedef struct {
     int sockfd;
@@ -23,9 +32,7 @@ typedef struct {
     void (*packetHandler) (uint8_t* data);
     unsigned int bufferSize;
     pthread_t handlePacketsThread;
-    uint8_t* packetBufferStart;   // Start of the allocated buffer
-    uint8_t* packetDataStart;     // Start of the stored data
-    uint8_t* packetAppendPointer; // Current position to append new data
+    Packet packet;
 } SwiftNetClientConnection;
 
 extern SwiftNetClientConnection SwiftNetClientConnections[MAX_CLIENT_CONNECTIONS];
@@ -41,9 +48,7 @@ typedef struct {
     unsigned int bufferSize;
     void (*packetHandler)(uint8_t* data, ClientAddrData sender);
     pthread_t handlePacketsThread;
-    uint8_t* packetBufferStart;   // Start of the allocated buffer
-    uint8_t* packetDataStart;     // Start of the stored data
-    uint8_t* packetAppendPointer; // Current position to append new data
+    Packet packet;
 } SwiftNetServer;
 
 extern SwiftNetServer SwiftNetServers[MAX_SERVERS];
@@ -77,7 +82,10 @@ SwiftNetServerCode(
     void* SwiftNetHandlePackets(void* serverVoid);
     void SwiftNetSetBufferSize(unsigned int newBufferSize, SwiftNetServer* server);
     void SwiftNetAppendToPacket(SwiftNetServer* server, void* data, unsigned int dataSize);
-)
+    void SwiftNetReadFromPacket(SwiftNetServer* server, void* ptr, unsigned int size);
+    static inline void SwiftNetReadStringFromPacket(SwiftNetServer* server, void* ptr) {
+        SwiftNetReadFromPacket(server, ptr, strlen((char*)server->packet.packetReadPointer) + 1);
+    })
 
 SwiftNetClientCode(
     void SwiftNetSendPacket(SwiftNetClientConnection* client);
@@ -85,7 +93,10 @@ SwiftNetClientCode(
     void* SwiftNetHandlePackets(void* clientVoid);
     void SwiftNetSetBufferSize(unsigned int newBufferSize, SwiftNetClientConnection* client);
     void SwiftNetAppendToPacket(SwiftNetClientConnection* client, void* data, unsigned int dataSize);
-)
+    void SwiftNetReadFromPacket(SwiftNetClientConnection* client, void* ptr, unsigned int size);
+    static inline void SwiftNetReadStringFromPacket(SwiftNetClientConnection* client, void* ptr) {
+        SwiftNetReadFromPacket(client, ptr, strlen((char*)client->packet.packetReadPointer) + 1);
+    })
 
 SwiftNetServer* SwiftNetCreateServer(char* ip_address, uint16_t port);
 SwiftNetClientConnection* SwiftNetCreateClient(char* ip_address, int port);

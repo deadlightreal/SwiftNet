@@ -38,6 +38,8 @@ void* SwiftNetHandlePackets(void* serverVoid) {
         sender.clientAddr = clientAddress;
         sender.clientAddrLen = clientAddressLen;
 
+        server->packet.packetDataLen = messageSize;
+
         // Check if the packet is meant to be for this server
         if(clientInfo.destination_port != server->server_port) {
             continue;
@@ -73,6 +75,8 @@ void* SwiftNetHandlePackets(void* clientVoid) {
     
         ClientInfo clientInfo;
         memcpy(&clientInfo, buffer + sizeof(struct ip), sizeof(ClientInfo));
+
+        client->packet.packetDataLen = messageSize;
     
         // Check if the packet is meant to be for this server
         if(clientInfo.destination_port != client->clientInfo.source_port) {

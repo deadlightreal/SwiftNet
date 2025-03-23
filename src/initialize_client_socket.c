@@ -52,9 +52,10 @@ SwiftNetClientConnection* SwiftNetCreateClient(char* ip_address, int port) {
         exit(EXIT_FAILURE);
     }
 
-    emptyConnection->packetBufferStart = dataPointer;
-    emptyConnection->packetDataStart = dataPointer + sizeof(ClientInfo);
-    emptyConnection->packetAppendPointer= emptyConnection->packetDataStart;
+    emptyConnection->packet.packetBufferStart = dataPointer;
+    emptyConnection->packet.packetDataStart = dataPointer + sizeof(ClientInfo);
+    emptyConnection->packet.packetAppendPointer= emptyConnection->packet.packetDataStart;
+    emptyConnection->packet.packetReadPointer = emptyConnection->packet.packetDataStart;
 
     memset(&emptyConnection->server_addr, 0, sizeof(emptyConnection->server_addr));
     emptyConnection->server_addr.sin_family = AF_INET;

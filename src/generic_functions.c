@@ -48,13 +48,15 @@ void SwiftNetSetBufferSize(unsigned int newBufferSize, SwiftNetServer* server) {
 
     server->bufferSize = newBufferSize;
 
-    unsigned int currentDataPosition = server->packetAppendPointer - server->packetDataStart;
+    unsigned int currentDataPosition = server->packet.packetAppendPointer - server->packet.packetDataStart;
+    unsigned int currentReadPosition = server->packet.packetReadPointer - server->packet.packetDataStart;
 
-    uint8_t* newDataPointer = realloc(server->packetBufferStart, newBufferSize);
+    uint8_t* newDataPointer = realloc(server->packet.packetBufferStart, newBufferSize);
 
-    server->packetBufferStart = newDataPointer;
-    server->packetDataStart = newDataPointer + sizeof(ClientInfo);
-    server->packetAppendPointer = server->packetDataStart + currentDataPosition;
+    server->packet.packetBufferStart = newDataPointer;
+    server->packet.packetDataStart = newDataPointer + sizeof(ClientInfo);
+    server->packet.packetAppendPointer = server->packet.packetDataStart + currentDataPosition;
+    server->packet.packetReadPointer = server->packet.packetDataStart + currentReadPosition;
 }
 )
 
@@ -66,12 +68,14 @@ void SwiftNetSetBufferSize(unsigned int newBufferSize, SwiftNetClientConnection*
 
     client->bufferSize = newBufferSize;
 
-    unsigned int currentDataPosition = client->packetAppendPointer - client->packetDataStart;
+    unsigned int currentDataPosition = client->packet.packetAppendPointer - client->packet.packetDataStart;
+    unsigned int currentReadPosition = client->packet.packetReadPointer - client->packet.packetDataStart;
 
-    uint8_t* newDataPointer = realloc(client->packetBufferStart, newBufferSize);
+    uint8_t* newDataPointer = realloc(client->packet.packetBufferStart, newBufferSize);
 
-    client->packetBufferStart = newDataPointer;
-    client->packetDataStart = newDataPointer + sizeof(ClientInfo);
-    client->packetAppendPointer = client->packetDataStart + currentDataPosition;
+    client->packet.packetBufferStart = newDataPointer;
+    client->packet.packetDataStart = newDataPointer + sizeof(ClientInfo);
+    client->packet.packetAppendPointer = client->packet.packetDataStart + currentDataPosition;
+    client->packet.packetReadPointer = client->packet.packetDataStart + currentReadPosition;
 }
 )
