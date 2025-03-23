@@ -7,7 +7,7 @@
 
 SwiftNetServerCode(
 void SwiftNetSetMessageHandler(void(*handler)(uint8_t* data, ClientAddrData sender), SwiftNetServer* server) {
-    SwiftNetDebug(
+    SwiftNetErrorCheck(
         if(unlikely(handler == NULL)) {
             fprintf(stderr, "Error: Invalid arguments given to function set message handler.\n");
             exit(EXIT_FAILURE);
@@ -20,7 +20,7 @@ void SwiftNetSetMessageHandler(void(*handler)(uint8_t* data, ClientAddrData send
 
 SwiftNetClientCode(
 void SwiftNetSetMessageHandler(void(*handler)(uint8_t* data), SwiftNetClientConnection* client) {
-    SwiftNetDebug(
+    SwiftNetErrorCheck(
         if(unlikely(handler == NULL)) {
             fprintf(stderr, "Error: Invalid arguments given to function set message handler.\n");
             exit(EXIT_FAILURE);
@@ -42,7 +42,7 @@ static inline void ValidateSetBufferSizeArgs(unsigned int size, void* con) {
 
 SwiftNetServerCode(
 void SwiftNetSetBufferSize(unsigned int newBufferSize, SwiftNetServer* server) {
-    SwiftNetDebug(
+    SwiftNetErrorCheck(
         ValidateSetBufferSizeArgs(newBufferSize, server);
     )
 
@@ -60,7 +60,7 @@ void SwiftNetSetBufferSize(unsigned int newBufferSize, SwiftNetServer* server) {
 
 SwiftNetClientCode(
 void SwiftNetSetBufferSize(unsigned int newBufferSize, SwiftNetClientConnection* client) {
-    SwiftNetDebug(
+    SwiftNetErrorCheck(
         ValidateSetBufferSizeArgs(newBufferSize, client);
     )
 

@@ -18,7 +18,7 @@ void* SwiftNetHandlePackets(void* serverVoid) {
     
         int messageSize = recvfrom(server->sockfd, buffer, sizeof(buffer), 0, (struct sockaddr *)&clientAddress, &clientAddressLen);
         // Check if user set a function that will execute with the packet data received as arg
-        SwiftNetDebug(
+        SwiftNetErrorCheck(
             if(unlikely(server->packetHandler == NULL)) {
                 fprintf(stderr, "Message Handler not net on server!!!!\n");
                 exit(EXIT_FAILURE);
@@ -61,7 +61,7 @@ void* SwiftNetHandlePackets(void* clientVoid) {
         int messageSize = recvfrom(client->sockfd, buffer, sizeof(buffer), 0, NULL, NULL);
     
         // Check if user set a function that will execute with the packet data received as arg
-        SwiftNetDebug(
+        SwiftNetErrorCheck(
             if(unlikely(client->packetHandler == NULL)) {
                 fprintf(stderr, "Message Handler not set on client!!!!\n");
                 exit(EXIT_FAILURE);

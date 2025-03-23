@@ -16,7 +16,7 @@ static inline void NullCheckConnection(void* ptr) {
 
 SwiftNetClientCode(
 void SwiftNetSendPacket(SwiftNetClientConnection* client) {
-    SwiftNetDebug(
+    SwiftNetErrorCheck(
         NullCheckConnection(client);
     )
 
@@ -30,7 +30,7 @@ void SwiftNetSendPacket(SwiftNetClientConnection* client) {
 
 SwiftNetServerCode(
 void SwiftNetSendPacket(SwiftNetServer* server, ClientAddrData* clientAddress) {
-    SwiftNetDebug(
+    SwiftNetErrorCheck(
         NullCheckConnection(server);
 
         if(unlikely(clientAddress == NULL)) {

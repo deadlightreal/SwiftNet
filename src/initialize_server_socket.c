@@ -24,6 +24,13 @@ SwiftNetServer* SwiftNetCreateServer(char* ip_address, uint16_t port) {
         break;
     }
 
+    SwiftNetErrorCheck(
+        if(unlikely(emptyServer == NULL)) {
+            perror("Failed to get an empty server\n");
+            exit(EXIT_FAILURE);
+        }
+    )
+
     struct sockaddr_in server_addr;
 
     emptyServer->server_port = port;
