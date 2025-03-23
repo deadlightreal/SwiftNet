@@ -12,6 +12,7 @@ set(SOURCE_FILES
     generic_functions.c
     initialize_client_socket.c
     initialize_server_socket.c
+    read_from_packet.c
 )
 
 set(OBJ_DIR ${CMAKE_SOURCE_DIR}/../build)

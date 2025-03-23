@@ -18,9 +18,9 @@ void SwiftNetAppendToPacket(SwiftNetServer* server, void* data, unsigned int dat
         ValidateArgs(server, data, dataSize);
     )
 
-    memcpy(server->packetAppendPointer, data, dataSize);
+    memcpy(server->packet.packetAppendPointer, data, dataSize);
 
-    server->packetAppendPointer += dataSize;
+    server->packet.packetAppendPointer += dataSize;
 }
 )
 
@@ -30,8 +30,8 @@ void SwiftNetAppendToPacket(SwiftNetClientConnection* client, void* data, unsign
         ValidateArgs(client, data, dataSize);
     )
 
-    memcpy(client->packetAppendPointer, data, dataSize);
+    memcpy(client->packet.packetAppendPointer, data, dataSize);
 
-    client->packetAppendPointer += dataSize;
+    client->packet.packetAppendPointer += dataSize;
 }
 )

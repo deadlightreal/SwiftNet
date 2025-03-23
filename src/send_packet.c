@@ -20,11 +20,12 @@ void SwiftNetSendPacket(SwiftNetClientConnection* client) {
         NullCheckConnection(client);
     )
 
-    memcpy(client->packetBufferStart, &client->clientInfo, sizeof(ClientInfo));
+    memcpy(client->packet.packetBufferStart, &client->clientInfo, sizeof(ClientInfo));
 
-    sendto(client->sockfd, client->packetBufferStart, client->packetAppendPointer - client->packetBufferStart, 0, (const struct sockaddr *)&client->server_addr, sizeof(client->server_addr));
+    sendto(client->sockfd, client->packet.packetBufferStart, client->packet.packetAppendPointer - client->packet.packetBufferStart, 0, (const struct sockaddr *)&client->server_addr, sizeof(client->server_addr));
 
-    client->packetAppendPointer = client->packetDataStart;
+    client->packet.packetAppendPointer = client->packet.packetDataStart;
+    client->packet.packetReadPointer = client->packet.packetDataStart;
 }
 )
 
@@ -44,10 +45,11 @@ void SwiftNetSendPacket(SwiftNetServer* server, ClientAddrData* clientAddress) {
     connectionInfo.destination_port = clientAddress->clientAddr.sin_port;
     connectionInfo.source_port = server->server_port;
 
-    memcpy(server->packetBufferStart, &connectionInfo, sizeof(ClientInfo));
+    memcpy(server->packet.packetBufferStart, &connectionInfo, sizeof(ClientInfo));
 
-    sendto(server->sockfd, server->packetBufferStart, server->packetAppendPointer - server->packetBufferStart, 0, (const struct sockaddr *)&clientAddress->clientAddr, clientAddress->clientAddrLen);
+    sendto(server->sockfd, server->packet.packetBufferStart, server->packet.packetAppendPointer - server->packet.packetBufferStart, 0, (const struct sockaddr *)&clientAddress->clientAddr, clientAddress->clientAddrLen);
 
-    server->packetAppendPointer = server->packetDataStart;
+    server->packet.packetAppendPointer = server->packet.packetDataStart;
+    server->packet.packetReadPointer = server->packet.packetDataStart;
 }
 )
