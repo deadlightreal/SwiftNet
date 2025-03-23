@@ -24,7 +24,7 @@ int main() {
 
         SwiftNetAppendToPacket(con, message, strlen(message) + 1);
 
-        SwiftNetSendPacket(con, NULL);
+        SwiftNetSendPacket(con);
 
         usleep(500000);
     }
