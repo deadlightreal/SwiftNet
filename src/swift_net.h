@@ -72,17 +72,21 @@ typedef struct {
 #endif
 
 SwiftNetServerCode(
+    void SwiftNetSendPacket(SwiftNetServer* server, ClientAddrData* clientAddress);
     void SwiftNetSetMessageHandler(void(*handler)(uint8_t* data, ClientAddrData sender), SwiftNetServer* connection);
+    void* SwiftNetHandlePackets(void* serverVoid);
+    void SwiftNetSetBufferSize(unsigned int newBufferSize, SwiftNetServer* server);
+    void SwiftNetAppendToPacket(SwiftNetServer* server, void* data, unsigned int dataSize);
 )
 
 SwiftNetClientCode(
+    void SwiftNetSendPacket(SwiftNetClientConnection* client);
     void SwiftNetSetMessageHandler(void(*handler)(uint8_t* data), SwiftNetClientConnection* connection);
+    void* SwiftNetHandlePackets(void* clientVoid);
+    void SwiftNetSetBufferSize(unsigned int newBufferSize, SwiftNetClientConnection* client);
+    void SwiftNetAppendToPacket(SwiftNetClientConnection* client, void* data, unsigned int dataSize);
 )
 
-void SwiftNetSendPacket(void* connection, void* clientAddress);
-void* SwiftNetHandlePackets(void* voidArgs);
 SwiftNetServer* SwiftNetCreateServer(char* ip_address, uint16_t port);
 SwiftNetClientConnection* SwiftNetCreateClient(char* ip_address, int port);
-void SwiftNetAppendToPacket(void* connection, void* data, unsigned int dataSize);
-void SwiftNetSetBufferSize(unsigned int newBufferSize, void* connection);
 void InitializeSwiftNet();

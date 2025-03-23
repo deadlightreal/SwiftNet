@@ -4,7 +4,10 @@
 #include <stdlib.h>
 #include <netinet/ip.h>
 
-static inline void HandlePacketsServer(SwiftNetServer* server) {
+SwiftNetServerCode(
+void* SwiftNetHandlePackets(void* serverVoid) {
+    SwiftNetServer* server = (SwiftNetServer*)serverVoid;
+
     while(1) {
         const unsigned int size = sizeof(ClientInfo) + sizeof(struct ip) + server->bufferSize;
 
@@ -30,8 +33,11 @@ static inline void HandlePacketsServer(SwiftNetServer* server) {
 
         clientAddress.sin_port = clientInfo.source_port;
 
-        ClientAddrData sender = {clientAddress, clientAddressLen};
+        ClientAddrData sender;
     
+        sender.clientAddr = clientAddress;
+        sender.clientAddrLen = clientAddressLen;
+
         // Check if the packet is meant to be for this server
         if(clientInfo.destination_port != server->server_port) {
             continue;
@@ -40,9 +46,15 @@ static inline void HandlePacketsServer(SwiftNetServer* server) {
         // Execute function set by user
         server->packetHandler(buffer + sizeof(ClientInfo) + sizeof(struct ip), sender);
     }
-}
 
-static inline void HandlePacketsClient(SwiftNetClientConnection* client) {
+    return NULL;
+}
+)
+
+SwiftNetClientCode(
+void* SwiftNetHandlePackets(void* clientVoid) {
+    SwiftNetClientConnection* client = (SwiftNetClientConnection*)clientVoid;
+
     while(1) {
         uint8_t buffer[client->bufferSize + sizeof(ClientInfo) + sizeof(struct ip)];
     
@@ -70,17 +82,7 @@ static inline void HandlePacketsClient(SwiftNetClientConnection* client) {
         // Execute function set by user
         client->packetHandler(buffer + sizeof(ClientInfo) + sizeof(struct ip));
     }
-}
-
-void* SwiftNetHandlePackets(void* connection) {
- 
-    SwiftNetServerCode(
-        HandlePacketsServer(connection);
-    )
-
-    SwiftNetClientCode(
-        HandlePacketsClient(connection);
-    )
 
     return NULL;
 }
+)

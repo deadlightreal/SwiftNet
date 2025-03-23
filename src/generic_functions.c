@@ -33,7 +33,19 @@ void SwiftNetSetMessageHandler(void(*handler)(uint8_t* data), SwiftNetClientConn
 
 // Adjusts the buffer size for a network packet, reallocating memory as needed.
 
-static inline void SetBufferSizeServer(unsigned int newBufferSize, SwiftNetServer* server) {
+static inline void ValidateSetBufferSizeArgs(unsigned int size, void* con) {
+    if(unlikely(con == NULL || size == 0)) {
+        fprintf(stderr, "Error: Invalid arguments given to function set buffer size.\n");
+        exit(EXIT_FAILURE);
+    }
+}
+
+SwiftNetServerCode(
+void SwiftNetSetBufferSize(unsigned int newBufferSize, SwiftNetServer* server) {
+    SwiftNetDebug(
+        ValidateSetBufferSizeArgs(newBufferSize, server);
+    )
+
     server->bufferSize = newBufferSize;
 
     unsigned int currentDataPosition = server->packetAppendPointer - server->packetDataStart;
@@ -44,8 +56,14 @@ static inline void SetBufferSizeServer(unsigned int newBufferSize, SwiftNetServe
     server->packetDataStart = newDataPointer + sizeof(ClientInfo);
     server->packetAppendPointer = server->packetDataStart + currentDataPosition;
 }
+)
 
-static inline void SetBufferSizeClient(unsigned int newBufferSize, SwiftNetClientConnection* client) {
+SwiftNetClientCode(
+void SwiftNetSetBufferSize(unsigned int newBufferSize, SwiftNetClientConnection* client) {
+    SwiftNetDebug(
+        ValidateSetBufferSizeArgs(newBufferSize, client);
+    )
+
     client->bufferSize = newBufferSize;
 
     unsigned int currentDataPosition = client->packetAppendPointer - client->packetDataStart;
@@ -56,18 +74,4 @@ static inline void SetBufferSizeClient(unsigned int newBufferSize, SwiftNetClien
     client->packetDataStart = newDataPointer + sizeof(ClientInfo);
     client->packetAppendPointer = client->packetDataStart + currentDataPosition;
 }
-
-void SwiftNetSetBufferSize(unsigned int newBufferSize, void* connection) {
-    if(unlikely(connection == NULL || newBufferSize == 0)) {
-        fprintf(stderr, "Error: Invalid arguments given to function set buffer size.\n");
-        exit(EXIT_FAILURE);
-    }
-
-    SwiftNetServerCode(
-        SetBufferSizeServer(newBufferSize, connection);
-    )
-
-    SwiftNetClientCode(
-        SetBufferSizeClient(newBufferSize, connection);
-    )
-}
+)
