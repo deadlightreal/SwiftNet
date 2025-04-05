@@ -4,6 +4,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
+#include <time.h>
+#include <unistd.h>
 
 // These functions send the data from the packet buffer to the designated client or server.
 
@@ -20,9 +22,12 @@ void SwiftNetSendPacket(SwiftNetClientConnection* client) {
         NullCheckConnection(client);
     )
 
+    uint16_t packet_id = rand();
+
     PacketInfo packetInfo = {};
     packetInfo.client_info = client->clientInfo;
     packetInfo.packet_length = client->packet.packetAppendPointer - client->packet.packetDataStart;
+    packetInfo.packet_id = packet_id;
 
     memcpy(client->packet.packetBufferStart, &packetInfo, sizeof(PacketInfo));
 
@@ -34,10 +39,34 @@ void SwiftNetSendPacket(SwiftNetClientConnection* client) {
 
     printf("sent %d bytes\n", packetInfo.packet_length);
 
-    sendto(client->sockfd, client->packet.packetBufferStart, client->packet.packetAppendPointer - client->packet.packetBufferStart, 0, (const struct sockaddr *)&client->server_addr, sizeof(client->server_addr));
+    if(packetInfo.packet_length > 0x1000) {
+        uint8_t buffer[0x1000 + sizeof(PacketInfo)];
 
-    client->packet.packetAppendPointer = client->packet.packetDataStart;
-    client->packet.packetReadPointer = client->packet.packetDataStart;
+        memcpy(buffer, &packetInfo, sizeof(PacketInfo));
+
+        for(unsigned int currentOffset = 0; ; currentOffset += 0x1000) {
+            if(currentOffset + 0x1000 > packetInfo.packet_length) {
+                unsigned int bytesToSend = packetInfo.packet_length - currentOffset;
+
+                memcpy(&buffer[sizeof(PacketInfo)], client->packet.packetDataStart + currentOffset, bytesToSend);
+                sendto(client->sockfd, buffer, bytesToSend + sizeof(PacketInfo), 0, (const struct sockaddr *)&client->server_addr, sizeof(client->server_addr));
+                
+                break;
+            } else {
+                memcpy(&buffer[sizeof(PacketInfo)], client->packet.packetDataStart + currentOffset, 0x1000);
+                sendto(client->sockfd, buffer, sizeof(buffer), 0, (const struct sockaddr *)&client->server_addr, sizeof(client->server_addr));
+            }
+
+            printf("chunk sent\n");
+
+            usleep(10000);
+        }
+    } else {
+        sendto(client->sockfd, client->packet.packetBufferStart, client->packet.packetAppendPointer - client->packet.packetBufferStart, 0, (const struct sockaddr *)&client->server_addr, sizeof(client->server_addr));
+
+        client->packet.packetAppendPointer = client->packet.packetDataStart;
+        client->packet.packetReadPointer = client->packet.packetDataStart;
+    }
 }
 )
 

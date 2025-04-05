@@ -11,6 +11,10 @@
 
 SwiftNetClientConnection* con;
 
+void handler(uint8_t* data) {
+
+}
+
 int main() {
     InitializeSwiftNet();
 
@@ -26,7 +30,13 @@ int main() {
 
     con = SwiftNetCreateClient("192.168.1.64", 8080);
 
+    SwiftNetSetMessageHandler(handler, con);
+
     SwiftNetSetBufferSize(DATA_TO_SEND, con);
+
+    int zero = 0;
+
+    SwiftNetAppendToPacket(con, &zero, sizeof(int));
 
     SwiftNetSendPacket(con);
 

@@ -11,7 +11,7 @@
 #define MAX_SERVERS 0x0A
 #define MAX_TRANSFER_CLIENTS 0x0A
 
-#define DEFAULT_DATA_CHUNK_SIZE 0x2000
+#define DEFAULT_DATA_CHUNK_SIZE 0x1000
 
 #define unlikely(x) __builtin_expect((x), 0x00)
 #define likely(x) __builtin_expect((x), 0x01)
@@ -24,6 +24,7 @@ typedef struct {
 typedef struct {
     unsigned int packet_length;
     ClientInfo client_info;
+    uint16_t packet_id;
 } PacketInfo;
 
 typedef struct {
@@ -36,6 +37,7 @@ typedef struct {
 
 typedef struct {
     uint8_t* packetDataStart;
+    uint8_t* packetCurrentPointer;
     PacketInfo packetInfo;
     in_addr_t clientAddress;
 } TransferClient;

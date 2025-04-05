@@ -9,21 +9,43 @@
 // How to do it: Save all clients sending data in chunks, and when they send all the data execute the function handler
 
 SwiftNetServerCode(
-TransferClient* GetTransferClient(PacketInfo packetInfo, in_addr_t clientAddress, SwiftNetServer* server) {
-    const TransferClient zeroedTransferClient = {0x00};
-
+static inline TransferClient* GetTransferClient(PacketInfo packetInfo, in_addr_t clientAddress, SwiftNetServer* server) {
     TransferClient* emptyTransferClient = NULL;
 
     for(unsigned int i = 0; i < MAX_TRANSFER_CLIENTS; i++) {
         TransferClient* currentTransferClient = &server->transferClients[i];
 
-        if(currentTransferClient->packetInfo.client_info.source_port == packetInfo.client_info.source_port && clientAddress == currentTransferClient->clientAddress) {
+        if(currentTransferClient->packetInfo.client_info.source_port == packetInfo.client_info.source_port && clientAddress == currentTransferClient->clientAddress && packetInfo.packet_id == currentTransferClient->packetInfo.packet_id) {
             // Found a transfer client struct that is meant for this client
             return currentTransferClient;
         }
     }
 
     return NULL;
+}
+
+static inline TransferClient* CreateNewTransferClient(PacketInfo packetInfo, in_addr_t clientAddress, SwiftNetServer* server) {
+    const TransferClient emptyTransferClient = {0x00};
+
+    for(unsigned int i = 0; i < MAX_TRANSFER_CLIENTS; i++) {
+        TransferClient* currentTransferClient = &server->transferClients[i];
+
+        if(memcmp(&emptyTransferClient, currentTransferClient, sizeof(TransferClient)) == 0) {
+            // Found empty transfer client slot
+            currentTransferClient->clientAddress = clientAddress;
+            currentTransferClient->packetInfo = packetInfo;
+            
+            uint8_t* allocatedMem = malloc(packetInfo.packet_length);
+            
+            currentTransferClient->packetDataStart = allocatedMem;
+            currentTransferClient->packetCurrentPointer = allocatedMem;
+
+            return currentTransferClient;
+        }
+    }
+
+    fprintf(stderr, "Error: exceeded maximum number of transfer clients\n");
+    exit(EXIT_FAILURE);
 }
 
 void* SwiftNetHandlePackets(void* serverVoid) {
@@ -73,8 +95,14 @@ void* SwiftNetHandlePackets(void* serverVoid) {
         TransferClient* transferClient = GetTransferClient(packetInfo, clientAddress.sin_addr.s_addr, server);
 
         if(transferClient == NULL) {
+            printf("packet length: %d\n", packetInfo.packet_length);
             if(packetInfo.packet_length > server->dataChunkSize) {
-            
+                TransferClient* newlyCreatedTransferClient = CreateNewTransferClient(packetInfo, clientAddress.sin_addr.s_addr, server);
+
+                // Copy the data from buffer to the transfer client
+                memcpy(newlyCreatedTransferClient->packetCurrentPointer, &packetBuffer[headerSize], server->dataChunkSize);
+
+                newlyCreatedTransferClient->packetCurrentPointer += server->dataChunkSize;
             } else {
                 clientAddress.sin_port = packetInfo.client_info.source_port;
 
@@ -93,6 +121,33 @@ void* SwiftNetHandlePackets(void* serverVoid) {
 
                 // Execute function set by user
                 server->packetHandler(packetBuffer + headerSize, sender);
+            }
+        } else {
+            // Found a transfer client
+            unsigned int bytesNeededToCompletePacket = packetInfo.packet_length - (transferClient->packetCurrentPointer - transferClient->packetDataStart);
+
+            printf("Data received: %.2f\n", 1.0 - ((float)bytesNeededToCompletePacket / (float)packetInfo.packet_length));
+            printf("Bytes remaining: %d\n", bytesNeededToCompletePacket);
+
+            // If this chunk is the last to complpete the packet
+            if(bytesNeededToCompletePacket < server->dataChunkSize) {
+                memcpy(transferClient->packetCurrentPointer, &packetBuffer[headerSize], bytesNeededToCompletePacket);
+
+                ClientAddrData sender;
+                sender.clientAddr = clientAddress;
+                sender.clientAddrLen = clientAddressLen;
+
+                server->packetHandler(transferClient->packetDataStart, sender);
+
+                free(transferClient->packetDataStart);
+
+                memset(transferClient, 0x00, sizeof(TransferClient));
+
+                printf("Finished data receiving\n");
+            } else {
+                memcpy(transferClient->packetCurrentPointer, &packetBuffer[headerSize], server->dataChunkSize);
+
+                transferClient->packetCurrentPointer += server->dataChunkSize;
             }
         }
     }
