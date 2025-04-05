@@ -46,14 +46,14 @@ SwiftNetClientConnection* SwiftNetCreateClient(char* ip_address, int port) {
     emptyConnection->bufferSize = 1024;
 
     // Allocate memory for the packet buffer
-    uint8_t* dataPointer = (uint8_t*)malloc(emptyConnection->bufferSize + sizeof(ClientInfo));
+    uint8_t* dataPointer = (uint8_t*)malloc(emptyConnection->bufferSize + sizeof(PacketInfo));
     if(unlikely(dataPointer == NULL)) {
         perror("Failed to allocate memory for packet data\n");
         exit(EXIT_FAILURE);
     }
 
     emptyConnection->packet.packetBufferStart = dataPointer;
-    emptyConnection->packet.packetDataStart = dataPointer + sizeof(ClientInfo);
+    emptyConnection->packet.packetDataStart = dataPointer + sizeof(PacketInfo);
     emptyConnection->packet.packetAppendPointer= emptyConnection->packet.packetDataStart;
     emptyConnection->packet.packetReadPointer = emptyConnection->packet.packetDataStart;
 
@@ -61,6 +61,8 @@ SwiftNetClientConnection* SwiftNetCreateClient(char* ip_address, int port) {
     emptyConnection->server_addr.sin_family = AF_INET;
     emptyConnection->server_addr.sin_port = htons(port);
     emptyConnection->server_addr.sin_addr.s_addr = inet_addr(ip_address);
+
+    emptyConnection->dataChunkSize = DEFAULT_DATA_CHUNK_SIZE;
  
     pthread_create(&emptyConnection->handlePacketsThread, NULL, SwiftNetHandlePackets, emptyConnection);
 

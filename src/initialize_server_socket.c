@@ -57,6 +57,10 @@ SwiftNetServer* SwiftNetCreateServer(char* ip_address, uint16_t port) {
     emptyServer->packet.packetDataStart = dataPointer + sizeof(ClientInfo);
     emptyServer->packet.packetAppendPointer = emptyServer->packet.packetDataStart;
     emptyServer->packet.packetReadPointer = emptyServer->packet.packetDataStart;
+    emptyServer->dataChunkSize = DEFAULT_DATA_CHUNK_SIZE;
+
+    memset(emptyServer->transferClients, 0x00, sizeof(emptyServer->transferClients));
+    // Initialize transfer clients to NULL | 0x00
 
     // Create a new thread that will handle all packets received
     pthread_create(&emptyServer->handlePacketsThread, NULL, SwiftNetHandlePackets, emptyServer);

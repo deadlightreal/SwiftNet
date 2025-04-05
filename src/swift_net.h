@@ -1,12 +1,17 @@
 #pragma once
 
 #include <arpa/inet.h>
+#include <netinet/in.h>
 #include <stdint.h>
 #include <pthread.h>
 #include <string.h>
+#include <netinet/ip.h>
 
 #define MAX_CLIENT_CONNECTIONS 0x0A
 #define MAX_SERVERS 0x0A
+#define MAX_TRANSFER_CLIENTS 0x0A
+
+#define DEFAULT_DATA_CHUNK_SIZE 0x2000
 
 #define unlikely(x) __builtin_expect((x), 0x00)
 #define likely(x) __builtin_expect((x), 0x01)
@@ -17,12 +22,23 @@ typedef struct {
 } ClientInfo;
 
 typedef struct {
+    unsigned int packet_length;
+    ClientInfo client_info;
+} PacketInfo;
+
+typedef struct {
     unsigned int packetDataLen;
     uint8_t* packetBufferStart;   // Start of the allocated buffer
     uint8_t* packetDataStart;     // Start of the stored data
     uint8_t* packetAppendPointer; // Current position to append new data
     uint8_t* packetReadPointer;
 } Packet;
+
+typedef struct {
+    uint8_t* packetDataStart;
+    PacketInfo packetInfo;
+    in_addr_t clientAddress;
+} TransferClient;
 
 // Connection data
 typedef struct {
@@ -33,6 +49,7 @@ typedef struct {
     unsigned int bufferSize;
     pthread_t handlePacketsThread;
     Packet packet;
+    unsigned int dataChunkSize;
 } SwiftNetClientConnection;
 
 extern SwiftNetClientConnection SwiftNetClientConnections[MAX_CLIENT_CONNECTIONS];
@@ -49,6 +66,8 @@ typedef struct {
     void (*packetHandler)(uint8_t* data, ClientAddrData sender);
     pthread_t handlePacketsThread;
     Packet packet;
+    unsigned int dataChunkSize;
+    TransferClient transferClients[MAX_TRANSFER_CLIENTS];
 } SwiftNetServer;
 
 extern SwiftNetServer SwiftNetServers[MAX_SERVERS];

@@ -33,6 +33,18 @@ void SwiftNetSetMessageHandler(void(*handler)(uint8_t* data), SwiftNetClientConn
 
 // Adjusts the buffer size for a network packet, reallocating memory as needed.
 
+SwiftNetServerCode(
+void SwiftNetChangeDataChunkSize(SwiftNetServer* server, unsigned int chunkSize) {
+    server->dataChunkSize = chunkSize;
+}
+)
+
+SwiftNetClientCode(
+void SwiftNetChangeDataChunkSize(SwiftNetClientConnection* connection, unsigned int chunkSize) {
+    connection->dataChunkSize = chunkSize;
+}
+)
+
 static inline void ValidateSetBufferSizeArgs(unsigned int size, void* con) {
     if(unlikely(con == NULL || size == 0)) {
         fprintf(stderr, "Error: Invalid arguments given to function set buffer size.\n");

@@ -20,7 +20,19 @@ void SwiftNetSendPacket(SwiftNetClientConnection* client) {
         NullCheckConnection(client);
     )
 
-    memcpy(client->packet.packetBufferStart, &client->clientInfo, sizeof(ClientInfo));
+    PacketInfo packetInfo = {};
+    packetInfo.client_info = client->clientInfo;
+    packetInfo.packet_length = client->packet.packetAppendPointer - client->packet.packetDataStart;
+
+    memcpy(client->packet.packetBufferStart, &packetInfo, sizeof(PacketInfo));
+
+    printf("network data sent: ");
+    /*for(uint8_t i = 0; i < packetInfo.packet_length + sizeof(PacketInfo); i++) {
+        printf("0x%02X", client->packet.packetBufferStart[i]);
+    }*/
+    printf("\n");
+
+    printf("sent %d bytes\n", packetInfo.packet_length);
 
     sendto(client->sockfd, client->packet.packetBufferStart, client->packet.packetAppendPointer - client->packet.packetBufferStart, 0, (const struct sockaddr *)&client->server_addr, sizeof(client->server_addr));
 
