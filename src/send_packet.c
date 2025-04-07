@@ -6,6 +6,8 @@
 #include <errno.h>
 #include <time.h>
 #include <unistd.h>
+#include <arpa/inet.h>
+#include <netinet/ip.h>
 
 // These functions send the data from the packet buffer to the designated client or server.
 
@@ -17,6 +19,13 @@ static inline void NullCheckConnection(void* ptr) {
 }
 
 SwiftNetClientCode(
+static inline void WaitForNextChunkRequest() {
+    while(SwiftNetServerRequestedNextChunk == false) {
+    }
+
+    SwiftNetServerRequestedNextChunk = false;
+}
+
 void SwiftNetSendPacket(SwiftNetClientConnection* client) {
     SwiftNetErrorCheck(
         NullCheckConnection(client);
@@ -28,6 +37,7 @@ void SwiftNetSendPacket(SwiftNetClientConnection* client) {
     packetInfo.client_info = client->clientInfo;
     packetInfo.packet_length = client->packet.packetAppendPointer - client->packet.packetDataStart;
     packetInfo.packet_id = packet_id;
+    packetInfo.packet_type = PACKET_TYPE_MESSAGE;
 
     memcpy(client->packet.packetBufferStart, &packetInfo, sizeof(PacketInfo));
 
@@ -59,7 +69,7 @@ void SwiftNetSendPacket(SwiftNetClientConnection* client) {
 
             printf("chunk sent\n");
 
-            usleep(10000);
+            WaitForNextChunkRequest();
         }
     } else {
         sendto(client->sockfd, client->packet.packetBufferStart, client->packet.packetAppendPointer - client->packet.packetBufferStart, 0, (const struct sockaddr *)&client->server_addr, sizeof(client->server_addr));

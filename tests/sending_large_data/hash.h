@@ -1,6 +1,9 @@
 #pragma once
 
-#define DATA_TO_SEND 10000000 // 10mb
+#define DATA_TO_SEND 1000000000 // 1gb
+//#define DATA_TO_SEND 100000 // 100kb
+//#define DATA_TO_SEND 1000 // 100kb
+
 
 #include <stdint.h>
 #include <unistd.h>

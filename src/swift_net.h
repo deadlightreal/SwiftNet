@@ -6,10 +6,16 @@
 #include <pthread.h>
 #include <string.h>
 #include <netinet/ip.h>
+#include <stdbool.h>
 
 #define MAX_CLIENT_CONNECTIONS 0x0A
 #define MAX_SERVERS 0x0A
 #define MAX_TRANSFER_CLIENTS 0x0A
+
+#define PACKET_TYPE_MESSAGE 0x01
+#define PACKET_TYPE_SEND_NEXT_CHUNK 0x02
+
+#define PACKET_INFO_ID_NONE 0xFFFF
 
 #define DEFAULT_DATA_CHUNK_SIZE 0x1000
 
@@ -25,6 +31,7 @@ typedef struct {
     unsigned int packet_length;
     ClientInfo client_info;
     uint16_t packet_id;
+    uint8_t packet_type;
 } PacketInfo;
 
 typedef struct {
@@ -55,6 +62,7 @@ typedef struct {
 } SwiftNetClientConnection;
 
 extern SwiftNetClientConnection SwiftNetClientConnections[MAX_CLIENT_CONNECTIONS];
+extern bool SwiftNetServerRequestedNextChunk;
 
 typedef struct {
     struct sockaddr_in clientAddr;

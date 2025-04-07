@@ -21,12 +21,12 @@ int main() {
     uint8_t* data = malloc(DATA_TO_SEND);
 
     for(size_t i = 0; i < DATA_TO_SEND; i++) {
-        data[i] = rand() % 256;
+        data[i] = rand();
+
+        //printf("0x%02X ", data[i]);
     }
 
     unsigned long long hash = quickhash64(data, DATA_TO_SEND);
-
-    printf("hash sent: %llx\n", hash);
 
     con = SwiftNetCreateClient("192.168.1.64", 8080);
 
@@ -43,6 +43,11 @@ int main() {
     SwiftNetAppendToPacket(con, data, DATA_TO_SEND);
 
     SwiftNetSendPacket(con);
+
+    printf("random byte: %d\n", data[5]);
+
+    printf("hash sent: %llx\n", hash);
+    printf("hash sent: %llx\n", quickhash64(data, DATA_TO_SEND));
 
     free(data);
 

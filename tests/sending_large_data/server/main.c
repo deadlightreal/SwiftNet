@@ -28,7 +28,13 @@ void handleMessages(uint8_t* data, ClientAddrData sender) {
     clock_t end = clock();
     double timeTaken = (double)(end - start) / CLOCKS_PER_SEC;
 
+    printf("random byte: %d\n", data[5]);
+
     printf("time took to receive data: %f\n", timeTaken);
+
+    unsigned long long hash = quickhash64(data, DATA_TO_SEND);
+
+    printf("hash received: %llx\n", hash);
 
     exit(EXIT_SUCCESS);
 }

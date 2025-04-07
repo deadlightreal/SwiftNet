@@ -47,14 +47,14 @@ SwiftNetServer* SwiftNetCreateServer(char* ip_address, uint16_t port) {
     setsockopt(emptyServer->sockfd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
 
     // Allocate memory for the packet buffer
-    uint8_t* dataPointer = (uint8_t*)malloc(emptyServer->bufferSize + sizeof(ClientInfo));
+    uint8_t* dataPointer = (uint8_t*)malloc(emptyServer->bufferSize + sizeof(PacketInfo));
     if(unlikely(dataPointer == NULL)) {
         perror("Failed to allocate memory for packet data\n");
         exit(EXIT_FAILURE);
     }
 
     emptyServer->packet.packetBufferStart = dataPointer;
-    emptyServer->packet.packetDataStart = dataPointer + sizeof(ClientInfo);
+    emptyServer->packet.packetDataStart = dataPointer + sizeof(PacketInfo);
     emptyServer->packet.packetAppendPointer = emptyServer->packet.packetDataStart;
     emptyServer->packet.packetReadPointer = emptyServer->packet.packetDataStart;
     emptyServer->dataChunkSize = DEFAULT_DATA_CHUNK_SIZE;
