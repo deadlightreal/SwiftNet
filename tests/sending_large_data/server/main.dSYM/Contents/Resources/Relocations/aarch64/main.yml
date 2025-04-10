@@ -2,12 +2,12 @@
 triple:          'arm64-apple-darwin'
 binary-path:     main
 relocations:
-  - { offset: 0x26, size: 0x8, addend: 0x0, symName: _quickhash64, symObjAddr: 0x0, symBinAddr: 0x100002E64, symSize: 0x34 }
-  - { offset: 0x3F, size: 0x8, addend: 0x0, symName: _started, symObjAddr: 0x1A36, symBinAddr: 0x100009380, symSize: 0x0 }
-  - { offset: 0x69, size: 0x8, addend: 0x0, symName: _server, symBinAddr: 0x100009388, symSize: 0x0 }
-  - { offset: 0x3C6, size: 0x8, addend: 0x0, symName: _start, symBinAddr: 0x100009390, symSize: 0x0 }
-  - { offset: 0x3F3, size: 0x8, addend: 0x0, symName: _quickhash64, symObjAddr: 0x0, symBinAddr: 0x100002E64, symSize: 0x34 }
-  - { offset: 0x467, size: 0x8, addend: 0x0, symName: _handleMessages, symObjAddr: 0x34, symBinAddr: 0x100002E98, symSize: 0xD0 }
-  - { offset: 0x51C, size: 0x8, addend: 0x0, symName: _main, symObjAddr: 0x104, symBinAddr: 0x100002F68, symSize: 0x50 }
-  - { offset: 0x569, size: 0x8, addend: 0x0, symName: _main, symObjAddr: 0x104, symBinAddr: 0x100002F68, symSize: 0x50 }
+  - { offset: 0x26, size: 0x8, addend: 0x0, symName: _quickhash64, symObjAddr: 0x0, symBinAddr: 0x100002A9C, symSize: 0x34 }
+  - { offset: 0x3F, size: 0x8, addend: 0x0, symName: _started, symObjAddr: 0x1A56, symBinAddr: 0x1000096A0, symSize: 0x0 }
+  - { offset: 0x69, size: 0x8, addend: 0x0, symName: _server, symBinAddr: 0x1000096A8, symSize: 0x0 }
+  - { offset: 0x3D2, size: 0x8, addend: 0x0, symName: _start, symBinAddr: 0x1000096B0, symSize: 0x0 }
+  - { offset: 0x3FF, size: 0x8, addend: 0x0, symName: _quickhash64, symObjAddr: 0x0, symBinAddr: 0x100002A9C, symSize: 0x34 }
+  - { offset: 0x473, size: 0x8, addend: 0x0, symName: _handleMessages, symObjAddr: 0x34, symBinAddr: 0x100002AD0, symSize: 0xCC }
+  - { offset: 0x52F, size: 0x8, addend: 0x0, symName: _main, symObjAddr: 0x100, symBinAddr: 0x100002B9C, symSize: 0x4C }
+  - { offset: 0x57C, size: 0x8, addend: 0x0, symName: _main, symObjAddr: 0x100, symBinAddr: 0x100002B9C, symSize: 0x4C }
 ...

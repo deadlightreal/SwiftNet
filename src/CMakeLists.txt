@@ -13,6 +13,8 @@ set(SOURCE_FILES
     initialize_client_socket.c
     initialize_server_socket.c
     read_from_packet.c
+    internal/get_mtu.c
+    internal/get_default_interface.c
 )
 
 set(OBJ_DIR ${CMAKE_SOURCE_DIR}/../build)

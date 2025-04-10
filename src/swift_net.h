@@ -14,6 +14,7 @@
 
 #define PACKET_TYPE_MESSAGE 0x01
 #define PACKET_TYPE_SEND_NEXT_CHUNK 0x02
+#define PACKET_TYPE_REQUEST_INFORMATION 0x03
 
 #define PACKET_INFO_ID_NONE 0xFFFF
 
@@ -21,6 +22,8 @@
 
 #define unlikely(x) __builtin_expect((x), 0x00)
 #define likely(x) __builtin_expect((x), 0x01)
+
+extern unsigned int maximum_transmission_unit;
 
 typedef struct {
     uint16_t destination_port;
@@ -32,7 +35,12 @@ typedef struct {
     ClientInfo client_info;
     uint16_t packet_id;
     uint8_t packet_type;
+    unsigned int chunk_size;
 } PacketInfo;
+
+typedef struct {
+    unsigned int maximum_transmission_unit;
+} ServerInformation;
 
 typedef struct {
     unsigned int packetDataLen;
@@ -59,6 +67,7 @@ typedef struct {
     pthread_t handlePacketsThread;
     Packet packet;
     unsigned int dataChunkSize;
+    unsigned int maximum_transmission_unit;
 } SwiftNetClientConnection;
 
 extern SwiftNetClientConnection SwiftNetClientConnections[MAX_CLIENT_CONNECTIONS];

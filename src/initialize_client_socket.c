@@ -8,6 +8,7 @@
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include "swift_net.h"
+#include <fcntl.h>
 
 // Create the socket, and set client and server info
 SwiftNetClientConnection* SwiftNetCreateClient(char* ip_address, int port) {
@@ -43,7 +44,7 @@ SwiftNetClientConnection* SwiftNetCreateClient(char* ip_address, int port) {
     emptyConnection->packetHandler = NULL;
 
     // Base buffer size
-    emptyConnection->bufferSize = 1024;
+    emptyConnection->bufferSize = 0x400; // 1024
 
     // Allocate memory for the packet buffer
     uint8_t* dataPointer = (uint8_t*)malloc(emptyConnection->bufferSize + sizeof(PacketInfo));
@@ -63,6 +64,68 @@ SwiftNetClientConnection* SwiftNetCreateClient(char* ip_address, int port) {
     emptyConnection->server_addr.sin_addr.s_addr = inet_addr(ip_address);
 
     emptyConnection->dataChunkSize = DEFAULT_DATA_CHUNK_SIZE;
+
+    // Request the server information, and proccess it
+    uint8_t request_information_data[sizeof(PacketInfo)];
+
+    PacketInfo packetInfo;
+    packetInfo.client_info = emptyConnection->clientInfo;
+    packetInfo.packet_length = 0;
+    packetInfo.packet_id = rand();
+    packetInfo.packet_type = PACKET_TYPE_REQUEST_INFORMATION;
+
+    memcpy(request_information_data, &packetInfo, sizeof(PacketInfo));
+
+    /*int flags = fcntl(emptyConnection->sockfd, F_GETFL, 0);  // Get current flags
+    if (flags == -1) {
+        perror("fcntl F_GETFL");
+        exit(EXIT_FAILURE);
+    }
+
+    int new_flags = flags |= O_NONBLOCK;  // Add O_NONBLOCK to the flags
+    if (fcntl(emptyConnection->sockfd, F_SETFL, new_flags) == -1) {  // Set the socket to non-blocking mode
+        perror("fcntl F_SETFL");
+        exit(EXIT_FAILURE);
+    }*/
+
+    uint8_t server_information_buffer[sizeof(PacketInfo) + sizeof(ServerInformation) + sizeof(struct ip)];
+
+    socklen_t server_addr_len = sizeof(emptyConnection->server_addr);
+
+    bool received = false;
+
+    while(received == false) {
+        printf("sending request to get info from server\n");
+
+        sendto(emptyConnection->sockfd, request_information_data, sizeof(request_information_data), 0, (struct sockaddr *)&emptyConnection->server_addr, sizeof(emptyConnection->server_addr));
+
+        for(uint8_t i = 0; i < 10; i++) {
+            int bytes_received = recvfrom(emptyConnection->sockfd, server_information_buffer, sizeof(server_information_buffer), 0, (struct sockaddr *)&emptyConnection->server_addr, &server_addr_len);
+
+            PacketInfo* packetInfo = (PacketInfo *)&server_information_buffer[sizeof(struct ip)];
+
+            if(packetInfo->client_info.destination_port != emptyConnection->clientInfo.source_port || packetInfo->client_info.source_port != emptyConnection->clientInfo.destination_port) {
+                continue;
+            }
+            
+            if(bytes_received != 0) {
+                received = true;
+                break;
+            }
+            
+            usleep(1000000);
+        }
+    }
+
+    ServerInformation* server_information = (ServerInformation*)&server_information_buffer[sizeof(PacketInfo) + sizeof(struct ip)];
+
+    emptyConnection->maximum_transmission_unit = server_information->maximum_transmission_unit;
+    printf("server mtu: %d\n", server_information->maximum_transmission_unit);
+
+    /*if (fcntl(emptyConnection->sockfd, F_SETFL, flags) == -1) {  // Set the socket back to blocking mode
+        perror("fcntl F_SETFL");
+        exit(EXIT_FAILURE);
+    }*/
  
     pthread_create(&emptyConnection->handlePacketsThread, NULL, SwiftNetHandlePackets, emptyConnection);
 

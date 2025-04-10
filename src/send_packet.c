@@ -33,10 +33,13 @@ void SwiftNetSendPacket(SwiftNetClientConnection* client) {
 
     uint16_t packet_id = rand();
 
+    unsigned int mtu = maximum_transmission_unit >= client->maximum_transmission_unit ? client->maximum_transmission_unit : maximum_transmission_unit;
+
     PacketInfo packetInfo = {};
     packetInfo.client_info = client->clientInfo;
     packetInfo.packet_length = client->packet.packetAppendPointer - client->packet.packetDataStart;
     packetInfo.packet_id = packet_id;
+    packetInfo.chunk_size = mtu;
     packetInfo.packet_type = PACKET_TYPE_MESSAGE;
 
     memcpy(client->packet.packetBufferStart, &packetInfo, sizeof(PacketInfo));
@@ -49,13 +52,13 @@ void SwiftNetSendPacket(SwiftNetClientConnection* client) {
 
     printf("sent %d bytes\n", packetInfo.packet_length);
 
-    if(packetInfo.packet_length > 0x1000) {
-        uint8_t buffer[0x1000 + sizeof(PacketInfo)];
+    if(packetInfo.packet_length > mtu) {
+        uint8_t buffer[mtu + sizeof(PacketInfo)];
 
         memcpy(buffer, &packetInfo, sizeof(PacketInfo));
 
-        for(unsigned int currentOffset = 0; ; currentOffset += 0x1000) {
-            if(currentOffset + 0x1000 > packetInfo.packet_length) {
+        for(unsigned int currentOffset = 0; ; currentOffset += mtu) {
+            if(currentOffset + mtu > packetInfo.packet_length) {
                 unsigned int bytesToSend = packetInfo.packet_length - currentOffset;
 
                 memcpy(&buffer[sizeof(PacketInfo)], client->packet.packetDataStart + currentOffset, bytesToSend);
@@ -63,7 +66,7 @@ void SwiftNetSendPacket(SwiftNetClientConnection* client) {
                 
                 break;
             } else {
-                memcpy(&buffer[sizeof(PacketInfo)], client->packet.packetDataStart + currentOffset, 0x1000);
+                memcpy(&buffer[sizeof(PacketInfo)], client->packet.packetDataStart + currentOffset, mtu);
                 sendto(client->sockfd, buffer, sizeof(buffer), 0, (const struct sockaddr *)&client->server_addr, sizeof(client->server_addr));
             }
 

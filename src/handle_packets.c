@@ -1,12 +1,11 @@
 #include "swift_net.h"
+#include <stdatomic.h>
 #include <stdio.h>
 #include <unistd.h>
 #include <string.h>
 #include <stdlib.h>
 #include <netinet/ip.h>
-
-// Todo: Implement receiving data in chunks - 0x2000 | 8192 bytes -- can manually modify using a function
-// How to do it: Save all clients sending data in chunks, and when they send all the data execute the function handler
+#include "internal/internal.h"
 
 SwiftNetServerCode(
 static inline TransferClient* GetTransferClient(PacketInfo packetInfo, in_addr_t clientAddress, SwiftNetServer* server) {
@@ -106,6 +105,31 @@ void* SwiftNetHandlePackets(void* serverVoid) {
             exit(EXIT_FAILURE);
         }
 
+        if(packetInfo.packet_type == PACKET_TYPE_REQUEST_INFORMATION) {
+            ClientInfo clientInfo;
+            clientInfo.destination_port = packetInfo.client_info.source_port;
+            clientInfo.source_port = server->server_port;
+
+            PacketInfo packetInfoNew;
+            packetInfoNew.client_info = clientInfo;
+            packetInfoNew.packet_type = PACKET_TYPE_REQUEST_INFORMATION;
+            packetInfoNew.packet_length = sizeof(ServerInformation);
+            packetInfoNew.packet_id = rand();
+
+            uint8_t sendBuffer[sizeof(packetInfo) + sizeof(ServerInformation)];
+            
+            ServerInformation serverInformation;
+
+            serverInformation.maximum_transmission_unit = maximum_transmission_unit;
+
+            memcpy(sendBuffer, &packetInfoNew, sizeof(packetInfoNew));
+            memcpy(&sendBuffer[sizeof(packetInfoNew)], &serverInformation, sizeof(serverInformation));
+
+            sendto(server->sockfd, sendBuffer, sizeof(sendBuffer), 0, (struct sockaddr *)&clientAddress, clientAddressLen);
+
+            continue;
+        }
+
         clientAddress.sin_port = packetInfo.client_info.source_port;
 
         ClientAddrData sender;
@@ -114,15 +138,17 @@ void* SwiftNetHandlePackets(void* serverVoid) {
 
         TransferClient* transferClient = GetTransferClient(packetInfo, clientAddress.sin_addr.s_addr, server);
 
+        printf("chunk size: %d\n", packetInfo.chunk_size);
+
         if(transferClient == NULL) {
             printf("packet length: %d\n", packetInfo.packet_length);
-            if(packetInfo.packet_length > server->dataChunkSize) {
+            if(packetInfo.packet_length > packetInfo.chunk_size) {
                 TransferClient* newlyCreatedTransferClient = CreateNewTransferClient(packetInfo, clientAddress.sin_addr.s_addr, server);
 
                 // Copy the data from buffer to the transfer client
-                memcpy(newlyCreatedTransferClient->packetCurrentPointer, &packetBuffer[headerSize], server->dataChunkSize);
+                memcpy(newlyCreatedTransferClient->packetCurrentPointer, &packetBuffer[headerSize], packetInfo.chunk_size);
 
-                newlyCreatedTransferClient->packetCurrentPointer += server->dataChunkSize;
+                newlyCreatedTransferClient->packetCurrentPointer += packetInfo.chunk_size;
 
                 RequestNextChunk(server, sender);
             } else {
