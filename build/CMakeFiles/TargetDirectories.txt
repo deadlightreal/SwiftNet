@@ -1,0 +1,5 @@
+/Users/admin/Desktop/socket-protocol/build/CMakeFiles/swift_net_client.dir
+/Users/admin/Desktop/socket-protocol/build/CMakeFiles/swift_net_server.dir
+/Users/admin/Desktop/socket-protocol/build/CMakeFiles/clean_objects.dir
+/Users/admin/Desktop/socket-protocol/build/CMakeFiles/edit_cache.dir
+/Users/admin/Desktop/socket-protocol/build/CMakeFiles/rebuild_cache.dir

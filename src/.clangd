@@ -1,3 +1,4 @@
 CompileFlags:
     Add:
+        #- "-DSWIFT_NET_SERVER"
         - "-DSWIFT_NET_CLIENT"

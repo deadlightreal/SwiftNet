@@ -46,153 +46,34 @@ static inline TransferClient* CreateNewTransferClient(PacketInfo packetInfo, in_
     fprintf(stderr, "Error: exceeded maximum number of transfer clients\n");
     exit(EXIT_FAILURE);
 }
+)
 
-static inline void RequestNextChunk(SwiftNetServer* server, ClientAddrData client) {
-    PacketInfo packetInfo;
-    packetInfo.packet_id = PACKET_INFO_ID_NONE;
-    packetInfo.packet_length = 0;
-    packetInfo.packet_type = PACKET_TYPE_SEND_NEXT_CHUNK;
+SwiftNetClientCode(
+static inline PendingMessage* GetPendingMessage(PacketInfo* packetInfo, PendingMessage* pending_messages, uint16_t pending_messages_size) {
+    for(uint16_t i = 0; i < pending_messages_size; i++) {
+        PendingMessage* current_pending_message = &pending_messages[i];
 
-    packetInfo.client_info.source_port = server->server_port;
-    packetInfo.client_info.destination_port = client.clientAddr.sin_port;
+        if(current_pending_message->packetInfo.packet_id == packetInfo->packet_id && current_pending_message->packetInfo.packet_length == packetInfo->packet_length) {
+            return current_pending_message;
+        }
+    }
 
-    sendto(server->sockfd, &packetInfo, sizeof(PacketInfo), 0, (const struct sockaddr *)&client.clientAddr, client.clientAddrLen);
-
-    printf("requested next chunk\n");
+    return NULL;
 }
 
-void* SwiftNetHandlePackets(void* serverVoid) {
-    SwiftNetServer* server = (SwiftNetServer*)serverVoid;
+static inline PendingMessage* CreateNewPendingMessage(PendingMessage* pending_messages, uint16_t pending_messages_size, PacketInfo* packet_info) {
+    for(uint16_t i = 0; i < pending_messages_size; i++) {
+        PendingMessage* current_pending_message = &pending_messages[i];
 
-    const unsigned int headerSize = sizeof(PacketInfo) + sizeof(struct ip);
-    const unsigned int totalBufferSize = headerSize + server->dataChunkSize;
+        if(current_pending_message->packet_current_pointer == NULL) {
+            current_pending_message->packetInfo = *packet_info;
 
-    uint8_t packetBuffer[totalBufferSize];
+            uint8_t* allocated_memory = malloc(packet_info->packet_length);
 
-    while(1) {
-        struct sockaddr_in clientAddress;
-        socklen_t clientAddressLen = sizeof(clientAddress);
-    
-        recvfrom(server->sockfd, packetBuffer, sizeof(packetBuffer), 0, (struct sockaddr *)&clientAddress, &clientAddressLen);
+            current_pending_message->packet_data_start = allocated_memory;
+            current_pending_message->packet_current_pointer = allocated_memory;
 
-        printf("header: ");
-        for(unsigned int i = 0; i < headerSize; i++) {
-            printf("0x%02X ", packetBuffer[i]);
-        }
-        printf("\n");
-
-        // Check if user set a function that will execute with the packet data received as arg
-        SwiftNetErrorCheck(
-            if(unlikely(server->packetHandler == NULL)) {
-                fprintf(stderr, "Message Handler not net on server!!!!\n");
-                exit(EXIT_FAILURE);;
-            }
-        )
-
-        struct ip ipHeader;
-        memcpy(&ipHeader, packetBuffer, sizeof(ipHeader));
-
-        PacketInfo packetInfo;
-        memcpy(&packetInfo, &packetBuffer[sizeof(ipHeader)], sizeof(PacketInfo));
-
-        // Check if the packet is meant to be for this server
-        if(packetInfo.client_info.destination_port != server->server_port) {
-            continue;
-        }
-
-        if(unlikely(packetInfo.packet_length > server->bufferSize)) {
-            fprintf(stderr, "Data received is larger than buffer size!\n");
-            exit(EXIT_FAILURE);
-        }
-
-        if(packetInfo.packet_type == PACKET_TYPE_REQUEST_INFORMATION) {
-            ClientInfo clientInfo;
-            clientInfo.destination_port = packetInfo.client_info.source_port;
-            clientInfo.source_port = server->server_port;
-
-            PacketInfo packetInfoNew;
-            packetInfoNew.client_info = clientInfo;
-            packetInfoNew.packet_type = PACKET_TYPE_REQUEST_INFORMATION;
-            packetInfoNew.packet_length = sizeof(ServerInformation);
-            packetInfoNew.packet_id = rand();
-
-            uint8_t sendBuffer[sizeof(packetInfo) + sizeof(ServerInformation)];
-            
-            ServerInformation serverInformation;
-
-            serverInformation.maximum_transmission_unit = maximum_transmission_unit;
-
-            memcpy(sendBuffer, &packetInfoNew, sizeof(packetInfoNew));
-            memcpy(&sendBuffer[sizeof(packetInfoNew)], &serverInformation, sizeof(serverInformation));
-
-            sendto(server->sockfd, sendBuffer, sizeof(sendBuffer), 0, (struct sockaddr *)&clientAddress, clientAddressLen);
-
-            continue;
-        }
-
-        clientAddress.sin_port = packetInfo.client_info.source_port;
-
-        ClientAddrData sender;
-        sender.clientAddr = clientAddress;
-        sender.clientAddrLen = clientAddressLen; 
-
-        TransferClient* transferClient = GetTransferClient(packetInfo, clientAddress.sin_addr.s_addr, server);
-
-        printf("chunk size: %d\n", packetInfo.chunk_size);
-
-        if(transferClient == NULL) {
-            printf("packet length: %d\n", packetInfo.packet_length);
-            if(packetInfo.packet_length > packetInfo.chunk_size) {
-                TransferClient* newlyCreatedTransferClient = CreateNewTransferClient(packetInfo, clientAddress.sin_addr.s_addr, server);
-
-                // Copy the data from buffer to the transfer client
-                memcpy(newlyCreatedTransferClient->packetCurrentPointer, &packetBuffer[headerSize], packetInfo.chunk_size);
-
-                newlyCreatedTransferClient->packetCurrentPointer += packetInfo.chunk_size;
-
-                RequestNextChunk(server, sender);
-            } else {
-                printf("data: ");
-                for(unsigned int i = headerSize; i < headerSize + packetInfo.packet_length; i++) {
-                    printf("0x%02X ", packetBuffer[i]);
-                }
-                printf("\n");
-
-                ClientAddrData sender;
-    
-                sender.clientAddr = clientAddress;
-                sender.clientAddrLen = clientAddressLen;
-
-                server->packet.packetDataLen = packetInfo.packet_length;
-
-                // Execute function set by user
-                server->packetHandler(packetBuffer + headerSize, sender);
-            }
-        } else {
-            // Found a transfer client
-            unsigned int bytesNeededToCompletePacket = packetInfo.packet_length - (transferClient->packetCurrentPointer - transferClient->packetDataStart);
-
-            printf("Data received: %.2f\n", 1.0 - ((float)bytesNeededToCompletePacket / (float)packetInfo.packet_length));
-            printf("Bytes remaining: %d\n", bytesNeededToCompletePacket);
-
-            // If this chunk is the last to complpete the packet
-            if(bytesNeededToCompletePacket < server->dataChunkSize) {
-                memcpy(transferClient->packetCurrentPointer, &packetBuffer[headerSize], bytesNeededToCompletePacket);
-
-                server->packetHandler(transferClient->packetDataStart, sender);
-
-                free(transferClient->packetDataStart);
-
-                memset(transferClient, 0x00, sizeof(TransferClient));
-
-                printf("Finished data receiving\n");
-            } else {
-                memcpy(transferClient->packetCurrentPointer, &packetBuffer[headerSize], server->dataChunkSize);
-
-                transferClient->packetCurrentPointer += server->dataChunkSize;
-
-                RequestNextChunk(server, sender);
-            }
+            return current_pending_message;
         }
     }
 
@@ -200,6 +81,257 @@ void* SwiftNetHandlePackets(void* serverVoid) {
 }
 )
 
+static inline void RequestNextChunk(CONNECTION_TYPE* connection, uint16_t packet_id EXTRA_REQUEST_NEXT_CHUNK_ARG) {
+    PacketInfo packetInfo;
+    packetInfo.packet_id = packet_id;
+    packetInfo.packet_length = 0;
+    packetInfo.packet_type = PACKET_TYPE_SEND_NEXT_CHUNK;
+
+    SwiftNetServerCode(
+        const uint16_t source_port = connection->server_port;
+        const uint16_t destination_port = target.clientAddr.sin_port;
+        const int sockfd = connection->sockfd;
+        const struct sockaddr_in* target_sock_addr = &target.clientAddr;
+        const socklen_t socklen = target.clientAddrLen;
+    )
+
+    SwiftNetClientCode(
+        const uint16_t source_port = connection->clientInfo.source_port;
+        const uint16_t destination_port = connection->clientInfo.destination_port;
+        const int sockfd = connection->sockfd;
+        const struct sockaddr_in* target_sock_addr = &connection->server_addr;
+        const socklen_t socklen = sizeof(connection->server_addr);
+    )
+
+    packetInfo.client_info.source_port = source_port;
+    packetInfo.client_info.destination_port = destination_port;
+
+    sendto(sockfd, &packetInfo, sizeof(PacketInfo), 0, (const struct sockaddr *)target_sock_addr, socklen);
+
+}
+
+static inline PacketSending* GetPacketSending(PacketSending* packet_sending_array, const uint16_t size, const uint16_t target_id) {
+    for(uint16_t i = 0; i < size; i++) {
+        PacketSending* current_packet_sending = &packet_sending_array[i];
+        if(current_packet_sending->packet_id == target_id) {
+            return current_packet_sending;
+        }
+    }
+
+    return NULL;
+}
+
+void* SwiftNetHandlePackets(void* void_connection) {
+    const unsigned int header_size = sizeof(PacketInfo) + sizeof(struct ip);
+
+    SwiftNetServerCode(
+        SwiftNetServer* server = (SwiftNetServer*)void_connection;
+
+        void** packetHandler = (void**)&server->packetHandler;
+
+        const unsigned min_mtu = maximum_transmission_unit;
+        const int sockfd = server->sockfd;
+        const uint16_t source_port = server->server_port;
+        const unsigned int* buffer_size = &server->bufferSize;
+        PacketSending* packet_sending = server->packets_sending;
+        const uint16_t packet_sending_size = MAX_PACKETS_SENDING;
+    )
+
+    SwiftNetClientCode(
+        SwiftNetClientConnection* connection = (SwiftNetClientConnection*)void_connection;
+
+        void** packetHandler = (void**)&connection->packetHandler;
+
+        unsigned int min_mtu = MIN(maximum_transmission_unit, connection->maximum_transmission_unit);
+        const int sockfd = connection->sockfd;
+        const uint16_t source_port = connection->clientInfo.source_port;
+        const unsigned int* buffer_size = &connection->bufferSize;
+        PacketSending* packet_sending = connection->packets_sending;
+        const uint16_t packet_sending_size = MAX_PACKETS_SENDING;
+    )
+
+    const unsigned int total_buffer_size = header_size + min_mtu;
+
+    uint8_t packet_buffer[total_buffer_size];
+
+    struct sockaddr_in client_address;
+    socklen_t client_address_len = sizeof(client_address);
+
+    while(1) {
+        recvfrom(sockfd, packet_buffer, sizeof(packet_buffer), 0, (struct sockaddr *)&client_address, &client_address_len);
+
+        // Check if user set a function that will execute with the packet data received as arg
+        SwiftNetErrorCheck(
+            if(unlikely(*packetHandler == NULL)) {
+                fprintf(stderr, "Message Handler not set!!\n");
+                exit(EXIT_FAILURE);;
+            }
+        )
+
+        struct ip ip_header;
+        memcpy(&ip_header, packet_buffer, sizeof(ip_header));
+
+        PacketInfo packet_info;
+        memcpy(&packet_info, &packet_buffer[sizeof(ip_header)], sizeof(PacketInfo));
+
+        // Check if the packet is meant to be for this server
+        if(packet_info.client_info.destination_port != source_port) {
+            continue;
+        }
+
+        if(unlikely(packet_info.packet_length > *buffer_size)) {
+            fprintf(stderr, "Data received is larger than buffer size!\n");
+            exit(EXIT_FAILURE);
+        }
+
+        printf("got packet\n");
+
+        switch(packet_info.packet_type) {
+            case PACKET_TYPE_REQUEST_INFORMATION:
+                {
+                    ClientInfo client_info;
+                    client_info.destination_port = packet_info.client_info.source_port;
+                    client_info.source_port = source_port;
+        
+                    PacketInfo packet_info_new;
+                    packet_info_new.client_info = client_info;
+                    packet_info_new.packet_type = PACKET_TYPE_REQUEST_INFORMATION;
+                    packet_info_new.packet_length = sizeof(ServerInformation);
+                    packet_info_new.packet_id = rand();
+        
+                    uint8_t send_buffer[sizeof(packet_info) + sizeof(ServerInformation)];
+                    
+                    ServerInformation server_information;
+        
+                    server_information.maximum_transmission_unit = maximum_transmission_unit;
+        
+                    memcpy(send_buffer, &packet_info_new, sizeof(packet_info_new));
+                    memcpy(&send_buffer[sizeof(packet_info_new)], &server_information, sizeof(server_information));
+        
+                    sendto(sockfd, send_buffer, sizeof(send_buffer), 0, (struct sockaddr *)&client_address, client_address_len);
+        
+                    goto next_packet;
+                }
+            case PACKET_TYPE_SEND_NEXT_CHUNK:
+                {
+                    PacketSending* target_packet_sending = GetPacketSending(packet_sending, packet_sending_size, packet_info.packet_id);
+                    if(unlikely(target_packet_sending == NULL)) {
+                        fprintf(stderr, "Got message to send an unknown packet\n");
+                        goto next_packet;
+                    }
+
+                    target_packet_sending->requested_next_chunk = true;
+
+                    goto next_packet;
+                }
+        }
+
+        client_address.sin_port = packet_info.client_info.source_port;
+
+        ClientAddrData sender;
+        sender.clientAddr = client_address;
+        sender.clientAddrLen = client_address_len;
+        sender.maximum_transmission_unit = packet_info.chunk_size;
+
+        unsigned int mtu = MIN(packet_info.chunk_size, maximum_transmission_unit);
+        const unsigned int chunk_data_size = mtu - sizeof(PacketInfo);
+        
+        SwiftNetServerCode(
+            TransferClient* transfer_client = GetTransferClient(packet_info, client_address.sin_addr.s_addr, server);
+
+            if(transfer_client == NULL) {
+                if(packet_info.packet_length + header_size > mtu) {
+    
+                    TransferClient* newlyCreatedTransferClient = CreateNewTransferClient(packet_info, client_address.sin_addr.s_addr, server);
+    
+                    // Copy the data from buffer to the transfer client
+                    memcpy(newlyCreatedTransferClient->packetCurrentPointer, &packet_buffer[header_size], chunk_data_size);
+    
+                    newlyCreatedTransferClient->packetCurrentPointer += chunk_data_size;
+    
+                    RequestNextChunk(server, packet_info.packet_id, sender);
+                } else {
+                    ClientAddrData sender;
+        
+                    sender.clientAddr = client_address;
+                    sender.clientAddrLen = client_address_len;
+    
+                    server->packet.packetDataLen = packet_info.packet_length;
+    
+                    // Execute function set by user
+                    server->packetHandler(packet_buffer + header_size, sender);
+                }
+            } else {
+                // Found a transfer client
+                unsigned int bytes_needed_to_complete_packet = packet_info.packet_length - (transfer_client->packetCurrentPointer - transfer_client->packetDataStart);
+
+                printf("percentage transmitted: %f\n", 1 - ((float)bytes_needed_to_complete_packet / packet_info.packet_length));
+    
+                // If this chunk is the last to complpete the packet
+                if(bytes_needed_to_complete_packet < mtu) {
+                    memcpy(transfer_client->packetCurrentPointer, &packet_buffer[header_size], bytes_needed_to_complete_packet);
+    
+                    server->packetHandler(transfer_client->packetDataStart, sender);
+    
+                    free(transfer_client->packetDataStart);
+    
+                    memset(transfer_client, 0x00, sizeof(TransferClient));
+                } else {
+                    memcpy(transfer_client->packetCurrentPointer, &packet_buffer[header_size], chunk_data_size);
+    
+                    transfer_client->packetCurrentPointer += chunk_data_size;
+    
+                    RequestNextChunk(server, packet_info.packet_id, sender);
+                }
+            }
+        )
+
+        SwiftNetClientCode(
+            PendingMessage* pending_message = GetPendingMessage(&packet_info, connection->pending_messages, MAX_PENDING_MESSAGES);
+
+            if(pending_message == NULL) {
+                if(packet_info.packet_length + header_size > mtu) {
+                    // Split packet into chunks
+                    PendingMessage* new_pending_message = CreateNewPendingMessage(connection->pending_messages, MAX_PENDING_MESSAGES, &packet_info);
+                    
+                    memcpy(new_pending_message->packet_current_pointer, &packet_buffer[header_size], chunk_data_size);
+
+                    RequestNextChunk(connection, packet_info.packet_id);
+                } else {
+                    connection->packetHandler(packet_buffer);
+
+                    continue;
+                }
+            } else {
+                unsigned int bytes_needed_to_complete_packet = packet_info.packet_length - (pending_message->packet_current_pointer - pending_message->packet_data_start);
+
+                if(bytes_needed_to_complete_packet < mtu) {
+                    // Completed the packet
+                    memcpy(pending_message->packet_current_pointer, &packet_buffer[header_size], bytes_needed_to_complete_packet);
+
+                    connection->packetHandler(pending_message->packet_data_start);
+
+                    free(pending_message->packet_data_start);
+
+                    memset(pending_message, 0x00, sizeof(PendingMessage));
+                } else {
+                    memcpy(pending_message->packet_current_pointer, &packet_buffer[header_size], chunk_data_size);
+
+                    pending_message->packet_current_pointer += chunk_data_size;
+
+                    RequestNextChunk(connection, packet_info.packet_id);
+                }
+            }
+        )
+
+        next_packet:
+        
+        continue;
+    }
+
+    return NULL;
+}
+/*
 SwiftNetClientCode(
 void* SwiftNetHandlePackets(void* clientVoid) {
     SwiftNetClientConnection* client = (SwiftNetClientConnection*)clientVoid;
@@ -209,7 +341,6 @@ void* SwiftNetHandlePackets(void* clientVoid) {
 
     uint8_t packetBuffer[totalBufferSize];
 
-    printf("checking for messages from server\n");
 
     while(1) {
         recvfrom(client->sockfd, packetBuffer, sizeof(packetBuffer), 0, NULL, NULL);
@@ -230,7 +361,6 @@ void* SwiftNetHandlePackets(void* clientVoid) {
 
         client->packet.packetDataLen = packetInfo.packet_length;
 
-        printf("got message from server from %d to %d\n", packetInfo.client_info.source_port, packetInfo.client_info.destination_port);
 
         // Check if the packet is meant to be for this client
         if(packetInfo.client_info.destination_port != client->clientInfo.source_port) {
@@ -249,3 +379,4 @@ void* SwiftNetHandlePackets(void* clientVoid) {
     return NULL;
 }
 )
+*/

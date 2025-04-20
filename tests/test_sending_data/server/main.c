@@ -10,6 +10,7 @@
 SwiftNetServer* server;
 
 void handleMessages(uint8_t* data, ClientAddrData sender) {
+    printf("got a message : %s\n", data);
 }
 
 int main() {

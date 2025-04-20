@@ -55,6 +55,8 @@ SwiftNetClientConnection* SwiftNetCreateClient(char* ip_address, int port) {
 
     emptyConnection->packet.packetBufferStart = dataPointer;
     emptyConnection->packet.packetDataStart = dataPointer + sizeof(PacketInfo);
+    
+
     emptyConnection->packet.packetAppendPointer= emptyConnection->packet.packetDataStart;
     emptyConnection->packet.packetReadPointer = emptyConnection->packet.packetDataStart;
 
@@ -62,8 +64,6 @@ SwiftNetClientConnection* SwiftNetCreateClient(char* ip_address, int port) {
     emptyConnection->server_addr.sin_family = AF_INET;
     emptyConnection->server_addr.sin_port = htons(port);
     emptyConnection->server_addr.sin_addr.s_addr = inet_addr(ip_address);
-
-    emptyConnection->dataChunkSize = DEFAULT_DATA_CHUNK_SIZE;
 
     // Request the server information, and proccess it
     uint8_t request_information_data[sizeof(PacketInfo)];
@@ -75,6 +75,9 @@ SwiftNetClientConnection* SwiftNetCreateClient(char* ip_address, int port) {
     packetInfo.packet_type = PACKET_TYPE_REQUEST_INFORMATION;
 
     memcpy(request_information_data, &packetInfo, sizeof(PacketInfo));
+
+    memset(emptyConnection->pending_messages, 0, MAX_PENDING_MESSAGES * sizeof(PendingMessage));
+    memset(emptyConnection->packets_sending, 0, MAX_PACKETS_SENDING * sizeof(PacketSending));
 
     /*int flags = fcntl(emptyConnection->sockfd, F_GETFL, 0);  // Get current flags
     if (flags == -1) {
@@ -95,7 +98,6 @@ SwiftNetClientConnection* SwiftNetCreateClient(char* ip_address, int port) {
     bool received = false;
 
     while(received == false) {
-        printf("sending request to get info from server\n");
 
         sendto(emptyConnection->sockfd, request_information_data, sizeof(request_information_data), 0, (struct sockaddr *)&emptyConnection->server_addr, sizeof(emptyConnection->server_addr));
 
@@ -120,7 +122,6 @@ SwiftNetClientConnection* SwiftNetCreateClient(char* ip_address, int port) {
     ServerInformation* server_information = (ServerInformation*)&server_information_buffer[sizeof(PacketInfo) + sizeof(struct ip)];
 
     emptyConnection->maximum_transmission_unit = server_information->maximum_transmission_unit;
-    printf("server mtu: %d\n", server_information->maximum_transmission_unit);
 
     /*if (fcntl(emptyConnection->sockfd, F_SETFL, flags) == -1) {  // Set the socket back to blocking mode
         perror("fcntl F_SETFL");

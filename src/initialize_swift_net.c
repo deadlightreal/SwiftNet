@@ -6,8 +6,6 @@
 
 unsigned int maximum_transmission_unit = 0x00;
 
-bool SwiftNetServerRequestedNextChunk = false;
-
 void InitializeSwiftNet() {
     char default_network_interface[32];
 

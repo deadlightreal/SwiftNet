@@ -32,19 +32,6 @@ void SwiftNetSetMessageHandler(void(*handler)(uint8_t* data), SwiftNetClientConn
 )
 
 // Adjusts the buffer size for a network packet, reallocating memory as needed.
-
-SwiftNetServerCode(
-void SwiftNetChangeDataChunkSize(SwiftNetServer* server, unsigned int chunkSize) {
-    server->dataChunkSize = chunkSize;
-}
-)
-
-SwiftNetClientCode(
-void SwiftNetChangeDataChunkSize(SwiftNetClientConnection* connection, unsigned int chunkSize) {
-    connection->dataChunkSize = chunkSize;
-}
-)
-
 static inline void ValidateSetBufferSizeArgs(unsigned int size, void* con) {
     if(unlikely(con == NULL || size == 0)) {
         fprintf(stderr, "Error: Invalid arguments given to function set buffer size.\n");
@@ -66,7 +53,7 @@ void SwiftNetSetBufferSize(unsigned int newBufferSize, SwiftNetServer* server) {
     uint8_t* newDataPointer = realloc(server->packet.packetBufferStart, newBufferSize);
 
     server->packet.packetBufferStart = newDataPointer;
-    server->packet.packetDataStart = newDataPointer + sizeof(ClientInfo);
+    server->packet.packetDataStart = newDataPointer + sizeof(PacketInfo);
     server->packet.packetAppendPointer = server->packet.packetDataStart + currentDataPosition;
     server->packet.packetReadPointer = server->packet.packetDataStart + currentReadPosition;
 }
@@ -86,7 +73,7 @@ void SwiftNetSetBufferSize(unsigned int newBufferSize, SwiftNetClientConnection*
     uint8_t* newDataPointer = realloc(client->packet.packetBufferStart, newBufferSize);
 
     client->packet.packetBufferStart = newDataPointer;
-    client->packet.packetDataStart = newDataPointer + sizeof(ClientInfo);
+    client->packet.packetDataStart = newDataPointer + sizeof(PacketInfo);
     client->packet.packetAppendPointer = client->packet.packetDataStart + currentDataPosition;
     client->packet.packetReadPointer = client->packet.packetDataStart + currentReadPosition;
 }
