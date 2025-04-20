@@ -79,6 +79,8 @@ void SwiftNetSendPacket(SwiftNetClientConnection* client) {
 
                 memcpy(&buffer[sizeof(PacketInfo)], client->packet.packetDataStart + currentOffset, bytesToSend);
                 sendto(client->sockfd, buffer, bytesToSend + sizeof(PacketInfo), 0, (const struct sockaddr *)&client->server_addr, sizeof(client->server_addr));
+
+                memset(empty_packet_sending, 0, sizeof(PacketSending));
                 
                 break;
             } else {
