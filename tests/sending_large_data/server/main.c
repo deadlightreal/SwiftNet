@@ -16,22 +16,25 @@ clock_t start;
 bool started = false;
 
 void handleMessages(uint8_t* data, ClientAddrData sender) {
-    if(!started) {
+    if(started == false) {
+        printf("started\n");
+
         started = true;
         start = clock();
-        printf("started\n");
+
         return;
     }
 
     clock_t end = clock();
+    double timeTaken = (double)(end - start) / CLOCKS_PER_SEC;
 
-    double time_taken = ((double)(end - start)) / CLOCKS_PER_SEC;
+    printf("random byte: %d\n", data[5]);
 
-    printf("time taken to process message: %f\n", time_taken);
+    printf("time took to receive data: %f\n", timeTaken);
 
     unsigned long long hash = quickhash64(data, DATA_TO_SEND);
 
-    printf("hash got: %llx\n", hash);
+    printf("hash received: %llx\n", hash);
 
     exit(EXIT_SUCCESS);
 }
@@ -47,7 +50,7 @@ int main() {
 
     while(1) {}
 
-    free(server->packet.packetBufferStart);
+    free(server->packet.packet_buffer_start);
 
     return 0;
 }

@@ -47,19 +47,24 @@ SwiftNetServer* SwiftNetCreateServer(char* ip_address, uint16_t port) {
     setsockopt(emptyServer->sockfd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
 
     // Allocate memory for the packet buffer
-    uint8_t* dataPointer = (uint8_t*)malloc(emptyServer->bufferSize + sizeof(ClientInfo));
+    uint8_t* dataPointer = (uint8_t*)malloc(emptyServer->buffer_size + sizeof(PacketInfo));
     if(unlikely(dataPointer == NULL)) {
         perror("Failed to allocate memory for packet data\n");
         exit(EXIT_FAILURE);
     }
 
-    emptyServer->packet.packetBufferStart = dataPointer;
-    emptyServer->packet.packetDataStart = dataPointer + sizeof(ClientInfo);
-    emptyServer->packet.packetAppendPointer = emptyServer->packet.packetDataStart;
-    emptyServer->packet.packetReadPointer = emptyServer->packet.packetDataStart;
+    emptyServer->packet.packet_buffer_start = dataPointer;
+    emptyServer->packet.packet_data_start = dataPointer + sizeof(PacketInfo);
+    emptyServer->packet.packet_append_pointer = emptyServer->packet.packet_data_start;
+    emptyServer->packet.packet_read_pointer = emptyServer->packet.packet_data_start;
+
+    memset(emptyServer->transfer_clients, 0x00, MAX_TRANSFER_CLIENTS * sizeof(TransferClient));
+    // Initialize transfer clients to NULL | 0x00
+
+    memset(emptyServer->packets_sending, 0x00, MAX_PACKETS_SENDING * sizeof(PacketSending));
 
     // Create a new thread that will handle all packets received
-    pthread_create(&emptyServer->handlePacketsThread, NULL, SwiftNetHandlePackets, emptyServer);
+    pthread_create(&emptyServer->handle_packets_thread, NULL, SwiftNetHandlePackets, emptyServer);
 
     return emptyServer;
 }

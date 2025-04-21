@@ -5,33 +5,19 @@
 
 // These functions append data to a packet buffer and advance the current pointer by the data size.
 
-static inline void ValidateArgs(void* con, void* data, unsigned int dataSize) {
-    if(unlikely(con == NULL || data == NULL || dataSize == 0)) {
+static inline void ValidateArgs(void* con, void* data, unsigned int data_size) {
+    if(unlikely(con == NULL || data == NULL || data_size == 0)) {
         fprintf(stderr, "Error: Invalid arguments given to function append to packet.\n");
         exit(EXIT_FAILURE);
     }
 }
 
-SwiftNetServerCode(
-void SwiftNetAppendToPacket(SwiftNetServer* server, void* data, unsigned int dataSize) {
+void SwiftNetAppendToPacket(CONNECTION_TYPE* connection, void* data, unsigned int data_size) {
     SwiftNetErrorCheck(
-        ValidateArgs(server, data, dataSize);
+        ValidateArgs(connection, data, data_size);
     )
 
-    memcpy(server->packet.packetAppendPointer, data, dataSize);
+    memcpy(connection->packet.packet_append_pointer, data, data_size);
 
-    server->packet.packetAppendPointer += dataSize;
+    connection->packet.packet_append_pointer += data_size;
 }
-)
-
-SwiftNetClientCode(
-void SwiftNetAppendToPacket(SwiftNetClientConnection* client, void* data, unsigned int dataSize) {
-    SwiftNetErrorCheck(
-        ValidateArgs(client, data, dataSize);
-    )
-
-    memcpy(client->packet.packetAppendPointer, data, dataSize);
-
-    client->packet.packetAppendPointer += dataSize;
-}
-)
