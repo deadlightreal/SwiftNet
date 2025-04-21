@@ -15,8 +15,6 @@ file(REMOVE_RECURSE
   "CMakeFiles/swift_net_client.dir/internal/get_default_interface.c.o.d"
   "CMakeFiles/swift_net_client.dir/internal/get_mtu.c.o"
   "CMakeFiles/swift_net_client.dir/internal/get_mtu.c.o.d"
-  "CMakeFiles/swift_net_client.dir/read_from_packet.c.o"
-  "CMakeFiles/swift_net_client.dir/read_from_packet.c.o.d"
   "CMakeFiles/swift_net_client.dir/send_packet.c.o"
   "CMakeFiles/swift_net_client.dir/send_packet.c.o.d"
   "CMakeFiles/swift_net_client.dir/swift_net.c.o"

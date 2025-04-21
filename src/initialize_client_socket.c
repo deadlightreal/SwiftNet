@@ -39,26 +39,26 @@ SwiftNetClientConnection* SwiftNetCreateClient(char* ip_address, int port) {
     
     uint16_t clientPort = rand();
 
-    emptyConnection->clientInfo.destination_port = port;
-    emptyConnection->clientInfo.source_port = clientPort;
-    emptyConnection->packetHandler = NULL;
+    emptyConnection->port_info.destination_port = port;
+    emptyConnection->port_info.source_port = clientPort;
+    emptyConnection->packet_handler = NULL;
 
     // Base buffer size
-    emptyConnection->bufferSize = 0x400; // 1024
+    emptyConnection->buffer_size = 0x400; // 1024
 
     // Allocate memory for the packet buffer
-    uint8_t* dataPointer = (uint8_t*)malloc(emptyConnection->bufferSize + sizeof(PacketInfo));
+    uint8_t* dataPointer = (uint8_t*)malloc(emptyConnection->buffer_size + sizeof(PacketInfo));
     if(unlikely(dataPointer == NULL)) {
         perror("Failed to allocate memory for packet data\n");
         exit(EXIT_FAILURE);
     }
 
-    emptyConnection->packet.packetBufferStart = dataPointer;
-    emptyConnection->packet.packetDataStart = dataPointer + sizeof(PacketInfo);
+    emptyConnection->packet.packet_buffer_start = dataPointer;
+    emptyConnection->packet.packet_data_start = dataPointer + sizeof(PacketInfo);
     
 
-    emptyConnection->packet.packetAppendPointer= emptyConnection->packet.packetDataStart;
-    emptyConnection->packet.packetReadPointer = emptyConnection->packet.packetDataStart;
+    emptyConnection->packet.packet_append_pointer= emptyConnection->packet.packet_data_start;
+    emptyConnection->packet.packet_read_pointer = emptyConnection->packet.packet_data_start;
 
     memset(&emptyConnection->server_addr, 0, sizeof(emptyConnection->server_addr));
     emptyConnection->server_addr.sin_family = AF_INET;
@@ -69,7 +69,7 @@ SwiftNetClientConnection* SwiftNetCreateClient(char* ip_address, int port) {
     uint8_t request_information_data[sizeof(PacketInfo)];
 
     PacketInfo packetInfo;
-    packetInfo.client_info = emptyConnection->clientInfo;
+    packetInfo.port_info = emptyConnection->port_info;
     packetInfo.packet_length = 0;
     packetInfo.packet_id = rand();
     packetInfo.packet_type = PACKET_TYPE_REQUEST_INFORMATION;
@@ -106,7 +106,7 @@ SwiftNetClientConnection* SwiftNetCreateClient(char* ip_address, int port) {
 
             PacketInfo* packetInfo = (PacketInfo *)&server_information_buffer[sizeof(struct ip)];
 
-            if(packetInfo->client_info.destination_port != emptyConnection->clientInfo.source_port || packetInfo->client_info.source_port != emptyConnection->clientInfo.destination_port) {
+            if(packetInfo->port_info.destination_port != emptyConnection->port_info.source_port || packetInfo->port_info.source_port != emptyConnection->port_info.destination_port) {
                 continue;
             }
             
@@ -128,7 +128,7 @@ SwiftNetClientConnection* SwiftNetCreateClient(char* ip_address, int port) {
         exit(EXIT_FAILURE);
     }*/
  
-    pthread_create(&emptyConnection->handlePacketsThread, NULL, SwiftNetHandlePackets, emptyConnection);
+    pthread_create(&emptyConnection->handle_packets_thread, NULL, SwiftNetHandlePackets, emptyConnection);
 
     return emptyConnection;
 }

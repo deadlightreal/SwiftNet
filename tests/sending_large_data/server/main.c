@@ -50,7 +50,7 @@ int main() {
 
     while(1) {}
 
-    free(server->packet.packetBufferStart);
+    free(server->packet.packet_buffer_start);
 
     return 0;
 }

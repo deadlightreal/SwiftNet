@@ -371,33 +371,6 @@ internal/get_mtu.c.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/swift_net_server.dir/build.make CMakeFiles/swift_net_server.dir/internal/get_mtu.c.s
 .PHONY : internal/get_mtu.c.s
 
-read_from_packet.o: read_from_packet.c.o
-.PHONY : read_from_packet.o
-
-# target to build an object file
-read_from_packet.c.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/swift_net_client.dir/build.make CMakeFiles/swift_net_client.dir/read_from_packet.c.o
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/swift_net_server.dir/build.make CMakeFiles/swift_net_server.dir/read_from_packet.c.o
-.PHONY : read_from_packet.c.o
-
-read_from_packet.i: read_from_packet.c.i
-.PHONY : read_from_packet.i
-
-# target to preprocess a source file
-read_from_packet.c.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/swift_net_client.dir/build.make CMakeFiles/swift_net_client.dir/read_from_packet.c.i
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/swift_net_server.dir/build.make CMakeFiles/swift_net_server.dir/read_from_packet.c.i
-.PHONY : read_from_packet.c.i
-
-read_from_packet.s: read_from_packet.c.s
-.PHONY : read_from_packet.s
-
-# target to generate assembly for a file
-read_from_packet.c.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/swift_net_client.dir/build.make CMakeFiles/swift_net_client.dir/read_from_packet.c.s
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/swift_net_server.dir/build.make CMakeFiles/swift_net_server.dir/read_from_packet.c.s
-.PHONY : read_from_packet.c.s
-
 send_packet.o: send_packet.c.o
 .PHONY : send_packet.o
 
@@ -487,9 +460,6 @@ help:
 	@echo "... internal/get_mtu.o"
 	@echo "... internal/get_mtu.i"
 	@echo "... internal/get_mtu.s"
-	@echo "... read_from_packet.o"
-	@echo "... read_from_packet.i"
-	@echo "... read_from_packet.s"
 	@echo "... send_packet.o"
 	@echo "... send_packet.i"
 	@echo "... send_packet.s"

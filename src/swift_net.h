@@ -40,10 +40,14 @@
 #ifdef SWIFT_NET_SERVER
     #define CONNECTION_TYPE SwiftNetServer
     #define EXTRA_REQUEST_NEXT_CHUNK_ARG , ClientAddrData target
+    #define SEND_PACKET_EXTRA_ARG , ClientAddrData client_address
     #define SwiftNetServerCode(code) code
+    #define HANDLER_TYPE(name) void(*name)(uint8_t*, ClientAddrData)
 #else   
     #define EXTRA_REQUEST_NEXT_CHUNK_ARG
+    #define SEND_PACKET_EXTRA_ARG
     #define SwiftNetServerCode(code)
+    #define HANDLER_TYPE(name) void(*name)(uint8_t*)
 #endif
 
 extern unsigned int maximum_transmission_unit;
@@ -51,11 +55,11 @@ extern unsigned int maximum_transmission_unit;
 typedef struct {
     uint16_t destination_port;
     uint16_t source_port;
-} ClientInfo;
+} PortInfo;
 
 typedef struct {
     unsigned int packet_length;
-    ClientInfo client_info;
+    PortInfo port_info;
     uint16_t packet_id;
     uint8_t packet_type;
     unsigned int chunk_size;
@@ -71,34 +75,33 @@ typedef struct {
 } PacketSending;
 
 typedef struct {
-    unsigned int packetDataLen;
-    uint8_t* packetBufferStart;   // Start of the allocated buffer
-    uint8_t* packetDataStart;     // Start of the stored data
-    uint8_t* packetAppendPointer; // Current position to append new data
-    uint8_t* packetReadPointer;
+    uint8_t* packet_buffer_start;   // Start of the allocated buffer
+    uint8_t* packet_data_start;     // Start of the stored data
+    uint8_t* packet_append_pointer; // Current position to append new data
+    uint8_t* packet_read_pointer;
 } Packet;
 
 typedef struct {
-    uint8_t* packetDataStart;
-    uint8_t* packetCurrentPointer;
-    PacketInfo packetInfo;
-    in_addr_t clientAddress;
+    uint8_t* packet_data_start;
+    uint8_t* packet_current_pointer;
+    PacketInfo packet_info;
+    in_addr_t client_address;
 } TransferClient;
 
 typedef struct {
     uint8_t* packet_data_start;
     uint8_t* packet_current_pointer;
-    PacketInfo packetInfo;
+    PacketInfo packet_info;
 } PendingMessage;
 
 // Connection data
 typedef struct {
     int sockfd;
-    ClientInfo clientInfo;
+    PortInfo port_info;
     struct sockaddr_in server_addr;
-    void (*packetHandler) (uint8_t* data);
-    unsigned int bufferSize;
-    pthread_t handlePacketsThread;
+    void (*packet_handler) (uint8_t*);
+    unsigned int buffer_size;
+    pthread_t handle_packets_thread;
     Packet packet;
     unsigned int maximum_transmission_unit;
     PendingMessage pending_messages[MAX_PENDING_MESSAGES];
@@ -108,52 +111,29 @@ typedef struct {
 extern SwiftNetClientConnection SwiftNetClientConnections[MAX_CLIENT_CONNECTIONS];
 
 typedef struct {
-    struct sockaddr_in clientAddr;
-    socklen_t clientAddrLen;
+    struct sockaddr_in client_address;
+    socklen_t client_address_length;
     unsigned int maximum_transmission_unit;
 } ClientAddrData;
 
 typedef struct {
     int sockfd;
     uint16_t server_port;
-    unsigned int bufferSize;
-    void (*packetHandler)(uint8_t* data, ClientAddrData sender);
-    pthread_t handlePacketsThread;
+    unsigned int buffer_size;
+    void (*packet_handler)(uint8_t*, ClientAddrData);
+    pthread_t handle_packets_thread;
     Packet packet;
-    TransferClient transferClients[MAX_TRANSFER_CLIENTS];
+    TransferClient transfer_clients[MAX_TRANSFER_CLIENTS];
     PacketSending packets_sending[MAX_PACKETS_SENDING];
 } SwiftNetServer;
 
 extern SwiftNetServer SwiftNetServers[MAX_SERVERS];
 
-typedef struct {
-    void* connection;
-    uint8_t mode;
-} SwiftNetHandlePacketsArgs;
-
-SwiftNetServerCode(
-    void SwiftNetSendPacket(SwiftNetServer* server, ClientAddrData* clientAddress);
-    void SwiftNetSetMessageHandler(void(*handler)(uint8_t* data, ClientAddrData sender), SwiftNetServer* connection);
-    void* SwiftNetHandlePackets(void* serverVoid);
-    void SwiftNetSetBufferSize(unsigned int newBufferSize, SwiftNetServer* server);
-    void SwiftNetAppendToPacket(SwiftNetServer* server, void* data, unsigned int dataSize);
-    void SwiftNetReadFromPacket(SwiftNetServer* server, void* ptr, unsigned int size);
-    static inline void SwiftNetReadStringFromPacket(SwiftNetServer* server, void* ptr) {
-        SwiftNetReadFromPacket(server, ptr, strlen((char*)server->packet.packetReadPointer) + 1);
-    })
-
-SwiftNetClientCode(
-    void SwiftNetSendPacket(SwiftNetClientConnection* client);
-    void SwiftNetSetMessageHandler(void(*handler)(uint8_t* data), SwiftNetClientConnection* connection);
-    void* SwiftNetHandlePackets(void* clientVoid);
-    void SwiftNetSetBufferSize(unsigned int newBufferSize, SwiftNetClientConnection* client);
-    void SwiftNetAppendToPacket(SwiftNetClientConnection* client, void* data, unsigned int dataSize);
-    void SwiftNetReadFromPacket(SwiftNetClientConnection* client, void* ptr, unsigned int size);
-    static inline void SwiftNetReadStringFromPacket(SwiftNetClientConnection* client, void* ptr) {
-        SwiftNetReadFromPacket(client, ptr, strlen((char*)client->packet.packetReadPointer) + 1);
-    }
-)
-
+void SwiftNetSetMessageHandler(HANDLER_TYPE(handler), CONNECTION_TYPE* connection);
+void* SwiftNetHandlePackets(void* connection);
+void SwiftNetSetBufferSize(unsigned int new_buffer_size, CONNECTION_TYPE* connection);
+void SwiftNetAppendToPacket(CONNECTION_TYPE* connection, void* data, unsigned int data_size);
+void SwiftNetSendPacket(CONNECTION_TYPE* connection EXTRA_REQUEST_NEXT_CHUNK_ARG);
 SwiftNetServer* SwiftNetCreateServer(char* ip_address, uint16_t port);
 SwiftNetClientConnection* SwiftNetCreateClient(char* ip_address, int port);
 void InitializeSwiftNet();

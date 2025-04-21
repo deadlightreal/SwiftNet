@@ -10,16 +10,16 @@
 SwiftNetClientConnection* con;
 
 void handleMessagesFromServer(uint8_t* data) {
-    char message[100];
-    SwiftNetReadStringFromPacket(con, message);
-
-    printf("got message from server: %s\n", message);
+    printf("got message from server: %s\n", data);
 }
 
 int main() {
     InitializeSwiftNet();
 
     con = SwiftNetCreateClient("192.168.1.64", 8080);
+
+    SwiftNetSetBufferSize(1024, con);
+
     SwiftNetSetMessageHandler(handleMessagesFromServer, con);
 
     for(uint8_t i = 0; ; i++) {
@@ -28,6 +28,8 @@ int main() {
         SwiftNetAppendToPacket(con, message, strlen(message) + 1);
 
         SwiftNetSendPacket(con);
+
+        printf("message sent\n");
 
         usleep(500000);
     }

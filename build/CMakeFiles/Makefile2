@@ -89,12 +89,12 @@ clean: CMakeFiles/clean_objects.dir/clean
 CMakeFiles/swift_net_client.dir/all:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/swift_net_client.dir/build.make CMakeFiles/swift_net_client.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/swift_net_client.dir/build.make CMakeFiles/swift_net_client.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/admin/Desktop/socket-protocol/build/CMakeFiles --progress-num=2,3,4,5,6,7,8,9,10,11,12,13 "Built target swift_net_client"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/admin/Desktop/socket-protocol/build/CMakeFiles --progress-num=2,3,4,5,6,7,8,9,10,11,12 "Built target swift_net_client"
 .PHONY : CMakeFiles/swift_net_client.dir/all
 
 # Build rule for subdir invocation for target.
 CMakeFiles/swift_net_client.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /Users/admin/Desktop/socket-protocol/build/CMakeFiles 12
+	$(CMAKE_COMMAND) -E cmake_progress_start /Users/admin/Desktop/socket-protocol/build/CMakeFiles 11
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/swift_net_client.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start /Users/admin/Desktop/socket-protocol/build/CMakeFiles 0
 .PHONY : CMakeFiles/swift_net_client.dir/rule
@@ -106,7 +106,7 @@ swift_net_client: CMakeFiles/swift_net_client.dir/rule
 # codegen rule for target.
 CMakeFiles/swift_net_client.dir/codegen:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/swift_net_client.dir/build.make CMakeFiles/swift_net_client.dir/codegen
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/admin/Desktop/socket-protocol/build/CMakeFiles --progress-num=2,3,4,5,6,7,8,9,10,11,12,13 "Finished codegen for target swift_net_client"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/admin/Desktop/socket-protocol/build/CMakeFiles --progress-num=2,3,4,5,6,7,8,9,10,11,12 "Finished codegen for target swift_net_client"
 .PHONY : CMakeFiles/swift_net_client.dir/codegen
 
 # clean rule for target.
@@ -121,12 +121,12 @@ CMakeFiles/swift_net_client.dir/clean:
 CMakeFiles/swift_net_server.dir/all:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/swift_net_server.dir/build.make CMakeFiles/swift_net_server.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/swift_net_server.dir/build.make CMakeFiles/swift_net_server.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/admin/Desktop/socket-protocol/build/CMakeFiles --progress-num=14,15,16,17,18,19,20,21,22,23,24,25 "Built target swift_net_server"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/admin/Desktop/socket-protocol/build/CMakeFiles --progress-num=13,14,15,16,17,18,19,20,21,22,23 "Built target swift_net_server"
 .PHONY : CMakeFiles/swift_net_server.dir/all
 
 # Build rule for subdir invocation for target.
 CMakeFiles/swift_net_server.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /Users/admin/Desktop/socket-protocol/build/CMakeFiles 12
+	$(CMAKE_COMMAND) -E cmake_progress_start /Users/admin/Desktop/socket-protocol/build/CMakeFiles 11
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/swift_net_server.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start /Users/admin/Desktop/socket-protocol/build/CMakeFiles 0
 .PHONY : CMakeFiles/swift_net_server.dir/rule
@@ -138,7 +138,7 @@ swift_net_server: CMakeFiles/swift_net_server.dir/rule
 # codegen rule for target.
 CMakeFiles/swift_net_server.dir/codegen:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/swift_net_server.dir/build.make CMakeFiles/swift_net_server.dir/codegen
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/admin/Desktop/socket-protocol/build/CMakeFiles --progress-num=14,15,16,17,18,19,20,21,22,23,24,25 "Finished codegen for target swift_net_server"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/admin/Desktop/socket-protocol/build/CMakeFiles --progress-num=13,14,15,16,17,18,19,20,21,22,23 "Finished codegen for target swift_net_server"
 .PHONY : CMakeFiles/swift_net_server.dir/codegen
 
 # clean rule for target.

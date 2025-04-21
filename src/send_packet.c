@@ -30,7 +30,6 @@ static inline PacketSending* GetEmptyPacketSending(PacketSending* packet_sending
     return NULL;
 }
 
-SwiftNetClientCode(
 static inline void WaitForNextChunkRequest(bool* requested_next_chunk) {
     while(*requested_next_chunk == false) {
     }
@@ -38,26 +37,54 @@ static inline void WaitForNextChunkRequest(bool* requested_next_chunk) {
     *requested_next_chunk = false;
 }
 
-void SwiftNetSendPacket(SwiftNetClientConnection* client) {
+void SwiftNetSendPacket(CONNECTION_TYPE* connection SEND_PACKET_EXTRA_ARG) {
     SwiftNetErrorCheck(
-        NullCheckConnection(client);
+        NullCheckConnection(connection);
+    )
+
+    SwiftNetClientCode(
+        const unsigned int target_maximum_transmission_unit = connection->maximum_transmission_unit;
+
+        PortInfo port_info = connection->port_info;
+
+        Packet* packet = &connection->packet;
+
+        const unsigned int packet_length = packet->packet_append_pointer - packet->packet_data_start;
+
+        const struct sockaddr_in* target_addr = &connection->server_addr;
+    )
+
+    SwiftNetServerCode(
+        const unsigned int target_maximum_transmission_unit = client_address.maximum_transmission_unit;
+
+        PortInfo port_info;
+        port_info.destination_port = client_address.client_address.sin_port;
+        port_info.source_port = connection->server_port;
+
+        Packet* packet = &connection->packet;
+
+        const unsigned int packet_length = packet->packet_append_pointer - packet->packet_data_start;
+
+        const struct sockaddr_in* target_addr = &client_address.client_address;
     )
 
     uint16_t packet_id = rand();
 
-    unsigned int mtu = maximum_transmission_unit >= client->maximum_transmission_unit ? client->maximum_transmission_unit : maximum_transmission_unit;
+    unsigned int mtu = MIN(target_maximum_transmission_unit, maximum_transmission_unit);
 
-    PacketInfo packetInfo = {};
-    packetInfo.client_info = client->clientInfo;
-    packetInfo.packet_length = client->packet.packetAppendPointer - client->packet.packetDataStart;
-    packetInfo.packet_id = packet_id;
-    packetInfo.chunk_size = mtu;
-    packetInfo.packet_type = PACKET_TYPE_MESSAGE;
+    PacketInfo packet_info;
+    packet_info.port_info = port_info;
+    packet_info.packet_length = packet_length;
+    packet_info.packet_id = packet_id;
+    packet_info.chunk_size = mtu;
+    packet_info.packet_type = PACKET_TYPE_MESSAGE;
 
-    memcpy(client->packet.packetBufferStart, &packetInfo, sizeof(PacketInfo));
+    memcpy(packet->packet_buffer_start, &packet_info, sizeof(PacketInfo));
 
-    if(packetInfo.packet_length > mtu) {
-        PacketSending* empty_packet_sending = GetEmptyPacketSending(client->packets_sending, MAX_PACKETS_SENDING);
+    printf("len: %d\nmtu: %d\n", packet_info.packet_length, mtu);
+
+    if(packet_length > mtu) {
+        PacketSending* empty_packet_sending = GetEmptyPacketSending(connection->packets_sending, MAX_PACKETS_SENDING);
         if(unlikely(empty_packet_sending == NULL)) {
             fprintf(stderr, "Failed to send a packet: exceeded maximum amount of sending packets at the same time\n");
             return;
@@ -68,83 +95,34 @@ void SwiftNetSendPacket(SwiftNetClientConnection* client) {
 
         uint8_t buffer[mtu];
 
-        memcpy(buffer, &packetInfo, sizeof(PacketInfo));
+        memcpy(buffer, &packet_info, sizeof(PacketInfo));
 
-        for(unsigned int currentOffset = 0; ; currentOffset += mtu - sizeof(PacketInfo)) {
-            printf("sending packet\n");
-            if(currentOffset + mtu > packetInfo.packet_length) {
-                printf("finished sending packet\n");
+        for(unsigned int current_offset = 0; ; current_offset += mtu - sizeof(PacketInfo)) {
+            if(current_offset + mtu > packet_info.packet_length) {
+                // last chunk
+                unsigned int bytes_to_send = packet_length - current_offset;
 
-                unsigned int bytesToSend = packetInfo.packet_length - currentOffset;
-
-                memcpy(&buffer[sizeof(PacketInfo)], client->packet.packetDataStart + currentOffset, bytesToSend);
-                sendto(client->sockfd, buffer, bytesToSend + sizeof(PacketInfo), 0, (const struct sockaddr *)&client->server_addr, sizeof(client->server_addr));
+                memcpy(&buffer[sizeof(PacketInfo)], packet->packet_data_start + current_offset, bytes_to_send);
+                sendto(connection->sockfd, buffer, bytes_to_send + sizeof(PacketInfo), 0, (const struct sockaddr *)target_addr, sizeof(*target_addr));
 
                 memset(empty_packet_sending, 0, sizeof(PacketSending));
                 
                 break;
             } else {
-                memcpy(&buffer[sizeof(PacketInfo)], client->packet.packetDataStart + currentOffset, mtu - sizeof(PacketInfo));
-                sendto(client->sockfd, buffer, sizeof(buffer), 0, (const struct sockaddr *)&client->server_addr, sizeof(client->server_addr));
+                memcpy(&buffer[sizeof(PacketInfo)], packet->packet_data_start + current_offset, sizeof(buffer));
+                sendto(connection->sockfd, buffer, sizeof(buffer), 0, (const struct sockaddr *)target_addr, sizeof(*target_addr));
             }
 
 
             WaitForNextChunkRequest(&empty_packet_sending->requested_next_chunk);
         }
+
+        packet->packet_append_pointer = packet->packet_data_start;
     } else {
-        memcpy(client->packet.packetBufferStart, &packetInfo, sizeof(PacketInfo));
+        memcpy(packet->packet_buffer_start, &packet_info, sizeof(PacketInfo));
         
-        sendto(client->sockfd, client->packet.packetBufferStart, client->packet.packetAppendPointer - client->packet.packetBufferStart, 0, (const struct sockaddr *)&client->server_addr, sizeof(client->server_addr));
+        sendto(connection->sockfd, packet->packet_buffer_start, packet_length + sizeof(PacketInfo), 0, (const struct sockaddr *)target_addr, sizeof(*target_addr));
 
-        client->packet.packetAppendPointer = client->packet.packetDataStart;
-        client->packet.packetReadPointer = client->packet.packetDataStart;
+        packet->packet_append_pointer = packet->packet_data_start;
     }
 }
-)
-
-SwiftNetServerCode(
-void SwiftNetSendPacket(SwiftNetServer* server, ClientAddrData* clientAddress) {
-    SwiftNetErrorCheck(
-        NullCheckConnection(server);
-
-        if(unlikely(clientAddress == NULL)) {
-            fprintf(stderr, "Error: Pointer to client address (Second argument) is NULL in SendPacket function\nWhen in server mode passing client address is required\n");
-            exit(EXIT_FAILURE);
-        }
-    )
-
-    ClientInfo clientInfo;
-
-    clientInfo.destination_port = clientAddress->clientAddr.sin_port;
-    clientInfo.source_port = server->server_port;
-
-    uint16_t packet_id = rand();
-
-    unsigned int mtu = maximum_transmission_unit >= clientAddress->maximum_transmission_unit ? clientAddress->maximum_transmission_unit : maximum_transmission_unit;
-
-    PacketInfo packetInfo = {};
-    packetInfo.client_info = clientInfo;
-    packetInfo.packet_length = server->packet.packetAppendPointer - server->packet.packetDataStart;
-    packetInfo.packet_id = packet_id;
-    packetInfo.chunk_size = mtu;
-    packetInfo.packet_type = PACKET_TYPE_MESSAGE;
-
-    memcpy(server->packet.packetBufferStart, &packetInfo, sizeof(PacketInfo));
-
-    if(packetInfo.packet_length > mtu) {
-        // Send data in multiple chunks
-        uint8_t buffer[mtu];
-
-        const unsigned int data_size = mtu - sizeof(PacketInfo);
-
-        for(unsigned int offset = 0; offset < packetInfo.packet_length; offset += data_size) {
-            memcpy(&buffer[sizeof(PacketInfo)], &server->packet.packetDataStart[offset], data_size);
-        }
-    }
-
-    sendto(server->sockfd, server->packet.packetBufferStart, server->packet.packetAppendPointer - server->packet.packetBufferStart, 0, (const struct sockaddr *)&clientAddress->clientAddr, clientAddress->clientAddrLen);
-
-    server->packet.packetAppendPointer = server->packet.packetDataStart;
-    server->packet.packetReadPointer = server->packet.packetDataStart;
-}
-)

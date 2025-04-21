@@ -11,6 +11,16 @@ SwiftNetServer* server;
 
 void handleMessages(uint8_t* data, ClientAddrData sender) {
     printf("got a message : %s\n", data);
+
+    char* message = "hello client";
+
+    SwiftNetAppendToPacket(server, message, strlen(message) + 1);
+
+    printf("appended\n");
+
+    SwiftNetSendPacket(server, sender);
+
+    printf("sent\n");
 }
 
 int main() {

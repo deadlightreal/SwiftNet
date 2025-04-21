@@ -16,7 +16,6 @@ set(CMAKE_DEPENDS_DEPENDENCY_FILES
   "/Users/admin/Desktop/socket-protocol/src/initialize_swift_net.c" "CMakeFiles/swift_net_server.dir/initialize_swift_net.c.o" "gcc" "CMakeFiles/swift_net_server.dir/initialize_swift_net.c.o.d"
   "/Users/admin/Desktop/socket-protocol/src/internal/get_default_interface.c" "CMakeFiles/swift_net_server.dir/internal/get_default_interface.c.o" "gcc" "CMakeFiles/swift_net_server.dir/internal/get_default_interface.c.o.d"
   "/Users/admin/Desktop/socket-protocol/src/internal/get_mtu.c" "CMakeFiles/swift_net_server.dir/internal/get_mtu.c.o" "gcc" "CMakeFiles/swift_net_server.dir/internal/get_mtu.c.o.d"
-  "/Users/admin/Desktop/socket-protocol/src/read_from_packet.c" "CMakeFiles/swift_net_server.dir/read_from_packet.c.o" "gcc" "CMakeFiles/swift_net_server.dir/read_from_packet.c.o.d"
   "/Users/admin/Desktop/socket-protocol/src/send_packet.c" "CMakeFiles/swift_net_server.dir/send_packet.c.o" "gcc" "CMakeFiles/swift_net_server.dir/send_packet.c.o.d"
   "/Users/admin/Desktop/socket-protocol/src/swift_net.c" "CMakeFiles/swift_net_server.dir/swift_net.c.o" "gcc" "CMakeFiles/swift_net_server.dir/swift_net.c.o.d"
   )

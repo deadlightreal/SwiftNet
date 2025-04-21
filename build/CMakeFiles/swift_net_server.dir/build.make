@@ -184,24 +184,10 @@ CMakeFiles/swift_net_server.dir/initialize_server_socket.c.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling C source to assembly CMakeFiles/swift_net_server.dir/initialize_server_socket.c.s"
 	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /Users/admin/Desktop/socket-protocol/src/initialize_server_socket.c -o CMakeFiles/swift_net_server.dir/initialize_server_socket.c.s
 
-CMakeFiles/swift_net_server.dir/read_from_packet.c.o: CMakeFiles/swift_net_server.dir/flags.make
-CMakeFiles/swift_net_server.dir/read_from_packet.c.o: /Users/admin/Desktop/socket-protocol/src/read_from_packet.c
-CMakeFiles/swift_net_server.dir/read_from_packet.c.o: CMakeFiles/swift_net_server.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/Users/admin/Desktop/socket-protocol/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_9) "Building C object CMakeFiles/swift_net_server.dir/read_from_packet.c.o"
-	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/swift_net_server.dir/read_from_packet.c.o -MF CMakeFiles/swift_net_server.dir/read_from_packet.c.o.d -o CMakeFiles/swift_net_server.dir/read_from_packet.c.o -c /Users/admin/Desktop/socket-protocol/src/read_from_packet.c
-
-CMakeFiles/swift_net_server.dir/read_from_packet.c.i: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing C source to CMakeFiles/swift_net_server.dir/read_from_packet.c.i"
-	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /Users/admin/Desktop/socket-protocol/src/read_from_packet.c > CMakeFiles/swift_net_server.dir/read_from_packet.c.i
-
-CMakeFiles/swift_net_server.dir/read_from_packet.c.s: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling C source to assembly CMakeFiles/swift_net_server.dir/read_from_packet.c.s"
-	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /Users/admin/Desktop/socket-protocol/src/read_from_packet.c -o CMakeFiles/swift_net_server.dir/read_from_packet.c.s
-
 CMakeFiles/swift_net_server.dir/internal/get_mtu.c.o: CMakeFiles/swift_net_server.dir/flags.make
 CMakeFiles/swift_net_server.dir/internal/get_mtu.c.o: /Users/admin/Desktop/socket-protocol/src/internal/get_mtu.c
 CMakeFiles/swift_net_server.dir/internal/get_mtu.c.o: CMakeFiles/swift_net_server.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/Users/admin/Desktop/socket-protocol/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_10) "Building C object CMakeFiles/swift_net_server.dir/internal/get_mtu.c.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/Users/admin/Desktop/socket-protocol/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_9) "Building C object CMakeFiles/swift_net_server.dir/internal/get_mtu.c.o"
 	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/swift_net_server.dir/internal/get_mtu.c.o -MF CMakeFiles/swift_net_server.dir/internal/get_mtu.c.o.d -o CMakeFiles/swift_net_server.dir/internal/get_mtu.c.o -c /Users/admin/Desktop/socket-protocol/src/internal/get_mtu.c
 
 CMakeFiles/swift_net_server.dir/internal/get_mtu.c.i: cmake_force
@@ -215,7 +201,7 @@ CMakeFiles/swift_net_server.dir/internal/get_mtu.c.s: cmake_force
 CMakeFiles/swift_net_server.dir/internal/get_default_interface.c.o: CMakeFiles/swift_net_server.dir/flags.make
 CMakeFiles/swift_net_server.dir/internal/get_default_interface.c.o: /Users/admin/Desktop/socket-protocol/src/internal/get_default_interface.c
 CMakeFiles/swift_net_server.dir/internal/get_default_interface.c.o: CMakeFiles/swift_net_server.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/Users/admin/Desktop/socket-protocol/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_11) "Building C object CMakeFiles/swift_net_server.dir/internal/get_default_interface.c.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/Users/admin/Desktop/socket-protocol/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_10) "Building C object CMakeFiles/swift_net_server.dir/internal/get_default_interface.c.o"
 	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/swift_net_server.dir/internal/get_default_interface.c.o -MF CMakeFiles/swift_net_server.dir/internal/get_default_interface.c.o.d -o CMakeFiles/swift_net_server.dir/internal/get_default_interface.c.o -c /Users/admin/Desktop/socket-protocol/src/internal/get_default_interface.c
 
 CMakeFiles/swift_net_server.dir/internal/get_default_interface.c.i: cmake_force
@@ -236,7 +222,6 @@ swift_net_server_OBJECTS = \
 "CMakeFiles/swift_net_server.dir/generic_functions.c.o" \
 "CMakeFiles/swift_net_server.dir/initialize_client_socket.c.o" \
 "CMakeFiles/swift_net_server.dir/initialize_server_socket.c.o" \
-"CMakeFiles/swift_net_server.dir/read_from_packet.c.o" \
 "CMakeFiles/swift_net_server.dir/internal/get_mtu.c.o" \
 "CMakeFiles/swift_net_server.dir/internal/get_default_interface.c.o"
 
@@ -251,12 +236,11 @@ server/libswift_net_server.a: CMakeFiles/swift_net_server.dir/append_to_packet.c
 server/libswift_net_server.a: CMakeFiles/swift_net_server.dir/generic_functions.c.o
 server/libswift_net_server.a: CMakeFiles/swift_net_server.dir/initialize_client_socket.c.o
 server/libswift_net_server.a: CMakeFiles/swift_net_server.dir/initialize_server_socket.c.o
-server/libswift_net_server.a: CMakeFiles/swift_net_server.dir/read_from_packet.c.o
 server/libswift_net_server.a: CMakeFiles/swift_net_server.dir/internal/get_mtu.c.o
 server/libswift_net_server.a: CMakeFiles/swift_net_server.dir/internal/get_default_interface.c.o
 server/libswift_net_server.a: CMakeFiles/swift_net_server.dir/build.make
 server/libswift_net_server.a: CMakeFiles/swift_net_server.dir/link.txt
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/Users/admin/Desktop/socket-protocol/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_12) "Linking C static library server/libswift_net_server.a"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/Users/admin/Desktop/socket-protocol/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_11) "Linking C static library server/libswift_net_server.a"
 	$(CMAKE_COMMAND) -P CMakeFiles/swift_net_server.dir/cmake_clean_target.cmake
 	$(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/swift_net_server.dir/link.txt --verbose=$(VERBOSE)
 
