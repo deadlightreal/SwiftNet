@@ -15,7 +15,7 @@ SwiftNetServer* server;
 clock_t start;
 bool started = false;
 
-void handleMessages(uint8_t* data, ClientAddrData sender) {
+void handleMessages(uint8_t* data, SwiftNetClientAddrData sender) {
     if(started == false) {
         printf("started\n");
 
@@ -40,17 +40,17 @@ void handleMessages(uint8_t* data, ClientAddrData sender) {
 }
 
 int main() {
-    InitializeSwiftNet();
+    swiftnet_initialize();
 
-    server = SwiftNetCreateServer("192.168.1.64", 8080);
+    server = swiftnet_create_server("192.168.1.64", 8080);
 
-    SwiftNetSetBufferSize(DATA_TO_SEND, server);
+    swiftnet_set_buffer_size(DATA_TO_SEND, server);
 
-    SwiftNetSetMessageHandler(handleMessages, server);
+    swiftnet_set_message_handler(handleMessages, server);
 
     while(1) {}
 
-    SwiftNetCleanupConnection(server);
+    swiftnet_cleanup_connection(server);
 
     return 0;
 }

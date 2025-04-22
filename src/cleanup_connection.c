@@ -1,7 +1,7 @@
 #include "swift_net.h"
 #include <stdlib.h>
 
-void SwiftNetCleanupConnection(CONNECTION_TYPE* connection) {
+void swiftnet_cleanup_connection(CONNECTION_TYPE* connection) {
     SwiftNetServerCode(
         free(connection->packet.packet_buffer_start);
     )
