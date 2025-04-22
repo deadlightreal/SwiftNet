@@ -12,6 +12,7 @@ set(SOURCE_FILES
     generic_functions.c
     initialize_client_socket.c
     initialize_server_socket.c
+    cleanup_connection.c
     internal/get_mtu.c
     internal/get_default_interface.c
 )

@@ -137,3 +137,4 @@ void SwiftNetSendPacket(CONNECTION_TYPE* connection EXTRA_REQUEST_NEXT_CHUNK_ARG
 SwiftNetServer* SwiftNetCreateServer(char* ip_address, uint16_t port);
 SwiftNetClientConnection* SwiftNetCreateClient(char* ip_address, int port);
 void InitializeSwiftNet();
+void SwiftNetCleanupConnection(CONNECTION_TYPE* connection);
