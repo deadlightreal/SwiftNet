@@ -34,5 +34,7 @@ int main() {
         usleep(500000);
     }
 
+    SwiftNetCleanupConnection(con);
+
     return 0;
 }

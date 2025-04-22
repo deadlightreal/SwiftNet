@@ -34,5 +34,7 @@ int main() {
 
     while(1) {}
 
+    SwiftNetCleanupConnection(server);
+
     return 0;
 }

@@ -32,10 +32,10 @@ static inline TransferClient* CreateNewTransferClient(PacketInfo packet_info, in
             current_transfer_client->client_address = client_address;
             current_transfer_client->packet_info = packet_info;
             
-            uint8_t* allocatedMem = malloc(packet_info.packet_length);
+            uint8_t* allocated_memory = malloc(packet_info.packet_length);
             
-            current_transfer_client->packet_data_start = allocatedMem;
-            current_transfer_client->packet_current_pointer = allocatedMem;
+            current_transfer_client->packet_data_start = allocated_memory;
+            current_transfer_client->packet_current_pointer = allocated_memory;
 
             return current_transfer_client;
         }

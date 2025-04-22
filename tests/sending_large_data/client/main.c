@@ -44,12 +44,11 @@ int main() {
 
     SwiftNetSendPacket(con);
 
-    printf("random byte: %d\n", data[5]);
-
     printf("hash sent: %llx\n", hash);
-    printf("hash sent: %llx\n", quickhash64(data, DATA_TO_SEND));
 
     free(data);
+
+    SwiftNetCleanupConnection(con);
 
     return 0;
 }

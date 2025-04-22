@@ -50,7 +50,7 @@ int main() {
 
     while(1) {}
 
-    free(server->packet.packet_buffer_start);
+    SwiftNetCleanupConnection(server);
 
     return 0;
 }
