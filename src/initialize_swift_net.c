@@ -6,7 +6,7 @@
 
 unsigned int maximum_transmission_unit = 0x00;
 
-void InitializeSwiftNet() {
+void swiftnet_initialize() {
     char default_network_interface[32];
 
     int got_default_interface = GetDefaultInterface(default_network_interface);

@@ -16,7 +16,7 @@ void handler(uint8_t* data) {
 }
 
 int main() {
-    InitializeSwiftNet();
+    swiftnet_initialize();
 
     uint8_t* data = malloc(DATA_TO_SEND);
 
@@ -28,27 +28,31 @@ int main() {
 
     unsigned long long hash = quickhash64(data, DATA_TO_SEND);
 
-    con = SwiftNetCreateClient("192.168.1.64", 8080);
+    con = swiftnet_create_client("192.168.1.64", 8080);
 
-    SwiftNetSetMessageHandler(handler, con);
+    swiftnet_set_message_handler(handler, con);
 
-    SwiftNetSetBufferSize(DATA_TO_SEND, con);
+    swiftnet_set_buffer_size(DATA_TO_SEND, con);
 
     int zero = 0;
 
-    SwiftNetAppendToPacket(con, &zero, sizeof(int));
+    swiftnet_append_to_packet(con, &zero, sizeof(int));
 
-    SwiftNetSendPacket(con);
+    swiftnet_send_packet(con);
 
-    SwiftNetAppendToPacket(con, data, DATA_TO_SEND);
+    printf("sent start\n");
 
-    SwiftNetSendPacket(con);
+    swiftnet_append_to_packet(con, data, DATA_TO_SEND);
+
+    printf("appended\n");
+
+    swiftnet_send_packet(con);
 
     printf("hash sent: %llx\n", hash);
 
     free(data);
 
-    SwiftNetCleanupConnection(con);
+    swiftnet_cleanup_connection(con);
 
     return 0;
 }

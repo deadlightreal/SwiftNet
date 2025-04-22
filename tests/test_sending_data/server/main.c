@@ -9,32 +9,32 @@
 
 SwiftNetServer* server;
 
-void handleMessages(uint8_t* data, ClientAddrData sender) {
+void handleMessages(uint8_t* data, SwiftNetClientAddrData sender) {
     printf("got a message : %s\n", data);
 
     char* message = "hello client";
 
-    SwiftNetAppendToPacket(server, message, strlen(message) + 1);
+    swiftnet_append_to_packet(server, message, strlen(message) + 1);
 
     printf("appended\n");
 
-    SwiftNetSendPacket(server, sender);
+    swiftnet_send_packet(server, sender);
 
     printf("sent\n");
 }
 
 int main() {
-    InitializeSwiftNet();
+    swiftnet_initialize();
 
-    server = SwiftNetCreateServer("192.168.1.64", 8080);
+    server = swiftnet_create_server("192.168.1.64", 8080);
 
-    SwiftNetSetBufferSize(2048, server);
+    swiftnet_set_buffer_size(2048, server);
 
-    SwiftNetSetMessageHandler(handleMessages, server);
+    swiftnet_set_message_handler(handleMessages, server);
 
     while(1) {}
 
-    SwiftNetCleanupConnection(server);
+    swiftnet_cleanup_connection(server);
 
     return 0;
 }

@@ -14,27 +14,27 @@ void handleMessagesFromServer(uint8_t* data) {
 }
 
 int main() {
-    InitializeSwiftNet();
+    swiftnet_initialize();
+ 
+    con = swiftnet_create_client("192.168.1.64", 8080);
 
-    con = SwiftNetCreateClient("192.168.1.64", 8080);
+    swiftnet_set_buffer_size(1024, con);
 
-    SwiftNetSetBufferSize(1024, con);
-
-    SwiftNetSetMessageHandler(handleMessagesFromServer, con);
+    swiftnet_set_message_handler(handleMessagesFromServer, con);
 
     for(uint8_t i = 0; ; i++) {
         char* message = "hello server";
 
-        SwiftNetAppendToPacket(con, message, strlen(message) + 1);
+        swiftnet_append_to_packet(con, message, strlen(message) + 1);
 
-        SwiftNetSendPacket(con);
+        swiftnet_send_packet(con);
 
         printf("message sent\n");
 
         usleep(500000);
     }
 
-    SwiftNetCleanupConnection(con);
+    swiftnet_cleanup_connection(con);
 
     return 0;
 }
