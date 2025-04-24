@@ -8,6 +8,7 @@
 #include <unistd.h>
 #include <arpa/inet.h>
 #include <netinet/ip.h>
+#include "internal/internal.h"
 
 // These functions send the data from the packet buffer to the designated client or server.
 

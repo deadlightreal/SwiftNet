@@ -58,7 +58,6 @@ SwiftNetClientConnection* swiftnet_create_client(char* ip_address, int port) {
     
 
     emptyConnection->packet.packet_append_pointer= emptyConnection->packet.packet_data_start;
-    emptyConnection->packet.packet_read_pointer = emptyConnection->packet.packet_data_start;
 
     memset(&emptyConnection->server_addr, 0, sizeof(emptyConnection->server_addr));
     emptyConnection->server_addr.sin_family = AF_INET;

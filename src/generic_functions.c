@@ -40,12 +40,10 @@ void swiftnet_set_buffer_size(unsigned int new_buffer_size, CONNECTION_TYPE* con
     connection->buffer_size = new_buffer_size;
 
     unsigned int currentDataPosition = packet->packet_append_pointer - packet->packet_data_start;
-    unsigned int currentReadPosition = packet->packet_read_pointer - packet->packet_data_start;
 
     uint8_t* newDataPointer = realloc(packet->packet_buffer_start, new_buffer_size);
 
     packet->packet_buffer_start = newDataPointer;
     packet->packet_data_start = newDataPointer + sizeof(SwiftNetPacketInfo);
     packet->packet_append_pointer = packet->packet_data_start + currentDataPosition;
-    packet->packet_read_pointer = packet->packet_data_start + currentReadPosition;
 }

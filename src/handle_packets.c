@@ -251,6 +251,8 @@ void* swiftnet_handle_packets(void* void_connection) {
                     sender.client_address_length = client_address_len;
                     sender.maximum_transmission_unit = packet_info.chunk_size;
 
+                    server->current_read_pointer = packet_buffer + header_size;
+
                     // Execute function set by user
                     server->packet_handler(packet_buffer + header_size, sender);
                 }
@@ -263,6 +265,8 @@ void* swiftnet_handle_packets(void* void_connection) {
                 // If this chunk is the last to complpete the packet
                 if(bytes_needed_to_complete_packet < mtu) {
                     memcpy(transfer_client->packet_current_pointer, &packet_buffer[header_size], bytes_needed_to_complete_packet);
+
+                    server->current_read_pointer = transfer_client->packet_data_start;
     
                     server->packet_handler(transfer_client->packet_data_start, sender);
     
@@ -273,7 +277,7 @@ void* swiftnet_handle_packets(void* void_connection) {
                     memcpy(transfer_client->packet_current_pointer, &packet_buffer[header_size], chunk_data_size);
     
                     transfer_client->packet_current_pointer += chunk_data_size;
-    
+
                     request_next_chunk(server, packet_info.packet_id, sender);
                 }
             }
@@ -291,6 +295,8 @@ void* swiftnet_handle_packets(void* void_connection) {
 
                     request_next_chunk(connection, packet_info.packet_id);
                 } else {
+                    connection->current_read_pointer = packet_buffer + header_size;
+
                     connection->packet_handler(packet_buffer + header_size);
 
                     continue;
@@ -301,6 +307,8 @@ void* swiftnet_handle_packets(void* void_connection) {
                 if(bytes_needed_to_complete_packet < mtu) {
                     // Completed the packet
                     memcpy(pending_message->packet_current_pointer, &packet_buffer[header_size], bytes_needed_to_complete_packet);
+
+                    connection->current_read_pointer = pending_message->packet_data_start;
 
                     connection->packet_handler(pending_message->packet_data_start);
 
