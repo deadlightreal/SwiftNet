@@ -171,6 +171,19 @@ static inline void swiftnet_append_uint32(uint32_t num, CONNECTION_TYPE* connect
     connection->packet.packet_append_pointer += sizeof(num);
 }
 
+static inline void swiftnet_append_uint64(uint64_t num, CONNECTION_TYPE* connection) {
+    connection->packet.packet_append_pointer[0] = num & 0xFF;
+    connection->packet.packet_append_pointer[1] = (num >> 8) & 0xFF;
+    connection->packet.packet_append_pointer[2] = (num >> 16) & 0xFF;
+    connection->packet.packet_append_pointer[3] = (num >> 24) & 0xFF;
+    connection->packet.packet_append_pointer[4] = (num >> 32) & 0xFF;
+    connection->packet.packet_append_pointer[5] = (num >> 40) & 0xFF;
+    connection->packet.packet_append_pointer[6] = (num >> 48) & 0xFF;
+    connection->packet.packet_append_pointer[7] = (num >> 56) & 0xFF;
+
+    connection->packet.packet_append_pointer += sizeof(num);
+}
+
 static inline void swiftnet_append_int8(int8_t num, CONNECTION_TYPE* connection) {
     *connection->packet.packet_append_pointer = num;
 
@@ -189,6 +202,19 @@ static inline void swiftnet_append_int32(int32_t num, CONNECTION_TYPE* connectio
     connection->packet.packet_append_pointer[1] = (num >> 8) & 0xFF;
     connection->packet.packet_append_pointer[2] = (num >> 16) & 0xFF;
     connection->packet.packet_append_pointer[3] = (num >> 24) & 0xFF;
+
+    connection->packet.packet_append_pointer += sizeof(num);
+}
+
+static inline void swiftnet_append_int64(int64_t num, CONNECTION_TYPE* connection) {
+    connection->packet.packet_append_pointer[0] = num & 0xFF;
+    connection->packet.packet_append_pointer[1] = (num >> 8) & 0xFF;
+    connection->packet.packet_append_pointer[2] = (num >> 16) & 0xFF;
+    connection->packet.packet_append_pointer[3] = (num >> 24) & 0xFF;
+    connection->packet.packet_append_pointer[4] = (num >> 32) & 0xFF;
+    connection->packet.packet_append_pointer[5] = (num >> 40) & 0xFF;
+    connection->packet.packet_append_pointer[6] = (num >> 48) & 0xFF;
+    connection->packet.packet_append_pointer[7] = (num >> 56) & 0xFF;
 
     connection->packet.packet_append_pointer += sizeof(num);
 }
