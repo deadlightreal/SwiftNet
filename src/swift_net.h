@@ -217,6 +217,22 @@ static inline uint32_t swiftnet_read_uint32(CONNECTION_TYPE* connection) {
     return result;
 }
 
+static inline uint64_t swiftnet_read_uint64(CONNECTION_TYPE* connection) {
+    uint64_t result = 
+        ((uint64_t)connection->current_read_pointer[0])       |
+        ((uint64_t)connection->current_read_pointer[1] << 8)  |
+        ((uint64_t)connection->current_read_pointer[2] << 16) |
+        ((uint64_t)connection->current_read_pointer[3] << 24) |
+        ((uint64_t)connection->current_read_pointer[4] << 32) |
+        ((uint64_t)connection->current_read_pointer[5] << 40) |
+        ((uint64_t)connection->current_read_pointer[6] << 48) |
+        ((uint64_t)connection->current_read_pointer[7] << 56);
+
+    connection->current_read_pointer += sizeof(result);
+
+    return result;
+}
+
 static inline int8_t swiftnet_read_int8(CONNECTION_TYPE* connection) {
     int8_t result = *connection->current_read_pointer;
 
@@ -235,6 +251,22 @@ static inline int16_t swiftnet_read_int16(CONNECTION_TYPE* connection) {
 
 static inline int32_t swiftnet_read_int32(CONNECTION_TYPE* connection) {
     int32_t result = connection->current_read_pointer[0] | connection->current_read_pointer[1] << 8 | connection->current_read_pointer[2] << 16 | connection->current_read_pointer[3] << 24;
+
+    connection->current_read_pointer += sizeof(result);
+
+    return result;
+}
+
+static inline int64_t swiftnet_read_int64(CONNECTION_TYPE* connection) {
+    int64_t result = 
+        ((uint64_t)connection->current_read_pointer[0])       |
+        ((uint64_t)connection->current_read_pointer[1] << 8)  |
+        ((uint64_t)connection->current_read_pointer[2] << 16) |
+        ((uint64_t)connection->current_read_pointer[3] << 24) |
+        ((uint64_t)connection->current_read_pointer[4] << 32) |
+        ((uint64_t)connection->current_read_pointer[5] << 40) |
+        ((uint64_t)connection->current_read_pointer[6] << 48) |
+        ((uint64_t)connection->current_read_pointer[7] << 56);
 
     connection->current_read_pointer += sizeof(result);
 
