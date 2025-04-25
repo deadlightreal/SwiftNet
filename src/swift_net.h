@@ -41,12 +41,10 @@
     #define EXTRA_REQUEST_NEXT_CHUNK_ARG , SwiftNetClientAddrData target
     #define SEND_PACKET_EXTRA_ARG , SwiftNetClientAddrData client_address
     #define SwiftNetServerCode(code) code
-    #define HANDLER_TYPE(name) void(*name)(uint8_t*, SwiftNetClientAddrData)
 #else   
     #define EXTRA_REQUEST_NEXT_CHUNK_ARG
     #define SEND_PACKET_EXTRA_ARG
     #define SwiftNetServerCode(code)
-    #define HANDLER_TYPE(name) void(*name)(uint8_t*)
 #endif
 
 extern unsigned int maximum_transmission_unit;
@@ -55,6 +53,20 @@ typedef struct {
     uint16_t destination_port;
     uint16_t source_port;
 } SwiftNetPortInfo;
+
+typedef struct {
+    struct sockaddr_in client_address;
+    socklen_t client_address_length;
+    unsigned int maximum_transmission_unit;
+} SwiftNetClientAddrData;
+
+typedef struct {
+    unsigned int data_length;
+
+    SwiftNetServerCode(
+        SwiftNetClientAddrData sender;
+    )
+} SwiftNetPacketMetadata;
 
 typedef struct {
     unsigned int packet_length;
@@ -97,7 +109,7 @@ typedef struct {
     int sockfd;
     SwiftNetPortInfo port_info;
     struct sockaddr_in server_addr;
-    void (*packet_handler) (uint8_t*);
+    void (*packet_handler) (uint8_t*, SwiftNetPacketMetadata);
     unsigned int buffer_size;
     pthread_t handle_packets_thread;
     SwiftNetPacket packet;
@@ -110,16 +122,10 @@ typedef struct {
 extern SwiftNetClientConnection SwiftNetClientConnections[MAX_CLIENT_CONNECTIONS];
 
 typedef struct {
-    struct sockaddr_in client_address;
-    socklen_t client_address_length;
-    unsigned int maximum_transmission_unit;
-} SwiftNetClientAddrData;
-
-typedef struct {
     int sockfd;
     uint16_t server_port;
     unsigned int buffer_size;
-    void (*packet_handler)(uint8_t*, SwiftNetClientAddrData);
+    void (*packet_handler)(uint8_t*, SwiftNetPacketMetadata);
     pthread_t handle_packets_thread;
     SwiftNetPacket packet;
     SwiftNetTransferClient transfer_clients[MAX_TRANSFER_CLIENTS];
@@ -129,7 +135,7 @@ typedef struct {
 
 extern SwiftNetServer SwiftNetServers[MAX_SERVERS];
 
-void swiftnet_set_message_handler(HANDLER_TYPE(handler), CONNECTION_TYPE* connection);
+void swiftnet_set_message_handler(void (*handler)(uint8_t*, SwiftNetPacketMetadata), CONNECTION_TYPE* connection);
 void* swiftnet_handle_packets(void* connection);
 void swiftnet_set_buffer_size(unsigned int new_buffer_size, CONNECTION_TYPE* connection);
 void swiftnet_append_to_packet(CONNECTION_TYPE* connection, void* data, unsigned int data_size);
@@ -139,26 +145,24 @@ SwiftNetClientConnection* swiftnet_create_client(char* ip_address, int port);
 void swiftnet_initialize();
 void swiftnet_cleanup_connection(CONNECTION_TYPE* connection);
 
-/*
- * ----------------
- * INLINE FUNCTIONS
- * ----------------
-*/
+// ----------------
+// INLINE FUNCTIONS
+// ----------------
 
-inline void swiftnet_append_uint8(uint8_t num, CONNECTION_TYPE* connection) {
+static inline void swiftnet_append_uint8(uint8_t num, CONNECTION_TYPE* connection) {
     *connection->packet.packet_append_pointer = num;
 
     connection->packet.packet_append_pointer += sizeof(num);
 }
 
-inline void swiftnet_append_uint16(uint16_t num, CONNECTION_TYPE* connection) {
+static inline void swiftnet_append_uint16(uint16_t num, CONNECTION_TYPE* connection) {
     connection->packet.packet_append_pointer[0] = num & 0xFF;
     connection->packet.packet_append_pointer[1] = (num >> 8) & 0xFF;
 
     connection->packet.packet_append_pointer += sizeof(num);
 }
 
-inline void swiftnet_append_uint32(uint32_t num, CONNECTION_TYPE* connection) {
+static inline void swiftnet_append_uint32(uint32_t num, CONNECTION_TYPE* connection) {
     connection->packet.packet_append_pointer[0] = num & 0xFF;
     connection->packet.packet_append_pointer[1] = (num >> 8) & 0xFF;
     connection->packet.packet_append_pointer[2] = (num >> 16) & 0xFF;
@@ -167,20 +171,20 @@ inline void swiftnet_append_uint32(uint32_t num, CONNECTION_TYPE* connection) {
     connection->packet.packet_append_pointer += sizeof(num);
 }
 
-inline void swiftnet_append_int8(int8_t num, CONNECTION_TYPE* connection) {
+static inline void swiftnet_append_int8(int8_t num, CONNECTION_TYPE* connection) {
     *connection->packet.packet_append_pointer = num;
 
     connection->packet.packet_append_pointer += sizeof(num);
 }
 
-inline void swiftnet_append_int16(int16_t num, CONNECTION_TYPE* connection) {
+static inline void swiftnet_append_int16(int16_t num, CONNECTION_TYPE* connection) {
     connection->packet.packet_append_pointer[0] = num & 0xFF;
     connection->packet.packet_append_pointer[1] = (num >> 8) & 0xFF;
 
     connection->packet.packet_append_pointer += sizeof(num);
 }
 
-inline void swiftnet_append_int32(int32_t num, CONNECTION_TYPE* connection) {
+static inline void swiftnet_append_int32(int32_t num, CONNECTION_TYPE* connection) {
     connection->packet.packet_append_pointer[0] = num & 0xFF;
     connection->packet.packet_append_pointer[1] = (num >> 8) & 0xFF;
     connection->packet.packet_append_pointer[2] = (num >> 16) & 0xFF;
@@ -189,7 +193,7 @@ inline void swiftnet_append_int32(int32_t num, CONNECTION_TYPE* connection) {
     connection->packet.packet_append_pointer += sizeof(num);
 }
 
-inline uint8_t swiftnet_read_uint8(CONNECTION_TYPE* connection) {
+static inline uint8_t swiftnet_read_uint8(CONNECTION_TYPE* connection) {
     uint8_t result = *connection->current_read_pointer;
 
     connection->current_read_pointer += sizeof(result);
@@ -197,7 +201,7 @@ inline uint8_t swiftnet_read_uint8(CONNECTION_TYPE* connection) {
     return result;
 }
 
-inline uint16_t swiftnet_read_uint16(CONNECTION_TYPE* connection) {
+static inline uint16_t swiftnet_read_uint16(CONNECTION_TYPE* connection) {
     uint16_t result = connection->current_read_pointer[0] | connection->current_read_pointer[1] << 8;
 
     connection->current_read_pointer += sizeof(result);
@@ -205,7 +209,7 @@ inline uint16_t swiftnet_read_uint16(CONNECTION_TYPE* connection) {
     return result;
 }
 
-inline uint32_t swiftnet_read_uint32(CONNECTION_TYPE* connection) {
+static inline uint32_t swiftnet_read_uint32(CONNECTION_TYPE* connection) {
     uint32_t result = connection->current_read_pointer[0] | connection->current_read_pointer[1] << 8 | connection->current_read_pointer[2] << 16 | connection->current_read_pointer[3] << 24;
 
     connection->current_read_pointer += sizeof(result);
@@ -213,7 +217,7 @@ inline uint32_t swiftnet_read_uint32(CONNECTION_TYPE* connection) {
     return result;
 }
 
-inline int8_t swiftnet_read_int8(CONNECTION_TYPE* connection) {
+static inline int8_t swiftnet_read_int8(CONNECTION_TYPE* connection) {
     int8_t result = *connection->current_read_pointer;
 
     connection->current_read_pointer += sizeof(result);
@@ -221,7 +225,7 @@ inline int8_t swiftnet_read_int8(CONNECTION_TYPE* connection) {
     return result;
 }
 
-inline int16_t swiftnet_read_int16(CONNECTION_TYPE* connection) {
+static inline int16_t swiftnet_read_int16(CONNECTION_TYPE* connection) {
     int16_t result = connection->current_read_pointer[0] | connection->current_read_pointer[1] << 8;
 
     connection->current_read_pointer += sizeof(result);
@@ -229,7 +233,7 @@ inline int16_t swiftnet_read_int16(CONNECTION_TYPE* connection) {
     return result;
 }
 
-inline int32_t swiftnet_read_int32(CONNECTION_TYPE* connection) {
+static inline int32_t swiftnet_read_int32(CONNECTION_TYPE* connection) {
     int32_t result = connection->current_read_pointer[0] | connection->current_read_pointer[1] << 8 | connection->current_read_pointer[2] << 16 | connection->current_read_pointer[3] << 24;
 
     connection->current_read_pointer += sizeof(result);

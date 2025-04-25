@@ -228,10 +228,15 @@ void* swiftnet_handle_packets(void* void_connection) {
         sender.client_address_length = client_address_len;
         sender.maximum_transmission_unit = packet_info.chunk_size;
 
+        SwiftNetPacketMetadata packet_metadata;
+        packet_metadata.data_length = packet_info.packet_length;
+
         unsigned int mtu = MIN(packet_info.chunk_size, maximum_transmission_unit);
         const unsigned int chunk_data_size = mtu - sizeof(SwiftNetPacketInfo);
         
         SwiftNetServerCode(
+            packet_metadata.sender = sender;
+
             SwiftNetTransferClient* transfer_client = get_transfer_client(packet_info, client_address.sin_addr.s_addr, server);
 
             if(transfer_client == NULL) {
@@ -245,16 +250,10 @@ void* swiftnet_handle_packets(void* void_connection) {
     
                     request_next_chunk(server, packet_info.packet_id, sender);
                 } else {
-                    SwiftNetClientAddrData sender;
-        
-                    sender.client_address = client_address;
-                    sender.client_address_length = client_address_len;
-                    sender.maximum_transmission_unit = packet_info.chunk_size;
-
                     server->current_read_pointer = packet_buffer + header_size;
 
                     // Execute function set by user
-                    server->packet_handler(packet_buffer + header_size, sender);
+                    server->packet_handler(packet_buffer + header_size, packet_metadata);
                 }
             } else {
                 // Found a transfer client
@@ -268,7 +267,7 @@ void* swiftnet_handle_packets(void* void_connection) {
 
                     server->current_read_pointer = transfer_client->packet_data_start;
     
-                    server->packet_handler(transfer_client->packet_data_start, sender);
+                    server->packet_handler(transfer_client->packet_data_start, packet_metadata);
     
                     free(transfer_client->packet_data_start);
     
@@ -297,7 +296,7 @@ void* swiftnet_handle_packets(void* void_connection) {
                 } else {
                     connection->current_read_pointer = packet_buffer + header_size;
 
-                    connection->packet_handler(packet_buffer + header_size);
+                    connection->packet_handler(packet_buffer + header_size, packet_metadata);
 
                     continue;
                 }
@@ -310,7 +309,7 @@ void* swiftnet_handle_packets(void* void_connection) {
 
                     connection->current_read_pointer = pending_message->packet_data_start;
 
-                    connection->packet_handler(pending_message->packet_data_start);
+                    connection->packet_handler(pending_message->packet_data_start, packet_metadata);
 
                     free(pending_message->packet_data_start);
 
