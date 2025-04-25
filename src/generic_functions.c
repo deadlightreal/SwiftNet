@@ -5,7 +5,7 @@
 
 // Set the handler for incoming packets/messages on the server or client
 
-void swiftnet_set_message_handler(HANDLER_TYPE(handler), CONNECTION_TYPE* connection) {
+void swiftnet_set_message_handler(void (*handler)(uint8_t*, SwiftNetPacketMetadata), CONNECTION_TYPE* connection) {
     SwiftNetErrorCheck(
         if(unlikely(handler == NULL)) {
             fprintf(stderr, "Error: Invalid arguments given to function set message handler.\n");
