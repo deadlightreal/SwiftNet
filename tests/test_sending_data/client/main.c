@@ -9,7 +9,7 @@
 
 SwiftNetClientConnection* con;
 
-void handleMessagesFromServer(uint8_t* data) {
+void handleMessagesFromServer(uint8_t* data, SwiftNetPacketMetadata metadata) {
     printf("got message from server: %s\n", data);
 }
 
@@ -28,6 +28,8 @@ int main() {
         swiftnet_append_to_packet(con, message, strlen(message) + 1);
 
         swiftnet_send_packet(con);
+
+        swiftnet_clear_send_buffer(con);
 
         printf("message sent\n");
 

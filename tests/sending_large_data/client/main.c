@@ -11,7 +11,7 @@
 
 SwiftNetClientConnection* con;
 
-void handler(uint8_t* data) {
+void handler(uint8_t* data, SwiftNetPacketMetadata metadata) {
 
 }
 
@@ -40,6 +40,8 @@ int main() {
 
     swiftnet_send_packet(con);
 
+    swiftnet_clear_send_buffer(con);
+
     printf("sent start\n");
 
     swiftnet_append_to_packet(con, data, DATA_TO_SEND);
@@ -49,6 +51,8 @@ int main() {
     swiftnet_send_packet(con);
 
     printf("hash sent: %llx\n", hash);
+
+    swiftnet_clear_send_buffer(con);
 
     free(data);
 
