@@ -114,13 +114,9 @@ void swiftnet_send_packet(CONNECTION_TYPE* connection SEND_PACKET_EXTRA_ARG) {
 
             wait_for_next_chunk_request(&empty_packet_sending->requested_next_chunk);
         }
-
-        packet->packet_append_pointer = packet->packet_data_start;
     } else {
         memcpy(packet->packet_buffer_start, &packet_info, sizeof(SwiftNetPacketInfo));
         
         sendto(connection->sockfd, packet->packet_buffer_start, packet_length + sizeof(SwiftNetPacketInfo), 0, (const struct sockaddr *)target_addr, sizeof(*target_addr));
-
-        packet->packet_append_pointer = packet->packet_data_start;
     }
 }

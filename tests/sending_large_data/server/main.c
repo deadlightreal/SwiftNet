@@ -15,7 +15,7 @@ SwiftNetServer* server;
 clock_t start;
 bool started = false;
 
-void handleMessages(uint8_t* data, SwiftNetClientAddrData sender) {
+void handleMessages(uint8_t* data, SwiftNetPacketMetadata metadata) {
     if(started == false) {
         printf("started\n");
 

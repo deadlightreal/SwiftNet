@@ -9,7 +9,7 @@
 
 SwiftNetServer* server;
 
-void handleMessages(uint8_t* data, SwiftNetClientAddrData sender) {
+void handleMessages(uint8_t* data, SwiftNetPacketMetadata metadata) {
     printf("got a message : %s\n", data);
 
     char* message = "hello client";
@@ -18,7 +18,9 @@ void handleMessages(uint8_t* data, SwiftNetClientAddrData sender) {
 
     printf("appended\n");
 
-    swiftnet_send_packet(server, sender);
+    swiftnet_send_packet(server, metadata.sender);
+
+    swiftnet_clear_send_buffer(server);
 
     printf("sent\n");
 }

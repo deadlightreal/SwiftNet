@@ -149,6 +149,10 @@ void swiftnet_cleanup_connection(CONNECTION_TYPE* connection);
 // INLINE FUNCTIONS
 // ----------------
 
+static inline void swiftnet_clear_send_buffer(CONNECTION_TYPE* connection) {
+    connection->packet.packet_append_pointer = connection->packet.packet_data_start;
+}
+
 static inline void swiftnet_append_uint8(uint8_t num, CONNECTION_TYPE* connection) {
     *connection->packet.packet_append_pointer = num;
 
