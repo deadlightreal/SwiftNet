@@ -78,6 +78,8 @@ SwiftNetClientConnection* swiftnet_create_client(char* ip_address, int port) {
     memset(emptyConnection->pending_messages, 0, MAX_PENDING_MESSAGES * sizeof(PendingMessage));
     memset(emptyConnection->packets_sending, 0, MAX_PACKETS_SENDING * sizeof(SwiftNetPacketSending));
 
+    printf("src: %d\n", clientPort);
+
     /*int flags = fcntl(emptyConnection->sockfd, F_GETFL, 0);  // Get current flags
     if (flags == -1) {
         perror("fcntl F_GETFL");
@@ -105,7 +107,12 @@ SwiftNetClientConnection* swiftnet_create_client(char* ip_address, int port) {
 
             SwiftNetPacketInfo* packetInfo = (SwiftNetPacketInfo *)&server_information_buffer[sizeof(struct ip)];
 
+            printf("got server info %d\n", packetInfo->packet_length);
+
+            printf("dest: %d\nsrc: %d\n", packetInfo->port_info.destination_port, packetInfo->port_info.source_port);
+
             if(packetInfo->port_info.destination_port != emptyConnection->port_info.source_port || packetInfo->port_info.source_port != emptyConnection->port_info.destination_port) {
+                printf("got invalid server info\n");
                 continue;
             }
             
