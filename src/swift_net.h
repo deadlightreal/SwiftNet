@@ -112,6 +112,7 @@ typedef struct {
     void (*packet_handler) (uint8_t*, SwiftNetPacketMetadata);
     unsigned int buffer_size;
     pthread_t handle_packets_thread;
+    pthread_t process_packets_thread;
     SwiftNetPacket packet;
     unsigned int maximum_transmission_unit;
     PendingMessage pending_messages[MAX_PENDING_MESSAGES];
@@ -127,6 +128,7 @@ typedef struct {
     unsigned int buffer_size;
     void (*packet_handler)(uint8_t*, SwiftNetPacketMetadata);
     pthread_t handle_packets_thread;
+    pthread_t process_packets_thread;
     SwiftNetPacket packet;
     SwiftNetTransferClient transfer_clients[MAX_TRANSFER_CLIENTS];
     SwiftNetPacketSending packets_sending[MAX_PACKETS_SENDING];

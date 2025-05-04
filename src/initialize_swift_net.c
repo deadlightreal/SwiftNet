@@ -6,6 +6,8 @@
 
 unsigned int maximum_transmission_unit = 0x00;
 
+PacketQueue packet_queue;
+
 void swiftnet_initialize() {
     char default_network_interface[32];
 

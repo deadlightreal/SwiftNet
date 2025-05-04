@@ -39,6 +39,8 @@ static inline void wait_for_next_chunk_request(bool* requested_next_chunk) {
 }
 
 void swiftnet_send_packet(CONNECTION_TYPE* connection SEND_PACKET_EXTRA_ARG) {
+    printf("sending packet\n");
+
     SwiftNetErrorCheck(
         null_check_connection(connection);
     )
