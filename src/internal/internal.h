@@ -9,6 +9,7 @@
 int GetDefaultInterface(char* interface_name);
 unsigned int GetMtu(const char* interface);
 void* process_packets(void* void_connection);
+void* requesting_lost_chunks(void* void_connection);
 
 typedef struct PacketQueueNode PacketQueueNode;
 

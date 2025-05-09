@@ -35,7 +35,7 @@ void* swiftnet_handle_packets(void* void_connection) {
         SwiftNetPacketSending* packet_sending = server->packets_sending;
         const uint16_t packet_sending_size = MAX_PACKETS_SENDING;
 
-        pthread_t process_packets_thread = server->process_packets_thread;
+        pthread_t* process_packets_thread = &server->process_packets_thread;
     )
 
     SwiftNetClientCode(
@@ -50,7 +50,7 @@ void* swiftnet_handle_packets(void* void_connection) {
         SwiftNetPacketSending* packet_sending = connection->packets_sending;
         const uint16_t packet_sending_size = MAX_PACKETS_SENDING;
 
-        pthread_t process_packets_thread = connection->process_packets_thread;
+        pthread_t* process_packets_thread = &connection->process_packets_thread;
     )
 
     const unsigned int total_buffer_size = header_size + min_mtu;
@@ -58,7 +58,7 @@ void* swiftnet_handle_packets(void* void_connection) {
     packet_queue.first_node = NULL;
     packet_queue.last_node = NULL;
 
-    pthread_create(&process_packets_thread, NULL, process_packets, void_connection);
+    pthread_create(process_packets_thread, NULL, process_packets, void_connection);
 
     while(1) {
         PacketQueueNode* node = malloc(sizeof(PacketQueueNode));

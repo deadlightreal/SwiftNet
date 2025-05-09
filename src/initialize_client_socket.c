@@ -75,7 +75,7 @@ SwiftNetClientConnection* swiftnet_create_client(char* ip_address, int port) {
 
     memcpy(request_information_data, &packetInfo, sizeof(SwiftNetPacketInfo));
 
-    memset(emptyConnection->pending_messages, 0, MAX_PENDING_MESSAGES * sizeof(PendingMessage));
+    memset(emptyConnection->pending_messages, 0, MAX_PENDING_MESSAGES * sizeof(SwiftNetPendingMessage));
     memset(emptyConnection->packets_sending, 0, MAX_PACKETS_SENDING * sizeof(SwiftNetPacketSending));
 
     printf("src: %d\n", clientPort);

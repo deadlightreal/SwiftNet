@@ -3,6 +3,7 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <stdint.h>
+#include <time.h>
 #include <pthread.h>
 #include <string.h>
 #include <netinet/ip.h>
@@ -10,13 +11,15 @@
 
 #define MAX_CLIENT_CONNECTIONS 0x0A
 #define MAX_SERVERS 0x0A
-#define MAX_TRANSFER_CLIENTS 0x0A
 #define MAX_PENDING_MESSAGES 0x0A
 #define MAX_PACKETS_SENDING 0x0A
 
 #define PACKET_TYPE_MESSAGE 0x01
 #define PACKET_TYPE_SEND_NEXT_CHUNK 0x02
 #define PACKET_TYPE_REQUEST_INFORMATION 0x03
+#define PACKET_TYPE_SEND_LOST_PACKETS_REQUEST 0x04
+#define PACKET_TYPE_SEND_LOST_PACKETS_RESPONSE 0x05
+
 
 #define PACKET_INFO_ID_NONE 0xFFFF
 
@@ -37,12 +40,16 @@
 #endif
 
 #ifdef SWIFT_NET_SERVER
+    #define EXTRA_PENDING_MESSAGE_ARG , in_addr_t client_address
     #define CONNECTION_TYPE SwiftNetServer
     #define EXTRA_REQUEST_NEXT_CHUNK_ARG , SwiftNetClientAddrData target
+    #define HANDLE_LOST_PACKETS_EXTRA_ARG , SwiftNetClientAddrData* destination
     #define SEND_PACKET_EXTRA_ARG , SwiftNetClientAddrData client_address
     #define SwiftNetServerCode(code) code
-#else   
+#else
+    #define EXTRA_PENDING_MESSAGE_ARG
     #define EXTRA_REQUEST_NEXT_CHUNK_ARG
+    #define HANDLE_LOST_PACKETS_EXTRA_ARG
     #define SEND_PACKET_EXTRA_ARG
     #define SwiftNetServerCode(code)
 #endif
@@ -73,6 +80,8 @@ typedef struct {
     SwiftNetPortInfo port_info;
     uint16_t packet_id;
     uint8_t packet_type;
+    unsigned int chunk_amount;
+    unsigned int chunk_index;
     unsigned int chunk_size;
 } SwiftNetPacketInfo;
 
@@ -83,6 +92,9 @@ typedef struct {
 typedef struct {
     uint16_t packet_id;
     bool requested_next_chunk;
+    volatile bool updated_lost_chunks_bit_array;
+    uint8_t* lost_chunks_bit_array;
+    unsigned int chunk_amount;
 } SwiftNetPacketSending;
 
 typedef struct {
@@ -95,14 +107,12 @@ typedef struct {
     uint8_t* packet_data_start;
     uint8_t* packet_current_pointer;
     SwiftNetPacketInfo packet_info;
-    in_addr_t client_address;
-} SwiftNetTransferClient;
-
-typedef struct {
-    uint8_t* packet_data_start;
-    uint8_t* packet_current_pointer;
-    SwiftNetPacketInfo packet_info;
-} PendingMessage;
+    SwiftNetServerCode(
+        in_addr_t client_address;
+    )
+    uint8_t* chunks_received;
+    unsigned int chunks_received_length;
+} SwiftNetPendingMessage;
 
 // Connection data
 typedef struct {
@@ -115,7 +125,7 @@ typedef struct {
     pthread_t process_packets_thread;
     SwiftNetPacket packet;
     unsigned int maximum_transmission_unit;
-    PendingMessage pending_messages[MAX_PENDING_MESSAGES];
+    SwiftNetPendingMessage pending_messages[MAX_PENDING_MESSAGES];
     SwiftNetPacketSending packets_sending[MAX_PACKETS_SENDING];
     uint8_t* current_read_pointer;
 } SwiftNetClientConnection;
@@ -130,7 +140,7 @@ typedef struct {
     pthread_t handle_packets_thread;
     pthread_t process_packets_thread;
     SwiftNetPacket packet;
-    SwiftNetTransferClient transfer_clients[MAX_TRANSFER_CLIENTS];
+    SwiftNetPendingMessage pending_messages[MAX_PENDING_MESSAGES];
     SwiftNetPacketSending packets_sending[MAX_PACKETS_SENDING];
     uint8_t* current_read_pointer;
 } SwiftNetServer;

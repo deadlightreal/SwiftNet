@@ -57,7 +57,7 @@ SwiftNetServer* swiftnet_create_server(char* ip_address, uint16_t port) {
     emptyServer->packet.packet_data_start = dataPointer + sizeof(SwiftNetPacketInfo);
     emptyServer->packet.packet_append_pointer = emptyServer->packet.packet_data_start;
 
-    memset(emptyServer->transfer_clients, 0x00, MAX_TRANSFER_CLIENTS * sizeof(SwiftNetTransferClient));
+    memset(emptyServer->pending_messages, 0x00, MAX_PENDING_MESSAGES * sizeof(SwiftNetPendingMessage));
     // Initialize transfer clients to NULL | 0x00
 
     memset(emptyServer->packets_sending, 0x00, MAX_PACKETS_SENDING * sizeof(SwiftNetPacketSending));
