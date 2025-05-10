@@ -6,10 +6,9 @@
 
 #define MIN(one, two) (one > two ? two : one)
 
-int GetDefaultInterface(char* interface_name);
-unsigned int GetMtu(const char* interface);
+int GetDefaultInterface(char* restrict interface_name);
+unsigned int GetMtu(const char* restrict interface);
 void* process_packets(void* void_connection);
-void* requesting_lost_chunks(void* void_connection);
 
 typedef struct PacketQueueNode PacketQueueNode;
 
@@ -21,8 +20,8 @@ struct PacketQueueNode {
 };
 
 typedef struct {
-    PacketQueueNode* first_node;
-    PacketQueueNode* last_node;
+    PacketQueueNode* volatile first_node;
+    PacketQueueNode* volatile last_node;
 } PacketQueue;
 
 extern PacketQueue packet_queue;

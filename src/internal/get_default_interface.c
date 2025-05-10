@@ -12,11 +12,9 @@
 #include <netinet/in.h>
 #include <net/route.h>
 
-int GetDefaultInterface(char* interface_name) {
-    FILE *fp = NULL;
-
-    fp = popen("route -n get default | grep interface | awk '{print $2}'", "r");
-    if (fp == NULL) {
+int GetDefaultInterface(char* const restrict interface_name) {
+    FILE* const restrict fp = popen("route -n get default | grep interface | awk '{print $2}'", "r");
+    if (unlikely(fp == NULL)) {
         fprintf(stderr, "popen failed\n");
         return -1;
     }
