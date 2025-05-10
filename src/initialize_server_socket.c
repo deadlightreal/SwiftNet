@@ -59,7 +59,7 @@ SwiftNetServer* swiftnet_create_server(const char* const restrict ip_address, co
     memset(empty_server->pending_messages, 0x00, MAX_PENDING_MESSAGES * sizeof(SwiftNetPendingMessage));
     // Initialize transfer clients to NULL | 0x00
 
-    memset(empty_server->packets_sending, 0x00, MAX_PACKETS_SENDING * sizeof(SwiftNetPacketSending));
+    memset((void *)empty_server->packets_sending, 0x00, MAX_PACKETS_SENDING * sizeof(SwiftNetPacketSending));
 
     // Create a new thread that will handle all packets received
     pthread_create(&empty_server->handle_packets_thread, NULL, swiftnet_handle_packets, empty_server);

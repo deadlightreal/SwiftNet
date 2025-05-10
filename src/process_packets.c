@@ -241,7 +241,7 @@ void* process_packets(void* restrict const void_connection) {
                     target_packet_sending->lost_chunks_bit_array = malloc(packet_info.packet_length);
                 }
 
-                memcpy(target_packet_sending->lost_chunks_bit_array, packet_data, packet_info.packet_length);
+                memcpy((void*)target_packet_sending->lost_chunks_bit_array, packet_data, packet_info.packet_length);
 
                 target_packet_sending->updated_lost_chunks_bit_array = true;
 

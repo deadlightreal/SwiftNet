@@ -77,7 +77,7 @@ SwiftNetClientConnection* swiftnet_create_client(const char* const restrict ip_a
     memcpy(request_information_data, &packetInfo, sizeof(SwiftNetPacketInfo));
 
     memset(empty_connection->pending_messages, 0x00, MAX_PENDING_MESSAGES * sizeof(SwiftNetPendingMessage));
-    memset(empty_connection->packets_sending, 0x00, MAX_PACKETS_SENDING * sizeof(SwiftNetPacketSending));
+    memset((void *)empty_connection->packets_sending, 0x00, MAX_PACKETS_SENDING * sizeof(SwiftNetPacketSending));
 
     uint8_t server_information_buffer[sizeof(SwiftNetPacketInfo) + sizeof(SwiftNetServerInformation) + sizeof(struct ip)];
 
