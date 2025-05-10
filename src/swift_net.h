@@ -1,6 +1,5 @@
 #pragma once
 
-#include "internal/internal.h"
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <stdint.h>
@@ -16,10 +15,9 @@
 #define MAX_PACKETS_SENDING 0x0A
 
 #define PACKET_TYPE_MESSAGE 0x01
-#define PACKET_TYPE_SEND_NEXT_CHUNK 0x02
-#define PACKET_TYPE_REQUEST_INFORMATION 0x03
-#define PACKET_TYPE_SEND_LOST_PACKETS_REQUEST 0x04
-#define PACKET_TYPE_SEND_LOST_PACKETS_RESPONSE 0x05
+#define PACKET_TYPE_REQUEST_INFORMATION 0x02
+#define PACKET_TYPE_SEND_LOST_PACKETS_REQUEST 0x03
+#define PACKET_TYPE_SEND_LOST_PACKETS_RESPONSE 0x04
 
 #define PACKET_INFO_ID_NONE 0xFFFF
 
@@ -33,25 +31,22 @@
 #endif
 
 #ifdef SWIFT_NET_CLIENT
-    #define CONNECTION_TYPE SwiftNetClientConnection
-    #define SwiftNetClientCode(code) code
-#else
-    #define SwiftNetClientCode(code)
-#endif
+        #else
+    #endif
 
 #ifdef SWIFT_NET_SERVER
-    #define EXTRA_PENDING_MESSAGE_ARG , const in_addr_t client_address
+    #define EXTRA_SERVER_ARG(arg) , arg
+    #define EXTRA_CLIENT_ARG(arg)
     #define CONNECTION_TYPE SwiftNetServer
-    #define EXTRA_REQUEST_NEXT_CHUNK_ARG , const SwiftNetClientAddrData target
-    #define HANDLE_LOST_PACKETS_EXTRA_ARG , const SwiftNetClientAddrData* restrict const destination
-    #define SEND_PACKET_EXTRA_ARG , SwiftNetClientAddrData client_address
     #define SwiftNetServerCode(code) code
+    #define SwiftNetClientCode(code)
 #else
-    #define EXTRA_PENDING_MESSAGE_ARG
-    #define EXTRA_REQUEST_NEXT_CHUNK_ARG
-    #define HANDLE_LOST_PACKETS_EXTRA_ARG
-    #define SEND_PACKET_EXTRA_ARG
+    
+    #define EXTRA_SERVER_ARG(arg)
+    #define EXTRA_CLIENT_ARG(arg) , arg
+    #define CONNECTION_TYPE SwiftNetClientConnection
     #define SwiftNetServerCode(code)
+    #define SwiftNetClientCode(code) code
 #endif
 
 extern unsigned int maximum_transmission_unit;
@@ -150,7 +145,7 @@ void swiftnet_set_message_handler(void (*handler)(uint8_t*, SwiftNetPacketMetada
 void* swiftnet_handle_packets(void* volatile connection);
 void swiftnet_set_buffer_size(unsigned int new_buffer_size, CONNECTION_TYPE* restrict connection);
 void swiftnet_append_to_packet(CONNECTION_TYPE* restrict connection, const void* restrict data, const unsigned int data_size);
-void swiftnet_send_packet(const CONNECTION_TYPE* restrict const connection EXTRA_REQUEST_NEXT_CHUNK_ARG);
+void swiftnet_send_packet(const CONNECTION_TYPE* restrict const connection EXTRA_SERVER_ARG(const SwiftNetClientAddrData client_address));
 SwiftNetServer* swiftnet_create_server(const char* restrict ip_address, const uint16_t port);
 SwiftNetClientConnection* swiftnet_create_client(const char* restrict ip_address, const int port);
 void swiftnet_initialize();

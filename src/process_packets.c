@@ -6,11 +6,19 @@
 #include <stdio.h>
 #include <time.h>
 
-static inline SwiftNetPendingMessage* const restrict get_pending_message(const SwiftNetPacketInfo* const restrict packet_info, SwiftNetPendingMessage* const restrict pending_messages, const uint16_t pending_messages_size) {
+static inline SwiftNetPendingMessage* const restrict get_pending_message(const SwiftNetPacketInfo* const restrict packet_info, SwiftNetPendingMessage* const restrict pending_messages, const uint16_t pending_messages_size EXTRA_SERVER_ARG(const in_addr_t client_address)) {
     for(uint16_t i = 0; i < pending_messages_size; i++) {
         SwiftNetPendingMessage* const restrict current_pending_message = &pending_messages[i];
 
-        if(current_pending_message->packet_info.packet_id == packet_info->packet_id) {
+        SwiftNetClientCode(
+            const bool target_message = current_pending_message->packet_info.packet_id == packet_info->packet_id;
+        )
+
+        SwiftNetServerCode(
+            const bool target_message = (current_pending_message->packet_info.packet_id == packet_info->packet_id) && (current_pending_message->client_address == client_address);
+        )
+
+        if(target_message == true) {
             return current_pending_message;
         }
     }
@@ -27,7 +35,7 @@ static inline void chunk_received(SwiftNetPendingMessage* const restrict pending
     pending_message->chunks_received[byte] |= 1 << bit;
 }
 
-static inline SwiftNetPendingMessage* restrict const create_new_pending_message(SwiftNetPendingMessage* restrict const pending_messages, const uint16_t pending_messages_size, const SwiftNetPacketInfo* const restrict packet_info EXTRA_PENDING_MESSAGE_ARG) {
+static inline SwiftNetPendingMessage* restrict const create_new_pending_message(SwiftNetPendingMessage* restrict const pending_messages, const uint16_t pending_messages_size, const SwiftNetPacketInfo* const restrict packet_info EXTRA_SERVER_ARG(const in_addr_t client_address)) {
     for(uint16_t i = 0; i < pending_messages_size; i++) {
         SwiftNetPendingMessage* restrict const current_pending_message = &pending_messages[i];
 
@@ -199,7 +207,7 @@ void* process_packets(void* restrict const void_connection) {
                 packet_info_new.packet_type = PACKET_TYPE_SEND_LOST_PACKETS_RESPONSE;
                 packet_info_new.port_info = port_info;
 
-                const SwiftNetPendingMessage* restrict const pending_message = get_pending_message(&packet_info, pending_messages, MAX_PENDING_MESSAGES);
+                const SwiftNetPendingMessage* restrict const pending_message = get_pending_message(&packet_info, pending_messages, MAX_PENDING_MESSAGES EXTRA_SERVER_ARG(node->sender_address.sin_addr.s_addr));
                 if(unlikely(pending_message == NULL)) {
                     printf("NULL pending message\n");
 
@@ -275,7 +283,7 @@ void* process_packets(void* restrict const void_connection) {
 
         printf("getting pending message\n");
 
-        SwiftNetPendingMessage* const restrict pending_message = get_pending_message(&packet_info, pending_messages, MAX_PENDING_MESSAGES);
+        SwiftNetPendingMessage* const restrict pending_message = get_pending_message(&packet_info, pending_messages, MAX_PENDING_MESSAGES EXTRA_SERVER_ARG(node->sender_address.sin_addr.s_addr));
 
         printf("address of pending message: %p\n", pending_messages);
 

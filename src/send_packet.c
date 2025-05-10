@@ -52,7 +52,7 @@ after_sending_request:
     return;
 }
 
-static inline void handle_lost_packets(volatile SwiftNetPacketSending* const packet_sending, const unsigned int maximum_transmission_unit, const volatile CONNECTION_TYPE* const connection HANDLE_LOST_PACKETS_EXTRA_ARG) {
+static inline void handle_lost_packets(volatile SwiftNetPacketSending* const packet_sending, const unsigned int maximum_transmission_unit, const volatile CONNECTION_TYPE* const connection EXTRA_SERVER_ARG(const SwiftNetClientAddrData* restrict const destination)) {
     SwiftNetServerCode(
         const uint16_t source_port = connection->server_port;
         const int sockfd = connection->sockfd;
@@ -139,7 +139,7 @@ static inline void handle_lost_packets(volatile SwiftNetPacketSending* const pac
     }
 }
 
-void swiftnet_send_packet(const CONNECTION_TYPE* restrict const connection SEND_PACKET_EXTRA_ARG) {
+void swiftnet_send_packet(const CONNECTION_TYPE* restrict const connection EXTRA_SERVER_ARG(const SwiftNetClientAddrData client_address)) {
     printf("sending packet\n");
 
     SwiftNetErrorCheck(
