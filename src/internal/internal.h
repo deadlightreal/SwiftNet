@@ -4,6 +4,9 @@
 #include <stdlib.h>
 #include "../swift_net.h"
 
+#define REQUEST_LOST_PACKETS_RETURN_UPDATED_BIT_ARRAY 0x00
+#define REQUEST_LOST_PACKETS_RETURN_COMPLETED_PACKET 0x01
+
 #define MIN(one, two) (one > two ? two : one)
 
 int GetDefaultInterface(char* restrict interface_name);

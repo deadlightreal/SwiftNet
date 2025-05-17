@@ -13,11 +13,14 @@
 #define MAX_SERVERS 0x0A
 #define MAX_PENDING_MESSAGES 0x0A
 #define MAX_PACKETS_SENDING 0x0A
+#define MAX_SENT_SUCCESSFULLY_COMPLETED_PACKET_SIGNAL 0x64
+#define MAX_COMPLETED_PACKETS_HISTORY_SIZE 0x64
 
 #define PACKET_TYPE_MESSAGE 0x01
 #define PACKET_TYPE_REQUEST_INFORMATION 0x02
 #define PACKET_TYPE_SEND_LOST_PACKETS_REQUEST 0x03
 #define PACKET_TYPE_SEND_LOST_PACKETS_RESPONSE 0x04
+#define PACKET_TYPE_SUCCESSFULLY_RECEIVED_PACKET 0x05
 
 #define PACKET_INFO_ID_NONE 0xFFFF
 
@@ -29,10 +32,6 @@
 #else
     #define SwiftNetErrorCheck(code)
 #endif
-
-#ifdef SWIFT_NET_CLIENT
-        #else
-    #endif
 
 #ifdef SWIFT_NET_SERVER
     #define EXTRA_SERVER_ARG(arg) , arg
@@ -89,7 +88,13 @@ typedef struct {
     volatile bool updated_lost_chunks_bit_array;
     volatile uint8_t* lost_chunks_bit_array;
     unsigned int chunk_amount;
+    volatile bool successfully_received;
 } SwiftNetPacketSending;
+
+typedef struct {
+    uint16_t packet_id;
+    unsigned int packet_length;
+} SwiftNetPacketCompleted;
 
 typedef struct {
     uint8_t* packet_buffer_start;   // Start of the allocated buffer
@@ -108,6 +113,11 @@ typedef struct {
     unsigned int chunks_received_length;
 } SwiftNetPendingMessage;
 
+typedef struct {
+    uint16_t packet_id;
+    volatile bool confirmed;
+} SwiftNetSentSuccessfullyCompletedPacketSignal;
+
 // Connection data
 typedef struct {
     int sockfd;
@@ -121,6 +131,8 @@ typedef struct {
     unsigned int maximum_transmission_unit;
     SwiftNetPendingMessage pending_messages[MAX_PENDING_MESSAGES];
     volatile SwiftNetPacketSending packets_sending[MAX_PACKETS_SENDING];
+    volatile SwiftNetPacketCompleted packets_completed_history[MAX_COMPLETED_PACKETS_HISTORY_SIZE];
+    SwiftNetSentSuccessfullyCompletedPacketSignal sent_successfully_completed_packet_signal[MAX_SENT_SUCCESSFULLY_COMPLETED_PACKET_SIGNAL];
     uint8_t* current_read_pointer;
 } SwiftNetClientConnection;
 
@@ -136,6 +148,8 @@ typedef struct {
     SwiftNetPacket packet;
     SwiftNetPendingMessage pending_messages[MAX_PENDING_MESSAGES];
     volatile SwiftNetPacketSending packets_sending[MAX_PACKETS_SENDING];
+    volatile SwiftNetPacketCompleted packets_completed_history[MAX_COMPLETED_PACKETS_HISTORY_SIZE];
+    SwiftNetSentSuccessfullyCompletedPacketSignal sent_successfully_completed_packet_signal[MAX_SENT_SUCCESSFULLY_COMPLETED_PACKET_SIGNAL];
     uint8_t* current_read_pointer;
 } SwiftNetServer;
 

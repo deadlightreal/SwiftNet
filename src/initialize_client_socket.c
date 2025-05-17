@@ -78,6 +78,8 @@ SwiftNetClientConnection* swiftnet_create_client(const char* const restrict ip_a
 
     memset(empty_connection->pending_messages, 0x00, MAX_PENDING_MESSAGES * sizeof(SwiftNetPendingMessage));
     memset((void *)empty_connection->packets_sending, 0x00, MAX_PACKETS_SENDING * sizeof(SwiftNetPacketSending));
+    memset((void *)empty_connection->packets_sending, 0x00, MAX_SENT_SUCCESSFULLY_COMPLETED_PACKET_SIGNAL * sizeof(SwiftNetSentSuccessfullyCompletedPacketSignal));
+    memset((void *)empty_connection->packets_completed_history, 0x00, MAX_COMPLETED_PACKETS_HISTORY_SIZE * sizeof(SwiftNetPacketCompleted));
 
     uint8_t server_information_buffer[sizeof(SwiftNetPacketInfo) + sizeof(SwiftNetServerInformation) + sizeof(struct ip)];
 

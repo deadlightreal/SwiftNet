@@ -35,8 +35,6 @@ void handleMessages(uint8_t* data, SwiftNetPacketMetadata metadata) {
     unsigned long long hash = quickhash64(data, DATA_TO_SEND);
 
     printf("hash received: %llx\n", hash);
-
-    exit(EXIT_SUCCESS);
 }
 
 int main() {

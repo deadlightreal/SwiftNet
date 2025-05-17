@@ -32,24 +32,24 @@ static inline volatile SwiftNetPacketSending* get_empty_packet_sending(volatile 
     return NULL;
 }
 
-static inline void request_lost_packets_bitarray(const uint8_t* restrict const raw_data, const unsigned int data_size, const struct sockaddr* restrict const destination, const socklen_t socklen, const int sockfd, volatile SwiftNetPacketSending* const packet_sending) {
+static inline uint8_t request_lost_packets_bitarray(const uint8_t* restrict const raw_data, const unsigned int data_size, const struct sockaddr* restrict const destination, const socklen_t socklen, const int sockfd, volatile SwiftNetPacketSending* const packet_sending) {
     while(1) {
         sendto(sockfd, raw_data, data_size, 0, destination, socklen);
 
         for(uint8_t times_checked = 0; times_checked < 0xFF; times_checked++) {
             if(packet_sending->updated_lost_chunks_bit_array == true) {
                 packet_sending->updated_lost_chunks_bit_array = false;
-                return;
-            }   
+                return REQUEST_LOST_PACKETS_RETURN_UPDATED_BIT_ARRAY;
+            }
+
+            if(packet_sending->successfully_received == true) {
+                printf("successfully_received\n");
+                return REQUEST_LOST_PACKETS_RETURN_COMPLETED_PACKET;
+            }
 
             usleep(10000);
         }
     }
-
-after_sending_request:
-    printf("got updated bit array\n");
-
-    return;
 }
 
 static inline void handle_lost_packets(volatile SwiftNetPacketSending* const packet_sending, const unsigned int maximum_transmission_unit, const volatile CONNECTION_TYPE* const connection EXTRA_SERVER_ARG(const SwiftNetClientAddrData* restrict const destination)) {
@@ -104,7 +104,15 @@ static inline void handle_lost_packets(volatile SwiftNetPacketSending* const pac
     memcpy(resend_chunk_buffer, &resend_chunk_packet_info, sizeof(SwiftNetPacketInfo));
 
     while(1) {
-        request_lost_packets_bitarray(request_lost_packets_bit_array_buffer, sizeof(SwiftNetPacketInfo), destination_address, socklen, sockfd, packet_sending);
+        uint8_t request_lost_packets_bitarray_response = request_lost_packets_bitarray(request_lost_packets_bit_array_buffer, sizeof(SwiftNetPacketInfo), destination_address, socklen, sockfd, packet_sending);
+
+        switch (request_lost_packets_bitarray_response) {
+            case REQUEST_LOST_PACKETS_RETURN_UPDATED_BIT_ARRAY:
+                break;
+            case REQUEST_LOST_PACKETS_RETURN_COMPLETED_PACKET:
+                printf("returned completed packet\n");
+                return;
+        }
 
         bool continue_sending = false;
     
@@ -220,13 +228,7 @@ void swiftnet_send_packet(const CONNECTION_TYPE* restrict const connection EXTRA
                 memcpy(&buffer[sizeof(SwiftNetPacketInfo)], packet->packet_data_start + current_offset, bytes_to_send);
                 sendto(connection->sockfd, buffer, bytes_to_send + sizeof(SwiftNetPacketInfo), 0x00, (const struct sockaddr *)target_addr, sizeof(*target_addr));
 
-                SwiftNetClientCode(
-                    handle_lost_packets(empty_packet_sending, mtu, connection);
-                )
-
-                SwiftNetServerCode(
-                    handle_lost_packets(empty_packet_sending, mtu, connection, &client_address);
-                )
+                handle_lost_packets(empty_packet_sending, mtu, connection EXTRA_SERVER_ARG(&client_address));
                 
                 break;
             } else {

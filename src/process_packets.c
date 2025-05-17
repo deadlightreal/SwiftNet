@@ -1,10 +1,37 @@
 #include "internal/internal.h"
 #include "swift_net.h"
+#include <stdint.h>
 #include <stdlib.h>
 #include <pthread.h>
+#include <sys/socket.h>
 #include <unistd.h>
 #include <stdio.h>
 #include <time.h>
+
+static inline void packet_completed(const uint16_t packet_id, const unsigned int packet_length, CONNECTION_TYPE* restrict const connection) {
+    const SwiftNetPacketCompleted null_packet_completed = {0x00};
+
+    for(uint16_t i = 0; i < MAX_COMPLETED_PACKETS_HISTORY_SIZE; i++) {
+        if(memcmp((const void*)&connection->packets_completed_history[i], &null_packet_completed, sizeof(SwiftNetPacketCompleted)) == 0) {
+            connection->packets_completed_history[i] = (SwiftNetPacketCompleted){
+                .packet_id = packet_id,
+                .packet_length = packet_length
+            };
+
+            return;
+        }
+    }
+}
+
+static inline bool check_packet_already_completed(const uint16_t packet_id, const CONNECTION_TYPE* restrict const connection) {
+    for(uint16_t i = 0; i < MAX_COMPLETED_PACKETS_HISTORY_SIZE; i++) {
+        if(connection->packets_completed_history[i].packet_id == packet_id) {
+            return true; 
+        }
+    }
+
+    return false;
+}
 
 static inline SwiftNetPendingMessage* const restrict get_pending_message(const SwiftNetPacketInfo* const restrict packet_info, SwiftNetPendingMessage* const restrict pending_messages, const uint16_t pending_messages_size EXTRA_SERVER_ARG(const in_addr_t client_address)) {
     for(uint16_t i = 0; i < pending_messages_size; i++) {
@@ -26,11 +53,10 @@ static inline SwiftNetPendingMessage* const restrict get_pending_message(const S
     return NULL;
 }
 
+
 static inline void chunk_received(SwiftNetPendingMessage* const restrict pending_message, const unsigned int index) {
     const unsigned int byte = index / 8;
     const uint8_t bit = index % 8;
-
-    printf("index: %d byte: %d bit: %d\n", index, byte, bit);
 
     pending_message->chunks_received[byte] |= 1 << bit;
 }
@@ -48,8 +74,6 @@ static inline SwiftNetPendingMessage* restrict const create_new_pending_message(
             current_pending_message->packet_current_pointer = allocated_memory;
 
             const unsigned int chunks_received_byte_size = (packet_info->chunk_amount + 7) / 8;
-
-            printf("chunk amount: %d bytes: %d\n", packet_info->chunk_amount, chunks_received_byte_size);
 
             current_pending_message->chunks_received_length = chunks_received_byte_size;
             current_pending_message->chunks_received = calloc(chunks_received_byte_size, 1);
@@ -77,12 +101,8 @@ static inline volatile SwiftNetPacketSending* const get_packet_sending(volatile 
 }
 
 PacketQueueNode* wait_for_next_packet() {
-    printf("waiting for next packet\n");
-
     while(packet_queue.first_node == NULL) {
     };
-
-    printf("processing packet\n");
 
     PacketQueueNode* const restrict node_to_process = packet_queue.first_node;
 
@@ -137,6 +157,9 @@ void* process_packets(void* restrict const void_connection) {
         PacketQueueNode* restrict const node = wait_for_next_packet();
 
         uint8_t* restrict const packet_buffer = node->data;
+        if(unlikely(node->data == NULL)) {
+            goto next_packet;
+        }
 
         const uint8_t* packet_data = &packet_buffer[header_size];
 
@@ -170,8 +193,6 @@ void* process_packets(void* restrict const void_connection) {
                     SwiftNetPortInfo port_info;
                     port_info.destination_port = packet_info.port_info.source_port;
                     port_info.source_port = source_port;
-
-                    printf("source: %d\ndest: %d\n", source_port, packet_info.port_info.source_port);
         
                     SwiftNetPacketInfo packet_info_new;
                     packet_info_new.port_info = port_info;
@@ -189,15 +210,11 @@ void* process_packets(void* restrict const void_connection) {
                     memcpy(&send_buffer[sizeof(packet_info_new)], &server_information, sizeof(server_information));
         
                     sendto(sockfd, send_buffer, sizeof(send_buffer), 0, (struct sockaddr *)&node->sender_address, node->sender_address_len);
-
-                    printf("sent\n");
         
                     goto next_packet;
             }
             case PACKET_TYPE_SEND_LOST_PACKETS_REQUEST:
             {
-                printf("got request\n");
-
                 SwiftNetPortInfo port_info;
                 port_info.source_port = packet_info.port_info.destination_port;
                 port_info.destination_port = packet_info.port_info.source_port;
@@ -209,7 +226,22 @@ void* process_packets(void* restrict const void_connection) {
 
                 const SwiftNetPendingMessage* restrict const pending_message = get_pending_message(&packet_info, pending_messages, MAX_PENDING_MESSAGES EXTRA_SERVER_ARG(node->sender_address.sin_addr.s_addr));
                 if(unlikely(pending_message == NULL)) {
-                    printf("NULL pending message\n");
+                    const bool packet_already_completed = check_packet_already_completed(packet_info.packet_id, void_connection);
+                    if(likely(packet_already_completed == true)) {
+                        const SwiftNetPacketInfo send_packet_info = {
+                            .packet_length = 0x00,
+                            .packet_id = packet_info.packet_id,
+                            .packet_type = PACKET_TYPE_SUCCESSFULLY_RECEIVED_PACKET,
+                            .port_info = (SwiftNetPortInfo){
+                                .destination_port = packet_info.port_info.source_port,
+                                .source_port = packet_info.port_info.destination_port
+                            }
+                        };
+
+                        sendto(sockfd, &send_packet_info, sizeof(SwiftNetPacketInfo), 0x00, (const struct sockaddr *)&node->sender_address, node->sender_address_len);
+
+                        goto next_packet;
+                    }
 
                     goto next_packet;
                 }
@@ -217,22 +249,15 @@ void* process_packets(void* restrict const void_connection) {
                 packet_info_new.packet_length = pending_message->chunks_received_length;
 
                 const unsigned int buffer_size = sizeof(SwiftNetPacketInfo) + pending_message->chunks_received_length;
-
-                printf("allocating %d bytes\n", buffer_size);
                 uint8_t send_buffer[buffer_size];
 
                 memcpy(send_buffer, &packet_info_new, sizeof(SwiftNetPacketInfo));
                 memcpy(&send_buffer[sizeof(SwiftNetPacketInfo)], pending_message->chunks_received, pending_message->chunks_received_length);
-
-                printf("Sent chunk received information: \n");
+                
                 for(uint8_t i = 0; i < pending_message->chunks_received_length; i++) {
-                    printf("%d ", pending_message->chunks_received[i]);
                 }
-                printf("\n");
 
                 sendto(sockfd, send_buffer, buffer_size, 0, (const struct sockaddr *)&node->sender_address, node->sender_address_len);
-
-                printf("processed request\n");
 
                 goto next_packet;
             }
@@ -243,8 +268,6 @@ void* process_packets(void* restrict const void_connection) {
                     goto next_packet;
                 }
 
-                printf("got response\n");
-
                 if(unlikely(target_packet_sending->lost_chunks_bit_array == NULL)) {
                     target_packet_sending->lost_chunks_bit_array = malloc(packet_info.packet_length);
                 }
@@ -253,11 +276,17 @@ void* process_packets(void* restrict const void_connection) {
 
                 target_packet_sending->updated_lost_chunks_bit_array = true;
 
-                printf("Received chunk received information: \n");
-                for(uint8_t i = 0; i < packet_info.packet_length; i++) {
-                    printf("%d ", packet_data[i]);
+                goto next_packet;
+            }
+            case PACKET_TYPE_SUCCESSFULLY_RECEIVED_PACKET:
+            {
+                volatile SwiftNetPacketSending* const target_packet_sending = (SwiftNetPacketSending* const restrict)get_packet_sending(packet_sending, packet_sending_size, packet_info.packet_id);
+
+                if(unlikely(target_packet_sending == NULL)) {
+                    goto next_packet;
                 }
-                printf("\n");
+
+                target_packet_sending->successfully_received = true;
 
                 goto next_packet;
             }
@@ -281,11 +310,7 @@ void* process_packets(void* restrict const void_connection) {
             packet_metadata.sender = sender;
         )
 
-        printf("getting pending message\n");
-
         SwiftNetPendingMessage* const restrict pending_message = get_pending_message(&packet_info, pending_messages, MAX_PENDING_MESSAGES EXTRA_SERVER_ARG(node->sender_address.sin_addr.s_addr));
-
-        printf("address of pending message: %p\n", pending_messages);
 
         if(pending_message == NULL) {
             if(packet_info.packet_length + header_size > mtu) {
@@ -305,15 +330,14 @@ void* process_packets(void* restrict const void_connection) {
             } else {
                 current_read_pointer = packet_buffer + header_size;
 
+                packet_completed(packet_info.packet_id, packet_info.packet_length, void_connection);
+
                 (*packet_handler)(packet_buffer + header_size, packet_metadata);
 
                 continue;
             }
         } else {
             const unsigned int bytes_needed_to_complete_packet = packet_info.packet_length - (pending_message->packet_current_pointer - pending_message->packet_data_start);
-
-            printf("chunk index: %d\n", packet_info.chunk_index);
-            printf("percentage transmitted: %f\n", 1 - ((float)bytes_needed_to_complete_packet / packet_info.packet_length));
 
             chunk_received(pending_message, packet_info.chunk_index);
 
@@ -322,6 +346,8 @@ void* process_packets(void* restrict const void_connection) {
                 memcpy(pending_message->packet_current_pointer, &packet_buffer[header_size], bytes_needed_to_complete_packet);
 
                 current_read_pointer = pending_message->packet_data_start;
+
+                packet_completed(packet_info.packet_id, packet_info.packet_length, void_connection);
 
                 (*packet_handler)(pending_message->packet_data_start, packet_metadata);
 
