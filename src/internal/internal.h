@@ -1,11 +1,16 @@
 #pragma once
 
 #include <netinet/in.h>
+#include <stdatomic.h>
 #include <stdlib.h>
 #include "../swift_net.h"
 
 #define REQUEST_LOST_PACKETS_RETURN_UPDATED_BIT_ARRAY 0x00
 #define REQUEST_LOST_PACKETS_RETURN_COMPLETED_PACKET 0x01
+
+#define PACKET_QUEUE_OWNER_NONE 0x00
+#define PACKET_QUEUE_OWNER_HANDLE_PACKETS 0x01
+#define PACKET_QUEUE_OWNER_PROCESS_PACKETS 0x02
 
 #define MIN(one, two) (one > two ? two : one)
 
@@ -23,6 +28,7 @@ struct PacketQueueNode {
 };
 
 typedef struct {
+    atomic_uint owner;
     PacketQueueNode* volatile first_node;
     PacketQueueNode* volatile last_node;
 } PacketQueue;

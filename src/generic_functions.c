@@ -37,11 +37,13 @@ void swiftnet_set_buffer_size(const unsigned int new_buffer_size, CONNECTION_TYP
         SwiftNetPacket* restrict const packet = &connection->packet;
 )
 
-    connection->buffer_size = new_buffer_size;
+    const unsigned int bytes_to_allocate = new_buffer_size + sizeof(SwiftNetPacketInfo);
+
+    connection->buffer_size = bytes_to_allocate;
 
     const unsigned int currentDataPosition = packet->packet_append_pointer - packet->packet_data_start;
 
-    uint8_t* restrict const newDataPointer = realloc(packet->packet_buffer_start, new_buffer_size);
+    uint8_t* restrict const newDataPointer = realloc(packet->packet_buffer_start, bytes_to_allocate);
 
     packet->packet_buffer_start = newDataPointer;
     packet->packet_data_start = newDataPointer + sizeof(SwiftNetPacketInfo);

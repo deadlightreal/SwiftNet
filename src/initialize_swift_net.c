@@ -1,3 +1,4 @@
+#include <stdatomic.h>
 #include <stdlib.h>
 #include <time.h>
 #include <stdio.h>
@@ -6,9 +7,14 @@
 
 unsigned int maximum_transmission_unit = 0x00;
 
-PacketQueue packet_queue;
+PacketQueue packet_queue = {
+    .first_node = NULL,
+    .last_node = NULL,
+};
 
 void swiftnet_initialize() {
+    atomic_store(&packet_queue.owner, PACKET_QUEUE_OWNER_NONE);
+
     char default_network_interface[32];
 
     const int got_default_interface = GetDefaultInterface(default_network_interface);

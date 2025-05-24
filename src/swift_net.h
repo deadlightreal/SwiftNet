@@ -85,9 +85,9 @@ typedef struct {
 
 typedef struct {
     uint16_t packet_id;
-    volatile bool updated_lost_chunks_bit_array;
-    volatile uint8_t* lost_chunks_bit_array;
-    unsigned int chunk_amount;
+    volatile bool updated_lost_chunks;
+    volatile uint32_t* lost_chunks;
+    volatile uint32_t lost_chunks_size;
     volatile bool successfully_received;
 } SwiftNetPacketSending;
 
@@ -104,13 +104,13 @@ typedef struct {
 
 typedef struct {
     uint8_t* packet_data_start;
-    uint8_t* packet_current_pointer;
     SwiftNetPacketInfo packet_info;
     SwiftNetServerCode(
         in_addr_t client_address;
     )
     uint8_t* chunks_received;
     unsigned int chunks_received_length;
+    unsigned int chunks_received_number;
 } SwiftNetPendingMessage;
 
 typedef struct {

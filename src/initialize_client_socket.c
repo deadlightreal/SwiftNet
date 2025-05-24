@@ -110,6 +110,7 @@ SwiftNetClientConnection* swiftnet_create_client(const char* const restrict ip_a
 
     const SwiftNetServerInformation* const restrict server_information = (SwiftNetServerInformation*)&server_information_buffer[sizeof(SwiftNetPacketInfo) + sizeof(struct ip)];
 
+    printf("got mtu: %d\n", server_information->maximum_transmission_unit);
     empty_connection->maximum_transmission_unit = server_information->maximum_transmission_unit;
  
     pthread_create(&empty_connection->handle_packets_thread, NULL, swiftnet_handle_packets, empty_connection);

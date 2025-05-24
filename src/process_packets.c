@@ -1,5 +1,6 @@
 #include "internal/internal.h"
 #include "swift_net.h"
+#include <stdatomic.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <pthread.h>
@@ -7,6 +8,60 @@
 #include <unistd.h>
 #include <stdio.h>
 #include <time.h>
+
+static inline const uint32_t return_lost_chunk_indexes(const SwiftNetPendingMessage* const restrict pending_message, const uint32_t buffer_size, uint32_t* const restrict buffer) {
+    uint32_t byte = 0;
+
+    uint32_t offset = 0;
+
+    const uint32_t chunk_amount = pending_message->packet_info.chunk_amount;
+
+    while(1) {
+        printf("buffer size: %d\noffset: %d\nchunk amount: %d\n", buffer_size, offset, chunk_amount);
+        printf("byte: %d\n", byte);
+
+        if(byte * 8 + 8 < pending_message->packet_info.chunk_amount) {
+            if(pending_message->chunks_received[byte] == 0xFF) {
+                byte++;
+                continue;
+            }
+
+            for(uint8_t bit = 0; bit < 8; bit++) {
+                if(offset * 4 + 4 > buffer_size) { 
+                    return buffer_size;
+                }
+
+                if((pending_message->chunks_received[byte] & (1 << bit)) == 0x00) {
+                    buffer[offset] = byte * 8 + bit;
+                    printf("lost: %d\n", buffer[offset]);
+                    offset++;
+                }
+            }
+        } else {
+            printf("in return stack frame\n");
+
+            const uint8_t bits_to_check = chunk_amount - byte * 8;
+            
+            for(uint8_t bit = 0; bit < bits_to_check; bit++) {
+                if(offset * 4 + 4 > buffer_size) { 
+                    return buffer_size;
+                }
+                
+                if((pending_message->chunks_received[byte] & (1 << bit)) == 0x00) {
+                    buffer[offset] = byte * 8 + bit;
+                    printf("lost: %d\n", buffer[offset]);
+                    offset++;
+                }
+            }
+            
+            return offset * 4;
+        }
+
+        byte++;
+    }
+
+    return offset * 4;
+}
 
 static inline void packet_completed(const uint16_t packet_id, const unsigned int packet_length, CONNECTION_TYPE* restrict const connection) {
     const SwiftNetPacketCompleted null_packet_completed = {0x00};
@@ -65,13 +120,13 @@ static inline SwiftNetPendingMessage* restrict const create_new_pending_message(
     for(uint16_t i = 0; i < pending_messages_size; i++) {
         SwiftNetPendingMessage* restrict const current_pending_message = &pending_messages[i];
 
-        if(current_pending_message->packet_current_pointer == NULL) {
+        if(current_pending_message->packet_data_start == NULL) {
             current_pending_message->packet_info = *packet_info;
 
             uint8_t* restrict const allocated_memory = malloc(packet_info->packet_length);
 
             current_pending_message->packet_data_start = allocated_memory;
-            current_pending_message->packet_current_pointer = allocated_memory;
+            current_pending_message->chunks_received_number = 0;
 
             const unsigned int chunks_received_byte_size = (packet_info->chunk_amount + 7) / 8;
 
@@ -104,9 +159,12 @@ PacketQueueNode* wait_for_next_packet() {
     while(packet_queue.first_node == NULL) {
     };
 
-    PacketQueueNode* const restrict node_to_process = packet_queue.first_node;
+    unsigned int owner_none = PACKET_QUEUE_OWNER_NONE;
+    while(!atomic_compare_exchange_strong(&packet_queue.owner, &owner_none, PACKET_QUEUE_OWNER_PROCESS_PACKETS)) {}
 
-    if(node_to_process == packet_queue.last_node) {
+    PacketQueueNode* volatile const node_to_process = packet_queue.first_node;
+
+    if(node_to_process->next == NULL) {
         packet_queue.first_node = NULL;
         packet_queue.last_node = NULL;
 
@@ -114,6 +172,8 @@ PacketQueueNode* wait_for_next_packet() {
     }
 
     packet_queue.first_node = node_to_process->next;
+
+    atomic_store(&packet_queue.owner, PACKET_QUEUE_OWNER_NONE);
 
     return node_to_process;
 }
@@ -157,11 +217,11 @@ void* process_packets(void* restrict const void_connection) {
         PacketQueueNode* restrict const node = wait_for_next_packet();
 
         uint8_t* restrict const packet_buffer = node->data;
-        if(unlikely(node->data == NULL)) {
+        if(packet_buffer == NULL) {
             goto next_packet;
         }
 
-        const uint8_t* packet_data = &packet_buffer[header_size];
+        uint8_t* restrict const packet_data = &packet_buffer[header_size];
 
         // Check if user set a function that will execute with the packet data received as arg
         SwiftNetErrorCheck(
@@ -224,8 +284,8 @@ void* process_packets(void* restrict const void_connection) {
                 packet_info_new.packet_type = PACKET_TYPE_SEND_LOST_PACKETS_RESPONSE;
                 packet_info_new.port_info = port_info;
 
-                const SwiftNetPendingMessage* restrict const pending_message = get_pending_message(&packet_info, pending_messages, MAX_PENDING_MESSAGES EXTRA_SERVER_ARG(node->sender_address.sin_addr.s_addr));
-                if(unlikely(pending_message == NULL)) {
+                SwiftNetPendingMessage* restrict const pending_message = get_pending_message(&packet_info, pending_messages, MAX_PENDING_MESSAGES EXTRA_SERVER_ARG(node->sender_address.sin_addr.s_addr));
+                if(pending_message == NULL) {
                     const bool packet_already_completed = check_packet_already_completed(packet_info.packet_id, void_connection);
                     if(likely(packet_already_completed == true)) {
                         const SwiftNetPacketInfo send_packet_info = {
@@ -246,18 +306,21 @@ void* process_packets(void* restrict const void_connection) {
                     goto next_packet;
                 }
 
-                packet_info_new.packet_length = pending_message->chunks_received_length;
+                const unsigned int mtu = MIN(packet_info.chunk_size, maximum_transmission_unit);
 
-                const unsigned int buffer_size = sizeof(SwiftNetPacketInfo) + pending_message->chunks_received_length;
-                uint8_t send_buffer[buffer_size];
-
-                memcpy(send_buffer, &packet_info_new, sizeof(SwiftNetPacketInfo));
-                memcpy(&send_buffer[sizeof(SwiftNetPacketInfo)], pending_message->chunks_received, pending_message->chunks_received_length);
-                
-                for(uint8_t i = 0; i < pending_message->chunks_received_length; i++) {
+                uint8_t send_buffer[mtu];
+                const uint32_t lost_chunk_indexes = return_lost_chunk_indexes(pending_message, mtu - sizeof(SwiftNetPacketInfo), (uint32_t*)&send_buffer[sizeof(SwiftNetPacketInfo)]);
+                for(uint32_t i = 0; i < lost_chunk_indexes; i += 4) {
+                    // Cast to uint32_t pointer before dereferencing to ensure correct size
+                    uint32_t *packet = (uint32_t*)&send_buffer[sizeof(SwiftNetPacketInfo) + i];
+                    printf("lost packet: %u\n", *packet);  // Use %u for unsigned integer
                 }
 
-                sendto(sockfd, send_buffer, buffer_size, 0, (const struct sockaddr *)&node->sender_address, node->sender_address_len);
+                packet_info_new.packet_length = lost_chunk_indexes;
+
+                memcpy(send_buffer, &packet_info_new, sizeof(SwiftNetPacketInfo));
+
+                sendto(sockfd, send_buffer, sizeof(SwiftNetPacketInfo) + lost_chunk_indexes, 0x00, (const struct sockaddr *)&node->sender_address, node->sender_address_len);
 
                 goto next_packet;
             }
@@ -268,13 +331,14 @@ void* process_packets(void* restrict const void_connection) {
                     goto next_packet;
                 }
 
-                if(unlikely(target_packet_sending->lost_chunks_bit_array == NULL)) {
-                    target_packet_sending->lost_chunks_bit_array = malloc(packet_info.packet_length);
+                if(unlikely(target_packet_sending->lost_chunks == NULL)) {
+                    target_packet_sending->lost_chunks = malloc(maximum_transmission_unit);
                 }
 
-                memcpy((void*)target_packet_sending->lost_chunks_bit_array, packet_data, packet_info.packet_length);
+                memcpy((void*)target_packet_sending->lost_chunks, packet_data, packet_info.packet_length);
 
-                target_packet_sending->updated_lost_chunks_bit_array = true;
+                target_packet_sending->lost_chunks_size = packet_info.packet_length / 4;
+                target_packet_sending->updated_lost_chunks = true;
 
                 goto next_packet;
             }
@@ -322,11 +386,11 @@ void* process_packets(void* restrict const void_connection) {
                     SwiftNetPendingMessage* restrict const new_pending_message = create_new_pending_message(pending_messages, MAX_PENDING_MESSAGES, &packet_info, node->sender_address.sin_addr.s_addr);
                 )
 
+                new_pending_message->chunks_received_number++;
+
                 chunk_received(new_pending_message, packet_info.chunk_index);
                     
-                memcpy(new_pending_message->packet_current_pointer, &packet_buffer[header_size], chunk_data_size);
-
-                new_pending_message->packet_current_pointer += chunk_data_size;
+                memcpy(new_pending_message->packet_data_start, &packet_buffer[header_size], chunk_data_size);
             } else {
                 current_read_pointer = packet_buffer + header_size;
 
@@ -337,13 +401,15 @@ void* process_packets(void* restrict const void_connection) {
                 continue;
             }
         } else {
-            const unsigned int bytes_needed_to_complete_packet = packet_info.packet_length - (pending_message->packet_current_pointer - pending_message->packet_data_start);
+            const float percentage_completed = (float)(pending_message->chunks_received_number + 1) / packet_info.chunk_amount;
 
-            chunk_received(pending_message, packet_info.chunk_index);
+            const unsigned int bytes_to_copy = packet_info.chunk_amount == packet_info.chunk_index + 1 ? packet_info.packet_length % chunk_data_size : chunk_data_size;
 
-            if(bytes_needed_to_complete_packet < mtu) {
+            printf("completed: %f.2\n", percentage_completed);
+
+            if(pending_message->chunks_received_number + 1 >= packet_info.chunk_amount) {
                     // Completed the packet
-                memcpy(pending_message->packet_current_pointer, &packet_buffer[header_size], bytes_needed_to_complete_packet);
+                memcpy(pending_message->packet_data_start + (chunk_data_size * packet_info.chunk_index), &packet_buffer[header_size], bytes_to_copy);
 
                 current_read_pointer = pending_message->packet_data_start;
 
@@ -356,11 +422,11 @@ void* process_packets(void* restrict const void_connection) {
 
                 memset(pending_message, 0x00, sizeof(SwiftNetPendingMessage));
             } else {
-                memcpy(pending_message->packet_current_pointer, &packet_buffer[header_size], chunk_data_size);
-
-                pending_message->packet_current_pointer += chunk_data_size;
+                memcpy(pending_message->packet_data_start + (chunk_data_size * packet_info.chunk_index), &packet_buffer[header_size], bytes_to_copy);
 
                 chunk_received(pending_message, packet_info.chunk_index);
+
+                pending_message->chunks_received_number++;
             }
         }
 
