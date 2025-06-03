@@ -2,9 +2,9 @@
 
 //#define DATA_TO_SEND 1000000000 // 1gb
 //#define DATA_TO_SEND 100000000 // 100mb
-//#define DATA_TO_SEND 10000000 // 10mb
-#define DATA_TO_SEND 6000000 // 6mb
-//#define DATA_TO_SEND 5000000 // 1mb
+#define DATA_TO_SEND 10000000 // 10mb
+//#define DATA_TO_SEND 6000000 // 6mb
+//#define DATA_TO_SEND 1000000 // 1mb
 //#define DATA_TO_SEND 100000 // 100kb
 //#define DATA_TO_SEND 10000 // 10kb
 

@@ -78,6 +78,7 @@ void* swiftnet_handle_packets(void* const volatile void_connection) {
 
         printf("got packet %d\n", received_sucessfully);
 
+        node->data_read = received_sucessfully;
         node->data = packet_buffer;
         node->next = NULL;
 

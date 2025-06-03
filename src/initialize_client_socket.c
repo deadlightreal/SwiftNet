@@ -7,6 +7,7 @@
 #include <netinet/ip.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
+#include "internal/internal.h"
 #include "swift_net.h"
 #include <fcntl.h>
 
@@ -71,10 +72,24 @@ SwiftNetClientConnection* swiftnet_create_client(const char* const restrict ip_a
         .port_info = empty_connection->port_info,
         .packet_length = 0x00,
         .packet_id = rand(),
-        .packet_type = PACKET_TYPE_REQUEST_INFORMATION
+        .packet_type = PACKET_TYPE_REQUEST_INFORMATION,
+        .chunk_size = 0x00,
+        .checksum = 0x00,
+        .maximum_transmission_unit = maximum_transmission_unit
     };
 
     memcpy(request_information_data, &packetInfo, sizeof(SwiftNetPacketInfo));
+
+    const uint32_t checksum = crc32(request_information_data, sizeof(request_information_data));
+
+    memcpy(&request_information_data[offsetof(SwiftNetPacketInfo, checksum)], &checksum, sizeof(checksum));
+
+    printf("crc: %d\n", checksum);
+
+    for (uint8_t i = 0; i < 28; i++) {
+        printf("%d ", request_information_data[i]);
+    }
+    printf("\n");
 
     memset(empty_connection->pending_messages, 0x00, MAX_PENDING_MESSAGES * sizeof(SwiftNetPendingMessage));
     memset((void *)empty_connection->packets_sending, 0x00, MAX_PACKETS_SENDING * sizeof(SwiftNetPacketSending));

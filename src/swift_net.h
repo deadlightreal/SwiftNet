@@ -74,9 +74,11 @@ typedef struct {
     SwiftNetPortInfo port_info;
     uint16_t packet_id;
     uint8_t packet_type;
+    uint32_t checksum;
     unsigned int chunk_amount;
     unsigned int chunk_index;
     unsigned int chunk_size;
+    uint32_t maximum_transmission_unit;
 } SwiftNetPacketInfo;
 
 typedef struct {
