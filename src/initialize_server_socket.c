@@ -11,59 +11,60 @@
 #include <stdbool.h>
 #include "swift_net.h"
 
-SwiftNetServer* swiftnet_create_server(char* ip_address, uint16_t port) {
-    SwiftNetServer* emptyServer = NULL;
+SwiftNetServer* swiftnet_create_server(const char* const restrict ip_address, const uint16_t port) {
+    SwiftNetServer* restrict empty_server = NULL;
     for(uint8_t i = 0; i < MAX_SERVERS; i++) {
-        SwiftNetServer* currentServer = &SwiftNetServers[i];
-        if(currentServer->sockfd != -1) {
+        SwiftNetServer* const restrict current_server = &SwiftNetServers[i];
+        if(current_server->sockfd != -1) {
             continue;
         }
 
-        emptyServer = currentServer;
+        empty_server = current_server;
 
         break;
     }
 
     SwiftNetErrorCheck(
-        if(unlikely(emptyServer == NULL)) {
-            perror("Failed to get an empty server\n");
+        if(unlikely(empty_server == NULL)) {
+            fprintf(stderr, "Failed to get an empty server\n");
             exit(EXIT_FAILURE);
         }
     )
 
-    struct sockaddr_in server_addr;
-
-    emptyServer->server_port = port;
+    empty_server->server_port = port;
 
     // Create the socket
-    emptyServer->sockfd = socket(AF_INET, SOCK_RAW, IPPROTO_RAW);
-    if (unlikely(emptyServer->sockfd < 0)) {
-        perror("Socket creation failed\n");
+    empty_server->sockfd = socket(AF_INET, SOCK_RAW, IPPROTO_RAW);
+    if (unlikely(empty_server->sockfd < 0)) {
+        fprintf(stderr, "Socket creation failed\n");
         exit(EXIT_FAILURE);
     }
 
-    // Set socket options to allow address reuse for the custom protocol
     int opt = 1;
-    setsockopt(emptyServer->sockfd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
+    setsockopt(empty_server->sockfd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
 
     // Allocate memory for the packet buffer
-    uint8_t* dataPointer = (uint8_t*)malloc(emptyServer->buffer_size + sizeof(SwiftNetPacketInfo));
-    if(unlikely(dataPointer == NULL)) {
-        perror("Failed to allocate memory for packet data\n");
+    uint8_t* const restrict buffer_pointer = (uint8_t*)malloc(empty_server->buffer_size + sizeof(SwiftNetPacketInfo));
+    if(unlikely(buffer_pointer == NULL)) {
+        fprintf(stderr, "Failed to allocate memory for packet data\n");
         exit(EXIT_FAILURE);
     }
 
-    emptyServer->packet.packet_buffer_start = dataPointer;
-    emptyServer->packet.packet_data_start = dataPointer + sizeof(SwiftNetPacketInfo);
-    emptyServer->packet.packet_append_pointer = emptyServer->packet.packet_data_start;
+    uint8_t* const restrict data_pointer = buffer_pointer + sizeof(SwiftNetPacketInfo);
 
-    memset(emptyServer->transfer_clients, 0x00, MAX_TRANSFER_CLIENTS * sizeof(SwiftNetTransferClient));
+    empty_server->packet.packet_buffer_start = buffer_pointer;
+    empty_server->packet.packet_data_start = data_pointer;
+    empty_server->packet.packet_append_pointer = data_pointer;
+
+    memset(empty_server->pending_messages, 0x00, MAX_PENDING_MESSAGES * sizeof(SwiftNetPendingMessage));
     // Initialize transfer clients to NULL | 0x00
 
-    memset(emptyServer->packets_sending, 0x00, MAX_PACKETS_SENDING * sizeof(SwiftNetPacketSending));
+    memset((void *)empty_server->packets_sending, 0x00, MAX_PACKETS_SENDING * sizeof(SwiftNetPacketSending));
+    memset((void *)empty_server->packets_sending, 0x00, MAX_SENT_SUCCESSFULLY_COMPLETED_PACKET_SIGNAL * sizeof(SwiftNetSentSuccessfullyCompletedPacketSignal));
+    memset((void *)empty_server->packets_completed_history, 0x00, MAX_COMPLETED_PACKETS_HISTORY_SIZE * sizeof(SwiftNetPacketCompleted));
 
     // Create a new thread that will handle all packets received
-    pthread_create(&emptyServer->handle_packets_thread, NULL, swiftnet_handle_packets, emptyServer);
+    pthread_create(&empty_server->handle_packets_thread, NULL, swiftnet_handle_packets, empty_server);
 
-    return emptyServer;
+    return empty_server;
 }
