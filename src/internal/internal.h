@@ -3,10 +3,15 @@
 #include <netinet/in.h>
 #include <stdatomic.h>
 #include <stdlib.h>
+#include <sys/_types/_socklen_t.h>
 #include "../swift_net.h"
 
 #define REQUEST_LOST_PACKETS_RETURN_UPDATED_BIT_ARRAY 0x00
 #define REQUEST_LOST_PACKETS_RETURN_COMPLETED_PACKET 0x01
+
+#define PACKET_HEADER_SIZE (sizeof(SwiftNetPacketInfo) + sizeof(struct ip))
+
+#define DEFAULT_BUFFER_SIZE 0xFFFF
 
 #define PACKET_QUEUE_OWNER_NONE 0x00
 #define PACKET_QUEUE_OWNER_HANDLE_PACKETS 0x01
@@ -92,8 +97,8 @@ static inline uint32_t crc32(const uint8_t *data, size_t length) {
     return crc ^ 0xFFFFFFFF;
 }
 
-int GetDefaultInterface(char* restrict interface_name);
-unsigned int GetMtu(const char* restrict interface);
+const int GetDefaultInterface(char* restrict interface_name);
+const unsigned int GetMtu(const char* restrict interface);
 void* process_packets(void* void_connection);
 
 typedef struct PacketQueueNode PacketQueueNode;
@@ -103,7 +108,7 @@ struct PacketQueueNode {
     uint8_t* data;
     uint32_t data_read;
     struct sockaddr_in sender_address;
-    socklen_t sender_address_len;
+    socklen_t server_address_length;
 };
 
 typedef struct {

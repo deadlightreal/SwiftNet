@@ -1,7 +1,10 @@
+#include <pthread.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/_pthread/_pthread_t.h>
+#include <sys/_types/_socklen_t.h>
 #include <unistd.h>
 #include <arpa/inet.h>
 #include <netinet/ip.h>
@@ -10,6 +13,32 @@
 #include "internal/internal.h"
 #include "swift_net.h"
 #include <fcntl.h>
+
+bool exit_thread = false;
+
+typedef struct {
+    const int sockfd;
+    const void* restrict const data;
+    const uint32_t size;
+    const struct sockaddr_in server_addr;
+    const socklen_t server_addr_len;
+} RequestServerInformationArgs;
+
+void* request_server_information(void* request_server_information_args_void) {
+    const RequestServerInformationArgs* restrict const request_server_information_args = (RequestServerInformationArgs*)request_server_information_args_void;
+
+    while (1) {
+        if(exit_thread == true) {
+            return NULL;
+        }
+
+        sendto(request_server_information_args->sockfd, request_server_information_args->data, request_server_information_args->size, 0, (struct sockaddr *)&request_server_information_args->server_addr, request_server_information_args->server_addr_len);
+
+        usleep(1000000);
+    }
+
+    return NULL;
+}
 
 // Create the socket, and set client and server info
 SwiftNetClientConnection* swiftnet_create_client(const char* const restrict ip_address, const int port) {
@@ -40,12 +69,14 @@ SwiftNetClientConnection* swiftnet_create_client(const char* const restrict ip_a
     
     const uint16_t clientPort = rand();
 
+    empty_connection->server_addr_len = sizeof(empty_connection->server_addr);
+
     empty_connection->port_info.destination_port = port;
     empty_connection->port_info.source_port = clientPort;
     empty_connection->packet_handler = NULL;
 
     // Base buffer size
-    empty_connection->buffer_size = 0x400; // 1024
+    empty_connection->buffer_size = DEFAULT_BUFFER_SIZE;
 
     // Allocate memory for the packet buffer
     uint8_t* restrict const buffer_pointer = malloc(empty_connection->buffer_size + sizeof(SwiftNetPacketInfo));
@@ -60,15 +91,13 @@ SwiftNetClientConnection* swiftnet_create_client(const char* const restrict ip_a
     empty_connection->packet.packet_data_start = data_pointer;
     empty_connection->packet.packet_append_pointer = data_pointer;
 
-    memset(&empty_connection->server_addr, 0, sizeof(empty_connection->server_addr));
+    memset(&empty_connection->server_addr, 0, sizeof(struct sockaddr_in));
     empty_connection->server_addr.sin_family = AF_INET;
     empty_connection->server_addr.sin_port = htons(port);
     empty_connection->server_addr.sin_addr.s_addr = inet_addr(ip_address);
 
     // Request the server information, and proccess it
-    uint8_t request_information_data[sizeof(SwiftNetPacketInfo)];
-
-    const SwiftNetPacketInfo packetInfo = {
+    SwiftNetPacketInfo request_server_information_packet_info = {
         .port_info = empty_connection->port_info,
         .packet_length = 0x00,
         .packet_id = rand(),
@@ -78,54 +107,54 @@ SwiftNetClientConnection* swiftnet_create_client(const char* const restrict ip_a
         .maximum_transmission_unit = maximum_transmission_unit
     };
 
-    memcpy(request_information_data, &packetInfo, sizeof(SwiftNetPacketInfo));
-
-    const uint32_t checksum = crc32(request_information_data, sizeof(request_information_data));
-
-    memcpy(&request_information_data[offsetof(SwiftNetPacketInfo, checksum)], &checksum, sizeof(checksum));
-
-    printf("crc: %d\n", checksum);
-
-    for (uint8_t i = 0; i < 28; i++) {
-        printf("%d ", request_information_data[i]);
-    }
-    printf("\n");
+     request_server_information_packet_info.checksum = crc32((const uint8_t*)&request_server_information_packet_info, sizeof(SwiftNetPacketInfo));
 
     memset(empty_connection->pending_messages, 0x00, MAX_PENDING_MESSAGES * sizeof(SwiftNetPendingMessage));
     memset((void *)empty_connection->packets_sending, 0x00, MAX_PACKETS_SENDING * sizeof(SwiftNetPacketSending));
     memset((void *)empty_connection->packets_sending, 0x00, MAX_SENT_SUCCESSFULLY_COMPLETED_PACKET_SIGNAL * sizeof(SwiftNetSentSuccessfullyCompletedPacketSignal));
     memset((void *)empty_connection->packets_completed_history, 0x00, MAX_COMPLETED_PACKETS_HISTORY_SIZE * sizeof(SwiftNetPacketCompleted));
 
-    uint8_t server_information_buffer[sizeof(SwiftNetPacketInfo) + sizeof(SwiftNetServerInformation) + sizeof(struct ip)];
+    uint8_t server_information_buffer[PACKET_HEADER_SIZE + sizeof(SwiftNetServerInformation)];
 
+    pthread_t send_request_thread;
+
+    const RequestServerInformationArgs thread_args = {
+        .sockfd = empty_connection->sockfd,
+        .data = &request_server_information_packet_info,
+        .size = sizeof(request_server_information_packet_info),
+        .server_addr = empty_connection->server_addr,
+        .server_addr_len = sizeof(empty_connection->server_addr)
+    };
+
+    pthread_create(&send_request_thread, NULL, request_server_information, (void*)&thread_args);
+    
     while(1) {
-        sendto(empty_connection->sockfd, request_information_data, sizeof(request_information_data), 0, (struct sockaddr *)&empty_connection->server_addr, sizeof(empty_connection->server_addr));
-
-        for(uint8_t i = 0; i < 10; i++) {
-            const int bytes_received = recvfrom(empty_connection->sockfd, server_information_buffer, sizeof(server_information_buffer), 0x00, NULL, NULL);
-
-            const SwiftNetPacketInfo* const restrict packetInfo = (SwiftNetPacketInfo *)&server_information_buffer[sizeof(struct ip)];
-
-            if(packetInfo->port_info.destination_port != empty_connection->port_info.source_port || packetInfo->port_info.source_port != empty_connection->port_info.destination_port) {
-                continue;
-            }
-            
-            if(bytes_received != 0) {
-                goto after_getting_server_info;
-                break;
-            }
-            
-            usleep(1000000);
+        const int bytes_received = recvfrom(empty_connection->sockfd, server_information_buffer, sizeof(server_information_buffer), 0x00, NULL, NULL);
+        if(bytes_received != PACKET_HEADER_SIZE + sizeof(SwiftNetServerInformation)) {
+            continue;
         }
 
-    after_getting_server_info:
-        break;
+        const SwiftNetPacketInfo* const restrict packetInfo = (SwiftNetPacketInfo *)&server_information_buffer[sizeof(struct ip)];
 
+        if(packetInfo->port_info.destination_port != empty_connection->port_info.source_port || packetInfo->port_info.source_port != empty_connection->port_info.destination_port) {
+            continue;
+        }
+
+        if(packetInfo->packet_type != PACKET_TYPE_REQUEST_INFORMATION) {
+            continue;
+        }
+            
+        if(bytes_received != 0) {
+            break;
+        }
     }
 
-    const SwiftNetServerInformation* const restrict server_information = (SwiftNetServerInformation*)&server_information_buffer[sizeof(SwiftNetPacketInfo) + sizeof(struct ip)];
+    exit_thread = true;
 
-    printf("got mtu: %d\n", server_information->maximum_transmission_unit);
+    pthread_join(send_request_thread, NULL);
+
+    const SwiftNetServerInformation* const restrict server_information = (SwiftNetServerInformation*)&server_information_buffer[PACKET_HEADER_SIZE];
+
     empty_connection->maximum_transmission_unit = server_information->maximum_transmission_unit;
  
     pthread_create(&empty_connection->handle_packets_thread, NULL, swiftnet_handle_packets, empty_connection);

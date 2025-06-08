@@ -17,7 +17,7 @@ void swiftnet_set_message_handler(void (*handler)(uint8_t*, SwiftNetPacketMetada
 }
 
 // Adjusts the buffer size for a network packet, reallocating memory as needed.
-static inline void validate_set_buffer_size_args(const unsigned int size, CONNECTION_TYPE* const restrict con) {
+static inline void validate_set_buffer_size_args(const unsigned int size, const CONNECTION_TYPE* const restrict con) {
     if(unlikely(con == NULL || size == 0)) {
         fprintf(stderr, "Error: Invalid arguments given to function set buffer size.\n");
         exit(EXIT_FAILURE);
@@ -38,14 +38,13 @@ void swiftnet_set_buffer_size(const unsigned int new_buffer_size, CONNECTION_TYP
 )
 
     const unsigned int bytes_to_allocate = new_buffer_size + sizeof(SwiftNetPacketInfo);
+    const unsigned int current_data_position = packet->packet_append_pointer - packet->packet_data_start;
+
+    uint8_t* restrict const new_data_pointer = realloc(packet->packet_buffer_start, bytes_to_allocate);
+
+    packet->packet_buffer_start = new_data_pointer;
+    packet->packet_data_start = new_data_pointer + sizeof(SwiftNetPacketInfo);
+    packet->packet_append_pointer = packet->packet_data_start + current_data_position;
 
     connection->buffer_size = bytes_to_allocate;
-
-    const unsigned int currentDataPosition = packet->packet_append_pointer - packet->packet_data_start;
-
-    uint8_t* restrict const newDataPointer = realloc(packet->packet_buffer_start, bytes_to_allocate);
-
-    packet->packet_buffer_start = newDataPointer;
-    packet->packet_data_start = newDataPointer + sizeof(SwiftNetPacketInfo);
-    packet->packet_append_pointer = packet->packet_data_start + currentDataPosition;
 }
