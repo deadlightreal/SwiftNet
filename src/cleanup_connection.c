@@ -3,9 +3,9 @@
 #include <stdlib.h>
 
 
-void swiftnet_cleanup_connection(CONNECTION_TYPE* const restrict connection) {
+void swiftnet_cleanup_connection(const CONNECTION_TYPE* const restrict connection) {
     SwiftNetServerCode(
-    free(connection->packet.packet_buffer_start);
+        free(connection->packet.packet_buffer_start);
     )
 
     SwiftNetClientCode(

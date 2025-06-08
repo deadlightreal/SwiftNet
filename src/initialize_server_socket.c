@@ -11,19 +11,23 @@
 #include <stdbool.h>
 #include "swift_net.h"
 
-SwiftNetServer* swiftnet_create_server(const char* const restrict ip_address, const uint16_t port) {
-    SwiftNetServer* restrict empty_server = NULL;
-    for(uint8_t i = 0; i < MAX_SERVERS; i++) {
-        SwiftNetServer* const restrict current_server = &SwiftNetServers[i];
-        if(current_server->sockfd != -1) {
-            continue;
+static inline SwiftNetServer* get_empty_server(SwiftNetServer* const restrict servers, const uint32_t server_count) {
+    for(uint16_t i = 0; i < server_count; i++) {
+        SwiftNetServer* const restrict current_server = &servers[i];
+        if(current_server->sockfd == -1) {
+            return current_server;
         }
-
-        empty_server = current_server;
-
-        break;
     }
 
+    return NULL;
+}
+
+SwiftNetServer* swiftnet_create_server(const char* const restrict ip_address, const uint16_t port) {
+    SwiftNetServer* restrict empty_server = get_empty_server(SwiftNetServers, MAX_SERVERS);
+    if(unlikely(empty_server == NULL)) {
+        return NULL;
+    }
+    
     SwiftNetErrorCheck(
         if(unlikely(empty_server == NULL)) {
             fprintf(stderr, "Failed to get an empty server\n");
@@ -40,7 +44,7 @@ SwiftNetServer* swiftnet_create_server(const char* const restrict ip_address, co
         exit(EXIT_FAILURE);
     }
 
-    int opt = 1;
+    const uint8_t opt = 1;
     setsockopt(empty_server->sockfd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
 
     // Allocate memory for the packet buffer

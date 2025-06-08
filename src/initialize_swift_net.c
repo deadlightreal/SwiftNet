@@ -5,7 +5,7 @@
 #include "swift_net.h"
 #include "internal/internal.h"
 
-unsigned int maximum_transmission_unit = 0x00;
+uint32_t maximum_transmission_unit = 0x00;
 
 PacketQueue packet_queue = {
     .first_node = NULL,
@@ -24,7 +24,7 @@ void swiftnet_initialize() {
     }
 
     maximum_transmission_unit = GetMtu(default_network_interface);
-if(unlikely(maximum_transmission_unit == 0)) {
+    if(unlikely(maximum_transmission_unit == 0)) {
         fprintf(stderr, "Failed to get the maximum transmission unit\n");
         exit(EXIT_FAILURE);
     }

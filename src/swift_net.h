@@ -3,6 +3,7 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <stdint.h>
+#include <sys/_types/_socklen_t.h>
 #include <time.h>
 #include <pthread.h>
 #include <string.h>
@@ -40,7 +41,6 @@
     #define SwiftNetServerCode(code) code
     #define SwiftNetClientCode(code)
 #else
-    
     #define EXTRA_SERVER_ARG(arg)
     #define EXTRA_CLIENT_ARG(arg) , arg
     #define CONNECTION_TYPE SwiftNetClientConnection
@@ -48,7 +48,7 @@
     #define SwiftNetClientCode(code) code
 #endif
 
-extern unsigned int maximum_transmission_unit;
+extern uint32_t maximum_transmission_unit;
 
 typedef struct {
     uint16_t destination_port;
@@ -58,11 +58,11 @@ typedef struct {
 typedef struct {
     struct sockaddr_in client_address;
     socklen_t client_address_length;
-    unsigned int maximum_transmission_unit;
+    uint32_t maximum_transmission_unit;
 } SwiftNetClientAddrData;
 
 typedef struct {
-    unsigned int data_length;
+    uint32_t data_length;
 
     SwiftNetServerCode(
         SwiftNetClientAddrData sender;
@@ -70,19 +70,19 @@ typedef struct {
 } SwiftNetPacketMetadata;
 
 typedef struct {
-    unsigned int packet_length;
+    uint32_t packet_length;
     SwiftNetPortInfo port_info;
     uint16_t packet_id;
     uint8_t packet_type;
     uint32_t checksum;
-    unsigned int chunk_amount;
-    unsigned int chunk_index;
-    unsigned int chunk_size;
+    uint32_t chunk_amount;
+    uint32_t chunk_index;
+    uint32_t chunk_size;
     uint32_t maximum_transmission_unit;
 } SwiftNetPacketInfo;
 
 typedef struct {
-    unsigned int maximum_transmission_unit;
+    uint32_t maximum_transmission_unit;
 } SwiftNetServerInformation;
 
 typedef struct {
@@ -95,7 +95,7 @@ typedef struct {
 
 typedef struct {
     uint16_t packet_id;
-    unsigned int packet_length;
+    uint32_t packet_length;
 } SwiftNetPacketCompleted;
 
 typedef struct {
@@ -111,8 +111,8 @@ typedef struct {
         in_addr_t client_address;
     )
     uint8_t* chunks_received;
-    unsigned int chunks_received_length;
-    unsigned int chunks_received_number;
+    uint32_t chunks_received_length;
+    uint32_t chunks_received_number;
 } SwiftNetPendingMessage;
 
 typedef struct {
@@ -125,12 +125,13 @@ typedef struct {
     int sockfd;
     SwiftNetPortInfo port_info;
     struct sockaddr_in server_addr;
+    socklen_t server_addr_len;
     void (* volatile packet_handler) (uint8_t*, const SwiftNetPacketMetadata);
-    unsigned int buffer_size;
+    uint32_t buffer_size;
     pthread_t handle_packets_thread;
     pthread_t process_packets_thread;
     SwiftNetPacket packet;
-    unsigned int maximum_transmission_unit;
+    uint32_t maximum_transmission_unit;
     SwiftNetPendingMessage pending_messages[MAX_PENDING_MESSAGES];
     volatile SwiftNetPacketSending packets_sending[MAX_PACKETS_SENDING];
     volatile SwiftNetPacketCompleted packets_completed_history[MAX_COMPLETED_PACKETS_HISTORY_SIZE];
@@ -143,7 +144,7 @@ extern SwiftNetClientConnection SwiftNetClientConnections[MAX_CLIENT_CONNECTIONS
 typedef struct {
     int sockfd;
     uint16_t server_port;
-    unsigned int buffer_size;
+    uint32_t buffer_size;
     void (* volatile packet_handler)(uint8_t*, const SwiftNetPacketMetadata);
     pthread_t handle_packets_thread;
     pthread_t process_packets_thread;
@@ -159,13 +160,13 @@ extern SwiftNetServer SwiftNetServers[MAX_SERVERS];
 
 void swiftnet_set_message_handler(void (*handler)(uint8_t*, SwiftNetPacketMetadata), CONNECTION_TYPE* restrict connection);
 void* swiftnet_handle_packets(void* volatile connection);
-void swiftnet_set_buffer_size(unsigned int new_buffer_size, CONNECTION_TYPE* restrict connection);
-void swiftnet_append_to_packet(CONNECTION_TYPE* restrict connection, const void* restrict data, const unsigned int data_size);
+void swiftnet_set_buffer_size(uint32_t new_buffer_size, CONNECTION_TYPE* restrict connection);
+void swiftnet_append_to_packet(CONNECTION_TYPE* restrict connection, const void* restrict data, const uint32_t data_size);
 void swiftnet_send_packet(const CONNECTION_TYPE* restrict const connection EXTRA_SERVER_ARG(const SwiftNetClientAddrData client_address));
 SwiftNetServer* swiftnet_create_server(const char* restrict ip_address, const uint16_t port);
 SwiftNetClientConnection* swiftnet_create_client(const char* restrict ip_address, const int port);
 void swiftnet_initialize();
-void swiftnet_cleanup_connection(CONNECTION_TYPE* restrict connection);
+void swiftnet_cleanup_connection(const CONNECTION_TYPE* const restrict connection);
 
 // ----------------
 // INLINE FUNCTIONS

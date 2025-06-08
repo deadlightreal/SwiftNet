@@ -4,7 +4,7 @@
 #include <string.h>
 #include <unistd.h>
 
-unsigned int GetMtu(const char* const restrict interface) {
+const unsigned int GetMtu(const char* const restrict interface) {
     char command[256];
 
     snprintf(command, sizeof(command), "ifconfig %s | grep mtu | awk '{print $4}'", interface);
