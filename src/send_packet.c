@@ -117,6 +117,7 @@ static inline void handle_lost_packets(volatile SwiftNetPacketSending* const pac
             case REQUEST_LOST_PACKETS_RETURN_UPDATED_BIT_ARRAY:
                 break;
             case REQUEST_LOST_PACKETS_RETURN_COMPLETED_PACKET:
+                free((void*)packet_sending->lost_chunks);
                 return;
         }
     
