@@ -9,6 +9,7 @@
 #include <sys/socket.h>
 #include <pthread.h>
 #include <stdbool.h>
+#include "internal/internal.h"
 #include "swift_net.h"
 
 static inline SwiftNetServer* get_empty_server(SwiftNetServer* const restrict servers, const uint32_t server_count) {
@@ -22,7 +23,7 @@ static inline SwiftNetServer* get_empty_server(SwiftNetServer* const restrict se
     return NULL;
 }
 
-SwiftNetServer* swiftnet_create_server(const char* const restrict ip_address, const uint16_t port) {
+SwiftNetServer* swiftnet_create_server(const uint16_t port) {
     SwiftNetServer* restrict empty_server = get_empty_server(SwiftNetServers, MAX_SERVERS);
     if(unlikely(empty_server == NULL)) {
         return NULL;
@@ -36,6 +37,7 @@ SwiftNetServer* swiftnet_create_server(const char* const restrict ip_address, co
     )
 
     empty_server->server_port = port;
+    empty_server->buffer_size = DEFAULT_BUFFER_SIZE;
 
     // Create the socket
     empty_server->sockfd = socket(AF_INET, SOCK_RAW, IPPROTO_RAW);
@@ -46,6 +48,14 @@ SwiftNetServer* swiftnet_create_server(const char* const restrict ip_address, co
 
     const uint8_t opt = 1;
     setsockopt(empty_server->sockfd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
+
+    
+    empty_server->packet_queue = (PacketQueue){
+        .first_node = NULL,
+        .last_node = NULL
+    };
+
+    atomic_store(&empty_server->packet_queue.owner, PACKET_QUEUE_OWNER_NONE);
 
     // Allocate memory for the packet buffer
     uint8_t* const restrict buffer_pointer = (uint8_t*)malloc(empty_server->buffer_size + sizeof(SwiftNetPacketInfo));
@@ -68,7 +78,7 @@ SwiftNetServer* swiftnet_create_server(const char* const restrict ip_address, co
     memset((void *)empty_server->packets_completed_history, 0x00, MAX_COMPLETED_PACKETS_HISTORY_SIZE * sizeof(SwiftNetPacketCompleted));
 
     // Create a new thread that will handle all packets received
-    pthread_create(&empty_server->handle_packets_thread, NULL, swiftnet_handle_packets, empty_server);
+    pthread_create(&empty_server->handle_packets_thread, NULL, swiftnet_server_handle_packets, empty_server);
 
     return empty_server;
 }

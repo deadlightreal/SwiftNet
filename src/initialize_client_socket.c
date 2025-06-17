@@ -1,4 +1,5 @@
 #include <pthread.h>
+#include <stdatomic.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -41,7 +42,7 @@ void* request_server_information(void* request_server_information_args_void) {
 }
 
 // Create the socket, and set client and server info
-SwiftNetClientConnection* swiftnet_create_client(const char* const restrict ip_address, const int port) {
+SwiftNetClientConnection* swiftnet_create_client(const char* const restrict ip_address, const uint16_t port) {
     SwiftNetClientConnection* restrict empty_connection = NULL;
     for(uint8_t i = 0; i < MAX_CLIENT_CONNECTIONS; i++) {
         SwiftNetClientConnection* const restrict currentConnection = &SwiftNetClientConnections[i];
@@ -68,6 +69,13 @@ SwiftNetClientConnection* swiftnet_create_client(const char* const restrict ip_a
     }
     
     const uint16_t clientPort = rand();
+
+    empty_connection->packet_queue = (PacketQueue){
+        .first_node = NULL,
+        .last_node = NULL
+    };
+
+    atomic_store(&empty_connection->packet_queue.owner, PACKET_QUEUE_OWNER_NONE);
 
     empty_connection->server_addr_len = sizeof(empty_connection->server_addr);
 
@@ -157,7 +165,7 @@ SwiftNetClientConnection* swiftnet_create_client(const char* const restrict ip_a
 
     empty_connection->maximum_transmission_unit = server_information->maximum_transmission_unit;
  
-    pthread_create(&empty_connection->handle_packets_thread, NULL, swiftnet_handle_packets, empty_connection);
+    pthread_create(&empty_connection->handle_packets_thread, NULL, swiftnet_client_handle_packets, empty_connection);
 
     return empty_connection;
 }

@@ -2,13 +2,10 @@
 #include "swift_net.h"
 #include <stdlib.h>
 
+void swiftnet_client_cleanup(const SwiftNetClientConnection* const restrict client) {
+    free(client->packet.packet_buffer_start);
+}
 
-void swiftnet_cleanup_connection(const CONNECTION_TYPE* const restrict connection) {
-    SwiftNetServerCode(
-        free(connection->packet.packet_buffer_start);
-    )
-
-    SwiftNetClientCode(
-        free(connection->packet.packet_buffer_start);
-    )
+void swiftnet_server_cleanup(const SwiftNetServer* const restrict server) {
+    free(server->packet.packet_buffer_start);
 }
