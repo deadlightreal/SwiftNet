@@ -21,26 +21,15 @@ set(SOURCE_FILES
 set(OBJ_DIR ${CMAKE_SOURCE_DIR}/../build)
 
 # SwiftNet Client Library
-add_library(swift_net_client STATIC ${SOURCE_FILES})
-target_compile_definitions(swift_net_client PRIVATE SWIFT_NET_CLIENT)
-set_target_properties(swift_net_client PROPERTIES
-    ARCHIVE_OUTPUT_DIRECTORY ${OBJ_DIR}/client
-    OUTPUT_NAME "swift_net_client"
-    RUNTIME_OUTPUT_DIRECTORY ${OBJ_DIR}/client
-    LIBRARY_OUTPUT_DIRECTORY ${OBJ_DIR}/client
-)
-
-# SwiftNet Server Library
-add_library(swift_net_server STATIC ${SOURCE_FILES})
-target_compile_definitions(swift_net_server PRIVATE SWIFT_NET_SERVER)
-set_target_properties(swift_net_server PROPERTIES
-    ARCHIVE_OUTPUT_DIRECTORY ${OBJ_DIR}/server
-    OUTPUT_NAME "swift_net_server"
-    RUNTIME_OUTPUT_DIRECTORY ${OBJ_DIR}/server
-    LIBRARY_OUTPUT_DIRECTORY ${OBJ_DIR}/server
+add_library(swift_net STATIC ${SOURCE_FILES})
+set_target_properties(swift_net PROPERTIES
+    ARCHIVE_OUTPUT_DIRECTORY ${OBJ_DIR}/output
+    OUTPUT_NAME "swift_net"
+    RUNTIME_OUTPUT_DIRECTORY ${OBJ_DIR}/output
+    LIBRARY_OUTPUT_DIRECTORY ${OBJ_DIR}/output
 )
 
 add_custom_target(clean_objects
-    COMMAND ${CMAKE_COMMAND} -E rm -f ${OBJ_DIR}/client/*.o ${OBJ_DIR}/server/*.o
+    COMMAND ${CMAKE_COMMAND} -E rm -f ${OBJ_DIR}/output/*.o
     COMMENT "Cleaning up object files"
 )

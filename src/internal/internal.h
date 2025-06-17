@@ -97,24 +97,13 @@ static inline uint32_t crc32(const uint8_t *data, size_t length) {
     return crc ^ 0xFFFFFFFF;
 }
 
-const int GetDefaultInterface(char* restrict interface_name);
-const unsigned int GetMtu(const char* restrict interface);
-void* process_packets(void* void_connection);
+extern const int get_default_interface(char* restrict interface_name);
+extern const uint32_t get_mtu(const char* restrict interface);
 
-typedef struct PacketQueueNode PacketQueueNode;
+extern void* swiftnet_server_process_packets(void* restrict const void_server);
+extern void* swiftnet_client_process_packets(void* restrict const void_client);
 
-struct PacketQueueNode {
-    PacketQueueNode* next;
-    uint8_t* data;
-    uint32_t data_read;
-    struct sockaddr_in sender_address;
-    socklen_t server_address_length;
-};
-
-typedef struct {
-    atomic_uint owner;
-    PacketQueueNode* volatile first_node;
-    PacketQueueNode* volatile last_node;
-} PacketQueue;
-
-extern PacketQueue packet_queue;
+typedef enum {
+    CONNECTION_TYPE_SERVER,
+    CONNECTION_TYPE_CLIENT
+} ConnectionType;
