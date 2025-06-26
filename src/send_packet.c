@@ -123,7 +123,7 @@ static inline void handle_lost_packets(
 
                 memcpy(&resend_chunk_buffer[offsetof(SwiftNetPacketInfo, checksum)], &checksum, SIZEOF_FIELD(SwiftNetPacketInfo, checksum));
     
-                sendto(sockfd, resend_chunk_buffer, bytes_to_complete, 0, (const struct sockaddr*)destination_address, sizeof(*destination_address));
+                sendto(sockfd, resend_chunk_buffer, bytes_to_complete, 0, (const struct sockaddr*)destination_address, *destination_address_len);
             } else {
                 memcpy(&resend_chunk_buffer[sizeof(SwiftNetPacketInfo)], &packet->packet_data_start[current_offset], maximum_transmission_unit - PACKET_HEADER_SIZE);
 

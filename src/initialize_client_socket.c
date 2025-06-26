@@ -122,6 +122,9 @@ SwiftNetClientConnection* swiftnet_create_client(const char* const restrict ip_a
     memset((void *)empty_connection->packets_sending, 0x00, MAX_SENT_SUCCESSFULLY_COMPLETED_PACKET_SIGNAL * sizeof(SwiftNetSentSuccessfullyCompletedPacketSignal));
     memset((void *)empty_connection->packets_completed_history, 0x00, MAX_COMPLETED_PACKETS_HISTORY_SIZE * sizeof(SwiftNetPacketCompleted));
 
+    memset(&empty_connection->packet_callback_queue, 0x00, sizeof(PacketCallbackQueue));
+    atomic_store(&empty_connection->packet_callback_queue.owner, PACKET_CALLBACK_QUEUE_OWNER_NONE);
+
     uint8_t server_information_buffer[PACKET_HEADER_SIZE + sizeof(SwiftNetServerInformation)];
 
     pthread_t send_request_thread;

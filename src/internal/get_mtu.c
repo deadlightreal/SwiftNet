@@ -3,6 +3,7 @@
 #include "stdio.h"
 #include <string.h>
 #include <unistd.h>
+#include "../swift_net.h"
 
 const uint32_t get_mtu(const char* const restrict interface) {
     char command[256];
