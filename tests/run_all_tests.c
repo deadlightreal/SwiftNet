@@ -71,7 +71,7 @@ int main() {
     closedir(dir);
 
     if (all_ok) {
-        printf("All test ran successfully.\n");
+        printf("All tests ran successfully.\n");
         return 0;
     } else {
         printf("Some tests failed.\n");

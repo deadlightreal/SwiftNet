@@ -77,6 +77,9 @@ SwiftNetServer* swiftnet_create_server(const uint16_t port) {
     memset((void *)empty_server->packets_sending, 0x00, MAX_SENT_SUCCESSFULLY_COMPLETED_PACKET_SIGNAL * sizeof(SwiftNetSentSuccessfullyCompletedPacketSignal));
     memset((void *)empty_server->packets_completed_history, 0x00, MAX_COMPLETED_PACKETS_HISTORY_SIZE * sizeof(SwiftNetPacketCompleted));
 
+    memset(&empty_server->packet_callback_queue, 0x00, sizeof(PacketCallbackQueue));
+    atomic_store(&empty_server->packet_callback_queue.owner, PACKET_CALLBACK_QUEUE_OWNER_NONE);
+
     // Create a new thread that will handle all packets received
     pthread_create(&empty_server->handle_packets_thread, NULL, swiftnet_server_handle_packets, empty_server);
 

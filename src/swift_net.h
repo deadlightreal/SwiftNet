@@ -1,6 +1,5 @@
 #pragma once
 
-#include "internal/internal.h"
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <stdint.h>
@@ -10,6 +9,7 @@
 #include <string.h>
 #include <netinet/ip.h>
 #include <stdbool.h>
+#include <stdatomic.h>
 
 #define MAX_CLIENT_CONNECTIONS 0x0A
 #define MAX_SERVERS 0x0A
@@ -36,22 +36,6 @@
 #endif
 
 extern uint32_t maximum_transmission_unit;
-
-typedef struct PacketQueueNode PacketQueueNode;
-
-struct PacketQueueNode {
-    PacketQueueNode* next;
-    uint8_t* data;
-    uint32_t data_read;
-    struct sockaddr_in sender_address;
-    socklen_t server_address_length;
-};
-
-typedef struct {
-    atomic_uint owner;
-    PacketQueueNode* volatile first_node;
-    PacketQueueNode* volatile last_node;
-} PacketQueue;
 
 typedef struct {
     uint16_t destination_port;
@@ -117,6 +101,37 @@ typedef struct {
     uint32_t chunks_received_number;
 } SwiftNetPendingMessage;
 
+typedef struct PacketQueueNode PacketQueueNode;
+
+struct PacketQueueNode {
+    PacketQueueNode* next;
+    uint8_t* data;
+    uint32_t data_read;
+    struct sockaddr_in sender_address;
+    socklen_t server_address_length;
+};
+
+typedef struct {
+    atomic_uint owner;
+    volatile PacketQueueNode* first_node;
+    volatile PacketQueueNode* last_node;
+} PacketQueue;
+
+typedef struct PacketCallbackQueueNode PacketCallbackQueueNode;
+
+struct PacketCallbackQueueNode {
+    uint8_t* data;
+    void* metadata;
+    SwiftNetPendingMessage* pending_message;
+    PacketCallbackQueueNode* next;
+};
+
+typedef struct {
+    atomic_uint owner;
+    volatile PacketCallbackQueueNode* first_node;
+    volatile PacketCallbackQueueNode* last_node;
+} PacketCallbackQueue;
+
 typedef struct {
     uint16_t packet_id;
     volatile bool confirmed;
@@ -128,7 +143,7 @@ typedef struct {
     SwiftNetPortInfo port_info;
     struct sockaddr_in server_addr;
     socklen_t server_addr_len;
-    void (* volatile packet_handler) (uint8_t*, SwiftNetPacketClientMetadata* restrict const);
+    void (* volatile packet_handler)(uint8_t*, SwiftNetPacketClientMetadata* restrict const);
     uint32_t buffer_size;
     pthread_t handle_packets_thread;
     pthread_t process_packets_thread;
@@ -140,6 +155,7 @@ typedef struct {
     SwiftNetSentSuccessfullyCompletedPacketSignal sent_successfully_completed_packet_signal[MAX_SENT_SUCCESSFULLY_COMPLETED_PACKET_SIGNAL];
     uint8_t* current_read_pointer;
     PacketQueue packet_queue;
+    PacketCallbackQueue packet_callback_queue;
 } SwiftNetClientConnection;
 
 extern SwiftNetClientConnection SwiftNetClientConnections[MAX_CLIENT_CONNECTIONS];
@@ -158,6 +174,7 @@ typedef struct {
     SwiftNetSentSuccessfullyCompletedPacketSignal sent_successfully_completed_packet_signal[MAX_SENT_SUCCESSFULLY_COMPLETED_PACKET_SIGNAL];
     uint8_t* current_read_pointer;
     PacketQueue packet_queue;
+    PacketCallbackQueue packet_callback_queue;
 } SwiftNetServer;
 
 extern SwiftNetServer SwiftNetServers[MAX_SERVERS];
@@ -165,7 +182,7 @@ extern SwiftNetServer SwiftNetServers[MAX_SERVERS];
 extern void swiftnet_server_set_message_handler(SwiftNetServer* server, void (*new_handler)(uint8_t*, SwiftNetPacketServerMetadata* restrict const));
 extern void swiftnet_client_set_message_handler(SwiftNetClientConnection* client, void (*new_handler)(uint8_t*, SwiftNetPacketClientMetadata* restrict const));
 extern void swiftnet_client_set_buffer_size(SwiftNetClientConnection* const restrict client, const uint32_t new_buffer_size);
-extern void swiftnet_serevr_set_buffer_size(SwiftNetServer* const restrict serevr, const uint32_t new_buffer_size);
+extern void swiftnet_server_set_buffer_size(SwiftNetServer* const restrict server, const uint32_t new_buffer_size);
 extern void swiftnet_client_append_to_packet(SwiftNetClientConnection* const restrict client, const void* const restrict data, const uint32_t data_size);
 extern void swiftnet_server_append_to_packet(SwiftNetServer* const restrict server, const void* const restrict data, const uint32_t data_size);
 extern void swiftnet_client_cleanup(const SwiftNetClientConnection* const restrict client);

@@ -4,7 +4,6 @@
 #include <stdatomic.h>
 #include <stdlib.h>
 #include <sys/_types/_socklen_t.h>
-#include "../swift_net.h"
 
 #define REQUEST_LOST_PACKETS_RETURN_UPDATED_BIT_ARRAY 0x00
 #define REQUEST_LOST_PACKETS_RETURN_COMPLETED_PACKET 0x01
@@ -16,6 +15,10 @@
 #define PACKET_QUEUE_OWNER_NONE 0x00
 #define PACKET_QUEUE_OWNER_HANDLE_PACKETS 0x01
 #define PACKET_QUEUE_OWNER_PROCESS_PACKETS 0x02
+
+#define PACKET_CALLBACK_QUEUE_OWNER_NONE 0x00
+#define PACKET_CALLBACK_QUEUE_OWNER_PROCESS_PACKETS 0x01
+#define PACKET_CALLBACK_QUEUE_OWNER_EXECUTE_PACKET_CALLBACK 0x02
 
 #define SIZEOF_FIELD(type, field) sizeof(((type *)0)->field)
 
@@ -102,6 +105,9 @@ extern const uint32_t get_mtu(const char* restrict interface);
 
 extern void* swiftnet_server_process_packets(void* restrict const void_server);
 extern void* swiftnet_client_process_packets(void* restrict const void_client);
+
+extern void* execute_packet_callback_client(void* void_client);
+extern void* execute_packet_callback_server(void* void_server);
 
 typedef enum {
     CONNECTION_TYPE_SERVER,

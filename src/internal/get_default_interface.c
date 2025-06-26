@@ -11,6 +11,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <net/route.h>
+#include "../swift_net.h"
 
 const int get_default_interface(char* const restrict interface_name) {
     FILE* const restrict fp = popen("route -n get default | grep interface | awk '{print $2}'", "r");

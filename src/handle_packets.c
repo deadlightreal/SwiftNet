@@ -7,7 +7,7 @@
 #include <netinet/ip.h>
 #include "internal/internal.h"
 
-static inline void insert_queue_node(PacketQueueNode* const restrict new_node, PacketQueue* restrict const packet_queue) {
+static inline void insert_queue_node(PacketQueueNode* const restrict new_node, PacketQueue* restrict const packet_queue, const ConnectionType contype) {
     if(new_node == NULL) {
         return;
     }
@@ -56,6 +56,7 @@ static inline void swiftnet_handle_packets(const int sockfd, const uint16_t sour
         }
 
         const int received_sucessfully = recvfrom(sockfd, packet_buffer, maximum_transmission_unit, 0, (struct sockaddr *)&node->sender_address, &node->server_address_length);
+        
         if(received_sucessfully < 0) {
             free(node);
             free(packet_buffer);
@@ -66,7 +67,7 @@ static inline void swiftnet_handle_packets(const int sockfd, const uint16_t sour
         node->data = packet_buffer;
         node->next = NULL;
 
-        insert_queue_node(node, packet_queue);
+        insert_queue_node(node, packet_queue, connection_type);
     }
 }
 

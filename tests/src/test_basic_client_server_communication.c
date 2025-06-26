@@ -42,7 +42,7 @@ int main() {
 
     swiftnet_client_clear_send_buffer(client);
 
-    usleep(2000000);
+    usleep(10000000);
 
     swiftnet_server_cleanup(server);
     swiftnet_client_cleanup(client);

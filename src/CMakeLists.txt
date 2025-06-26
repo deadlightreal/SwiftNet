@@ -14,6 +14,7 @@ set(SOURCE_FILES
     initialize_server_socket.c
     cleanup_connection.c
     process_packets.c
+    execute_packet_callback.c
     internal/get_mtu.c
     internal/get_default_interface.c
 )
