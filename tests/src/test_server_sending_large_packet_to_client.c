@@ -31,18 +31,12 @@ void client_message_handler(uint8_t* data, SwiftNetPacketClientMetadata* restric
 }
 
 void server_message_handler(uint8_t* data, SwiftNetPacketServerMetadata* restrict const metadata) {
-    printf("server got msg %d\n", data[0]);
-
     if (data[0] == REQUEST_SEND_LARGE_PACKET) {
         swiftnet_server_append_to_packet(server, random_generated_data, DATA_TO_SEND);
-        printf("apended\n");
 
         swiftnet_server_send_packet(server, metadata->sender);
-        printf("sent\n");
 
         swiftnet_server_clear_send_buffer(server);
-
-        printf("sent\n");
     }
 }
 
