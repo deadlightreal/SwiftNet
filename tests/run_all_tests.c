@@ -11,12 +11,9 @@ int run_and_check(const char *path) {
     pid_t pid = fork();
 
     if (pid == -1) {
-        perror("fork");
         return -1;
     } else if (pid == 0) {
         execl(path, path, NULL);
-        // If execl fails
-        perror("execl");
         exit(127);
     } else {
         int status;
@@ -44,7 +41,6 @@ int main() {
     int all_ok = 1;
 
     while ((entry = readdir(dir)) != NULL) {
-        // Skip . and ..
         if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
             continue;
 
