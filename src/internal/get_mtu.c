@@ -1,27 +1,24 @@
 #include "internal.h"
 #include "stdlib.h"
 #include "stdio.h"
+#include <stdatomic.h>
+#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include "../swift_net.h"
+#include <sys/socket.h>
+#include <sys/ioctl.h>
 
-const uint32_t get_mtu(const char* const restrict interface) {
-    char command[256];
+const uint32_t get_mtu(const char* const restrict interface, const int sockfd) {
+    struct ifreq ifr;
 
-    snprintf(command, sizeof(command), "ifconfig %s | grep mtu | awk '{print $4}'", interface);
+    memset(&ifr, 0, sizeof(ifr));
+    strncpy(ifr.ifr_name, interface, IFNAMSIZ - 1);
 
-    FILE* const restrict fp = popen(command, "r");
-    if (unlikely(fp == NULL)) {
-        fprintf(stderr, "failed to run command\n");
-        return 0;
+    if (ioctl(sockfd, SIOCGIFMTU, &ifr) < 0) {
+        fprintf(stderr, "ioctl failed\n");
+         exit(EXIT_FAILURE);
     }
 
-    char size[64];
-   
-    fread(size, 1, sizeof(size), fp);
-
-    pclose(fp);
-
-    return (uint32_t)atoi(size);
+    return ifr.ifr_mtu;
 }
 

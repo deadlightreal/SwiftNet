@@ -100,8 +100,8 @@ static inline uint32_t crc32(const uint8_t *data, size_t length) {
     return crc ^ 0xFFFFFFFF;
 }
 
-extern const int get_default_interface(char* restrict interface_name);
-extern const uint32_t get_mtu(const char* restrict interface);
+extern const int get_default_interface(char* restrict const interface_name, const uint32_t interface_name_length, const int sockfd);
+extern const uint32_t get_mtu(const char* restrict const interface, const int sockfd);
 
 extern void* swiftnet_server_process_packets(void* restrict const void_server);
 extern void* swiftnet_client_process_packets(void* restrict const void_client);
