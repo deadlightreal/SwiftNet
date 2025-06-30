@@ -18,9 +18,12 @@ jobs:
         cmake ../src
         make -j4
       working-directory: build
-    - name: run_tests
+    - name: build_tests
       run: |
         cmake .
         make -j4
+      working-directory: tests
+    - name: run_tests
+      run: |
         sudo ./run_all_tests
       working-directory: tests
