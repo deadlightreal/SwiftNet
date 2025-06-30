@@ -3,7 +3,7 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <stdint.h>
-#include <sys/_types/_socklen_t.h>
+#include <sys/socket.h>
 #include <time.h>
 #include <pthread.h>
 #include <string.h>
