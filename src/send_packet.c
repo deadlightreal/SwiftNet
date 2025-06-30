@@ -6,7 +6,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
-#include <sys/_types/_socklen_t.h>
+#include <sys/socket.h>
 #include <time.h>
 #include <unistd.h>
 #include <arpa/inet.h>

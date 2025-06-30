@@ -3,7 +3,7 @@
 #include <netinet/in.h>
 #include <stdatomic.h>
 #include <stdlib.h>
-#include <sys/_types/_socklen_t.h>
+#include <sys/socket.h>
 
 #define REQUEST_LOST_PACKETS_RETURN_UPDATED_BIT_ARRAY 0x00
 #define REQUEST_LOST_PACKETS_RETURN_COMPLETED_PACKET 0x01

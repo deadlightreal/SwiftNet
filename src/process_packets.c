@@ -5,7 +5,6 @@
 #include <stdlib.h>
 #include <pthread.h>
 #include <string.h>
-#include <sys/_types/_in_addr_t.h>
 #include <sys/socket.h>
 #include <unistd.h>
 #include <stdio.h>

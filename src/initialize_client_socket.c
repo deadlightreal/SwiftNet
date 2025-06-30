@@ -4,8 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/_pthread/_pthread_t.h>
-#include <sys/_types/_socklen_t.h>
+#include <pthread.h>
 #include <unistd.h>
 #include <arpa/inet.h>
 #include <netinet/ip.h>
