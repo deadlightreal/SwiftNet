@@ -1,6 +1,6 @@
  # Compiler and flags
 CC := clang
-CFLAGS := -L../build/output -lswift_net 
+CFLAGS := -v -L../build/output -lswift_net 
 
 # Directories
 SRC_DIR := src
