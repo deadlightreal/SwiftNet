@@ -1,0 +1,25 @@
+name: Ubuntu Linux Run Tests
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: build
+      run: |
+        cd build
+        cmake ../src
+        make -j4
+    - name: run_tests
+      run: |
+        cd tests
+        make -j4
+        sudo ./run_all_tests
