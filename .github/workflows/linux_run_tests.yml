@@ -15,11 +15,11 @@ jobs:
     - uses: actions/checkout@v4
     - name: build
       run: |
-        cd build
         cmake ../src
         make -j4
+      working-directory: build
     - name: run_tests
       run: |
-        cd tests
         make -j4
         sudo ./run_all_tests
+      working-directory: tests
