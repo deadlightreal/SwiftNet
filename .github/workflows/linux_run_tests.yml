@@ -20,6 +20,7 @@ jobs:
       working-directory: build
     - name: run_tests
       run: |
+        cmake .
         make -j4
         sudo ./run_all_tests
       working-directory: tests
