@@ -2,6 +2,7 @@
 #include "swift_net.h"
 #include <stdatomic.h>
 #include <stdint.h>
+#include <stddef.h>
 #include <stdlib.h>
 #include <pthread.h>
 #include <string.h>
