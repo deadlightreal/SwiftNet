@@ -7,6 +7,10 @@
 #include "internal/internal.h"
 #include <unistd.h>
 
+SwiftNetDebug(
+    SwiftNetDebugger debugger = {.flags = 0};
+)
+
 uint32_t maximum_transmission_unit = 0x00;
 
 void swiftnet_initialize() {
