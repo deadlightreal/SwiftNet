@@ -1,9 +1,13 @@
 #pragma once
 
+#include <string.h>
 #include <netinet/in.h>
 #include <stdatomic.h>
 #include <stdlib.h>
+#include "../swift_net.h"
 #include <sys/socket.h>
+#include <stdarg.h>
+#include <stdio.h>
 
 #define REQUEST_LOST_PACKETS_RETURN_UPDATED_BIT_ARRAY 0x00
 #define REQUEST_LOST_PACKETS_RETURN_COMPLETED_PACKET 0x01
@@ -106,6 +110,34 @@ extern void* swiftnet_client_process_packets(void* restrict const void_client);
 
 extern void* execute_packet_callback_client(void* void_client);
 extern void* execute_packet_callback_server(void* void_server);
+
+SwiftNetDebug(
+    extern SwiftNetDebugger debugger;
+
+    static inline bool check_debug_flag(SwiftNetDebugFlags flag) {
+        return (debugger.flags & flag) != 0;
+    }
+
+    static inline void send_debug_message(const char* message, ...) {
+        va_list args;
+        va_start(args, message);
+
+        char* prefix = "[DEBUG] ";
+
+        const uint32_t prefix_length = strlen(prefix);
+        const uint32_t message_length = strlen(message);
+
+        char full_message[prefix_length + message_length + 1];
+
+        memcpy(full_message, prefix, prefix_length);
+        memcpy(full_message + prefix_length, message, message_length);
+        full_message[prefix_length + message_length] = '\0';
+
+        vprintf(full_message, args);
+
+        va_end(args);
+    }
+);
 
 typedef enum {
     CONNECTION_TYPE_SERVER,

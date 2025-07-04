@@ -35,7 +35,23 @@
     #define SwiftNetErrorCheck(code)
 #endif
 
+#ifndef SWIFT_NET_DISABLE_DEBUGGING
+    #define SwiftNetDebug(code) code
+#else
+    #define SwiftNetDebug(code) code
+#endif
+
 extern uint32_t maximum_transmission_unit;
+
+typedef enum {
+    DEBUG_PACKETS_SENDING = 1u << 0,
+    DEBUG_PACKETS_RECEIVING = 1u << 1,
+    DEBUG_INITIALIZATION = 1u << 2
+} SwiftNetDebugFlags;
+
+typedef struct {
+    uint32_t flags;
+} SwiftNetDebugger;
 
 typedef struct {
     uint16_t destination_port;
@@ -191,6 +207,9 @@ extern SwiftNetPacketBuffer swiftnet_server_create_packet_buffer(const uint32_t 
 extern SwiftNetPacketBuffer swiftnet_client_create_packet_buffer(const uint32_t buffer_size);
 extern void swiftnet_server_destroy_packet_buffer(SwiftNetPacketBuffer* restrict const packet);
 extern void swiftnet_client_destroy_packet_buffer(SwiftNetPacketBuffer* restrict const packet);
-
 extern SwiftNetServer* swiftnet_create_server(const uint16_t port);
 extern SwiftNetClientConnection* swiftnet_create_client(const char* const restrict ip_address, const uint16_t port);
+
+SwiftNetDebug(
+    extern void swiftnet_add_debug_flags(const uint32_t flags);
+)

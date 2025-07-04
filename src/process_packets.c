@@ -1,5 +1,6 @@
 #include "internal/internal.h"
 #include "swift_net.h"
+#include <arpa/inet.h>
 #include <stdatomic.h>
 #include <stdint.h>
 #include <stddef.h>
@@ -269,8 +270,19 @@ static inline void swiftnet_process_packets(
         memset(&packet_buffer[sizeof(struct ip) + offsetof(SwiftNetPacketInfo, checksum)], 0x00, SIZEOF_FIELD(SwiftNetPacketInfo, checksum));
 
         if(packet_corrupted(checksum_received, packet_info.chunk_size + sizeof(SwiftNetPacketInfo), &packet_buffer[sizeof(struct ip)]) == true) {
+            SwiftNetDebug(
+                if (check_debug_flag(DEBUG_PACKETS_RECEIVING)) {
+                    send_debug_message("Received corrupted packet: {\"source_ip_address\": \"%s\", \"source_port\": %d, \"packet_id\": %d}\n", inet_ntoa(ip_header.ip_src), packet_info.port_info.source_port, packet_info.packet_id);
+                }
+            )
             goto next_packet;
         }
+
+        SwiftNetDebug(
+            if (check_debug_flag(DEBUG_PACKETS_RECEIVING)) {
+                send_debug_message("Received packet: {\"source_ip_address\": \"%s\", \"source_port\": %d, \"packet_id\": %d, \"packet_type\": %d, \"packet_length\": %d}\n", inet_ntoa(ip_header.ip_src), packet_info.port_info.source_port, packet_info.packet_id, packet_info.packet_type, packet_info.packet_length);
+            }
+        )
 
         switch(packet_info.packet_type) {
             case PACKET_TYPE_REQUEST_INFORMATION:
