@@ -164,6 +164,12 @@ static inline void swiftnet_send_packet(
         .maximum_transmission_unit = maximum_transmission_unit
     };
 
+    SwiftNetDebug(
+        if (check_debug_flag(DEBUG_PACKETS_SENDING)) {
+            send_debug_message("Sending packet: {\"destination_ip_address\": \"%s\", \"destination_port\": %d, \"packet_length\": %d}\n", inet_ntoa(target_addr->sin_addr), port_info.destination_port, packet_length);
+        }
+    )
+
     memcpy(packet->packet_buffer_start, &packet_info, sizeof(SwiftNetPacketInfo));
 
     if(packet_length > mtu) {
@@ -185,6 +191,12 @@ static inline void swiftnet_send_packet(
 
         for(uint32_t i = 0; ; i++) {
             const uint32_t current_offset = i * (mtu - PACKET_HEADER_SIZE);
+
+            SwiftNetDebug(
+                if (check_debug_flag(DEBUG_PACKETS_SENDING)) {
+                    send_debug_message("Sent chunk: {\"chunk_index\": %d}\n", i);
+                }
+            )
 
             memcpy(&buffer[offsetof(SwiftNetPacketInfo, chunk_index)], &i, SIZEOF_FIELD(SwiftNetPacketInfo, chunk_index));
             
