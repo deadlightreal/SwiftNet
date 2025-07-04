@@ -215,7 +215,6 @@ static inline void swiftnet_process_packets(
     void (* const volatile * const packet_handler) (uint8_t*, void*),
     const int sockfd,
     const uint16_t source_port,
-    volatile const uint32_t* const buffer_size,
     volatile SwiftNetPacketSending* const packet_sending,
     SwiftNetPendingMessage* restrict const pending_messages,
     const uint16_t packet_sending_size,
@@ -271,11 +270,6 @@ static inline void swiftnet_process_packets(
 
         if(packet_corrupted(checksum_received, packet_info.chunk_size + sizeof(SwiftNetPacketInfo), &packet_buffer[sizeof(struct ip)]) == true) {
             goto next_packet;
-        }
-
-        if(unlikely(packet_info.packet_length > *buffer_size)) {
-            fprintf(stderr, "Data received is larger than buffer size!\n");
-            exit(EXIT_FAILURE);
         }
 
         switch(packet_info.packet_type) {
@@ -509,7 +503,7 @@ static inline void swiftnet_process_packets(
 void* swiftnet_server_process_packets(void* restrict const void_server) {
     SwiftNetServer* restrict const server = (SwiftNetServer*)void_server;
 
-    swiftnet_process_packets((void (* const volatile * const) (uint8_t*, void*))&server->packet_handler, server->sockfd, server->server_port, &server->buffer_size, server->packets_sending, server->pending_messages, MAX_PACKETS_SENDING, server->current_read_pointer, server->packets_completed_history, CONNECTION_TYPE_SERVER, &server->packet_queue, &server->packet_callback_queue, server);
+    swiftnet_process_packets((void (* const volatile * const) (uint8_t*, void*))&server->packet_handler, server->sockfd, server->server_port, server->packets_sending, server->pending_messages, MAX_PACKETS_SENDING, server->current_read_pointer, server->packets_completed_history, CONNECTION_TYPE_SERVER, &server->packet_queue, &server->packet_callback_queue, server);
 
     return NULL;
 }
@@ -517,7 +511,7 @@ void* swiftnet_server_process_packets(void* restrict const void_server) {
 void* swiftnet_client_process_packets(void* restrict const void_client) {
     SwiftNetClientConnection* restrict const client = (SwiftNetClientConnection*)void_client;
 
-    swiftnet_process_packets((void (* const volatile * const) (uint8_t*, void*))&client->packet_handler, client->sockfd, client->port_info.source_port, &client->buffer_size, client->packets_sending, client->pending_messages, MAX_PACKETS_SENDING, client->current_read_pointer, client->packets_completed_history, CONNECTION_TYPE_CLIENT, &client->packet_queue, &client->packet_callback_queue, client);
+    swiftnet_process_packets((void (* const volatile * const) (uint8_t*, void*))&client->packet_handler, client->sockfd, client->port_info.source_port, client->packets_sending, client->pending_messages, MAX_PACKETS_SENDING, client->current_read_pointer, client->packets_completed_history, CONNECTION_TYPE_CLIENT, &client->packet_queue, &client->packet_callback_queue, client);
 
     return NULL;
 }

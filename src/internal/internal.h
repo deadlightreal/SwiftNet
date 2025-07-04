@@ -10,8 +10,6 @@
 
 #define PACKET_HEADER_SIZE (sizeof(SwiftNetPacketInfo) + sizeof(struct ip))
 
-#define DEFAULT_BUFFER_SIZE 0xFFFF
-
 #define PACKET_QUEUE_OWNER_NONE 0x00
 #define PACKET_QUEUE_OWNER_HANDLE_PACKETS 0x01
 #define PACKET_QUEUE_OWNER_PROCESS_PACKETS 0x02

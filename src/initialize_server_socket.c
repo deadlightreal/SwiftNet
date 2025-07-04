@@ -37,7 +37,6 @@ SwiftNetServer* swiftnet_create_server(const uint16_t port) {
     )
 
     empty_server->server_port = port;
-    empty_server->buffer_size = DEFAULT_BUFFER_SIZE;
 
     // Create the socket
     empty_server->sockfd = socket(AF_INET, SOCK_RAW, IPPROTO_RAW);
@@ -56,19 +55,6 @@ SwiftNetServer* swiftnet_create_server(const uint16_t port) {
     };
 
     atomic_store(&empty_server->packet_queue.owner, PACKET_QUEUE_OWNER_NONE);
-
-    // Allocate memory for the packet buffer
-    uint8_t* const restrict buffer_pointer = (uint8_t*)malloc(empty_server->buffer_size + sizeof(SwiftNetPacketInfo));
-    if(unlikely(buffer_pointer == NULL)) {
-        fprintf(stderr, "Failed to allocate memory for packet data\n");
-        exit(EXIT_FAILURE);
-    }
-
-    uint8_t* const restrict data_pointer = buffer_pointer + sizeof(SwiftNetPacketInfo);
-
-    empty_server->packet.packet_buffer_start = buffer_pointer;
-    empty_server->packet.packet_data_start = data_pointer;
-    empty_server->packet.packet_append_pointer = data_pointer;
 
     memset(empty_server->pending_messages, 0x00, MAX_PENDING_MESSAGES * sizeof(SwiftNetPendingMessage));
     // Initialize transfer clients to NULL | 0x00

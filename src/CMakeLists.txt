@@ -15,6 +15,8 @@ set(SOURCE_FILES
     cleanup_connection.c
     process_packets.c
     execute_packet_callback.c
+    create_packet_buffer.c
+    destroy_packet_buffer.c
     internal/get_mtu.c
     internal/get_default_interface.c
 )

@@ -19,11 +19,13 @@ void client_message_handler(uint8_t* data, SwiftNetPacketClientMetadata* restric
 
 void server_message_handler(uint8_t* data, SwiftNetPacketServerMetadata* restrict const metadata) {
     if(memcmp(data, message, metadata->data_length) == 0) {
-        swiftnet_server_append_to_packet(server, message, strlen(message));
+        SwiftNetPacketBuffer buffer = swiftnet_server_create_packet_buffer(strlen(message));
 
-        swiftnet_server_send_packet(server, metadata->sender);
+        swiftnet_server_append_to_packet(server, message, strlen(message), &buffer);
 
-        swiftnet_server_clear_send_buffer(server);
+        swiftnet_server_send_packet(server, &buffer, metadata->sender);
+
+        swiftnet_server_destroy_packet_buffer(&buffer);
     };
 }
 
@@ -36,11 +38,13 @@ int main() {
     client = swiftnet_create_client("127.0.0.1", 8080);
     swiftnet_client_set_message_handler(client, client_message_handler);
 
-    swiftnet_client_append_to_packet(client, message, strlen(message));
+    SwiftNetPacketBuffer buffer = swiftnet_client_create_packet_buffer(strlen(message));
 
-    swiftnet_client_send_packet(client);
+    swiftnet_client_append_to_packet(client, message, strlen(message), &buffer);
 
-    swiftnet_client_clear_send_buffer(client);
+    swiftnet_client_send_packet(client, &buffer);
+
+    swiftnet_client_destroy_packet_buffer(&buffer);
 
     usleep(10000000);
 

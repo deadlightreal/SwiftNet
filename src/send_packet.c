@@ -48,7 +48,7 @@ static inline uint8_t request_lost_packets_bitarray(const uint8_t* restrict cons
 static inline void handle_lost_packets(
     volatile SwiftNetPacketSending* const packet_sending,
     const uint32_t maximum_transmission_unit,
-    const volatile SwiftNetPacket* const packet, 
+    const volatile SwiftNetPacketBuffer* const packet, 
     const int sockfd,
     const struct sockaddr_in* restrict const destination_address,
     const socklen_t* destination_address_len,
@@ -143,7 +143,7 @@ static inline void swiftnet_send_packet(
     const void* restrict const connection,
     const uint32_t target_maximum_transmission_unit,
     const SwiftNetPortInfo port_info,
-    const volatile SwiftNetPacket* const packet,
+    const volatile SwiftNetPacketBuffer* const packet,
     const uint32_t packet_length,
     const struct sockaddr_in* restrict const target_addr,
     const socklen_t* restrict const target_addr_len,
@@ -231,19 +231,19 @@ static inline void swiftnet_send_packet(
     }
 }
 
-void swiftnet_client_send_packet (SwiftNetClientConnection* restrict const client) {
-    const uint32_t packet_length = client->packet.packet_append_pointer - client->packet.packet_data_start;
+void swiftnet_client_send_packet(SwiftNetClientConnection* restrict const client, SwiftNetPacketBuffer* restrict const packet) {
+    const uint32_t packet_length = packet->packet_append_pointer - packet->packet_data_start;
 
-    swiftnet_send_packet(client, client->maximum_transmission_unit, client->port_info, &client->packet, packet_length, &client->server_addr, &client->server_addr_len, client->packets_sending, client->sockfd);
+    swiftnet_send_packet(client, client->maximum_transmission_unit, client->port_info, packet, packet_length, &client->server_addr, &client->server_addr_len, client->packets_sending, client->sockfd);
 }
 
-void swiftnet_server_send_packet (SwiftNetServer* restrict const server, const SwiftNetClientAddrData target) {
-    const uint32_t packet_length = server->packet.packet_append_pointer - server->packet.packet_data_start;
+void swiftnet_server_send_packet(SwiftNetServer* restrict const server, SwiftNetPacketBuffer* restrict const packet, const SwiftNetClientAddrData target) {
+    const uint32_t packet_length = packet->packet_append_pointer - packet->packet_data_start;
 
     const SwiftNetPortInfo port_info = {
         .destination_port = target.sender_address.sin_port,
         .source_port = server->server_port
     };
 
-    swiftnet_send_packet(server, target.maximum_transmission_unit, port_info, &server->packet, packet_length, &target.sender_address, &target.sender_address_length, server->packets_sending, server->sockfd);
+    swiftnet_send_packet(server, target.maximum_transmission_unit, port_info, packet, packet_length, &target.sender_address, &target.sender_address_length, server->packets_sending, server->sockfd);
 }

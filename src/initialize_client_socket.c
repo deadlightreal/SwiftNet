@@ -82,22 +82,6 @@ SwiftNetClientConnection* swiftnet_create_client(const char* const restrict ip_a
     empty_connection->port_info.source_port = clientPort;
     empty_connection->packet_handler = NULL;
 
-    // Base buffer size
-    empty_connection->buffer_size = DEFAULT_BUFFER_SIZE;
-
-    // Allocate memory for the packet buffer
-    uint8_t* restrict const buffer_pointer = malloc(empty_connection->buffer_size + sizeof(SwiftNetPacketInfo));
-    if(unlikely(buffer_pointer == NULL)) {
-        perror("Failed to allocate memory for packet data\n");
-        exit(EXIT_FAILURE);
-    }
-
-    uint8_t* restrict const data_pointer = buffer_pointer + sizeof(SwiftNetPacketInfo);
-
-    empty_connection->packet.packet_buffer_start = buffer_pointer;
-    empty_connection->packet.packet_data_start = data_pointer;
-    empty_connection->packet.packet_append_pointer = data_pointer;
-
     memset(&empty_connection->server_addr, 0, sizeof(struct sockaddr_in));
     empty_connection->server_addr.sin_family = AF_INET;
     empty_connection->server_addr.sin_port = htons(port);

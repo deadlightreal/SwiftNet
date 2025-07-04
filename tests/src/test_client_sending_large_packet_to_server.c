@@ -45,16 +45,17 @@ int main() {
 
     server = swiftnet_create_server(8080);
     swiftnet_server_set_message_handler(server, server_message_handler);
-    swiftnet_server_set_buffer_size(server, DATA_TO_SEND);
 
     client = swiftnet_create_client("127.0.0.1", 8080);
     swiftnet_client_set_message_handler(client, client_message_handler);
 
-    swiftnet_client_append_to_packet(client, random_generated_data, DATA_TO_SEND);
+    SwiftNetPacketBuffer buffer = swiftnet_client_create_packet_buffer(DATA_TO_SEND);
 
-    swiftnet_client_send_packet(client);
+    swiftnet_client_append_to_packet(client, random_generated_data, DATA_TO_SEND, &buffer);
 
-    swiftnet_client_clear_send_buffer(client);
+    swiftnet_client_send_packet(client, &buffer);
+
+    swiftnet_client_destroy_packet_buffer(&buffer);
 
     usleep(10000000);
 
