@@ -45,7 +45,8 @@ extern uint32_t maximum_transmission_unit;
 
 typedef enum {
     DEBUG_PACKETS_SENDING = 1u << 0,
-    DEBUG_PACKETS_RECEIVING = 1u << 1
+    DEBUG_PACKETS_RECEIVING = 1u << 1,
+    DEBUG_INITIALIZATION = 1u << 2
 } SwiftNetDebugFlags;
 
 typedef struct {

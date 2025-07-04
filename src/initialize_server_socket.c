@@ -47,7 +47,6 @@ SwiftNetServer* swiftnet_create_server(const uint16_t port) {
 
     const uint8_t opt = 1;
     setsockopt(empty_server->sockfd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
-
     
     empty_server->packet_queue = (PacketQueue){
         .first_node = NULL,
@@ -68,6 +67,12 @@ SwiftNetServer* swiftnet_create_server(const uint16_t port) {
 
     // Create a new thread that will handle all packets received
     pthread_create(&empty_server->handle_packets_thread, NULL, swiftnet_server_handle_packets, empty_server);
+
+    SwiftNetDebug(
+        if (check_debug_flag(DEBUG_INITIALIZATION)) {
+            send_debug_message("Successfully initialized server\n");
+        }
+    )
 
     return empty_server;
 }

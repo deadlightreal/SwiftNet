@@ -31,7 +31,7 @@ void server_message_handler(uint8_t* data, SwiftNetPacketServerMetadata* restric
 }
 
 int main() {
-    swiftnet_add_debug_flags(DEBUG_PACKETS_RECEIVING | DEBUG_PACKETS_SENDING);
+    swiftnet_add_debug_flags(DEBUG_PACKETS_RECEIVING | DEBUG_PACKETS_SENDING | DEBUG_INITIALIZATION);
 
     random_generated_data = malloc(DATA_TO_SEND);
     if (random_generated_data == NULL) {
