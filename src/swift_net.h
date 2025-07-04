@@ -90,7 +90,7 @@ typedef struct {
     uint8_t* packet_buffer_start;   // Start of the allocated buffer
     uint8_t* packet_data_start;     // Start of the stored data
     uint8_t* packet_append_pointer; // Current position to append new data
-} SwiftNetPacket;
+} SwiftNetPacketBuffer;
 
 typedef struct {
     uint8_t* packet_data_start;
@@ -144,10 +144,8 @@ typedef struct {
     struct sockaddr_in server_addr;
     socklen_t server_addr_len;
     void (* volatile packet_handler)(uint8_t*, SwiftNetPacketClientMetadata* restrict const);
-    uint32_t buffer_size;
     pthread_t handle_packets_thread;
     pthread_t process_packets_thread;
-    SwiftNetPacket packet;
     uint32_t maximum_transmission_unit;
     SwiftNetPendingMessage pending_messages[MAX_PENDING_MESSAGES];
     volatile SwiftNetPacketSending packets_sending[MAX_PACKETS_SENDING];
@@ -163,11 +161,9 @@ extern SwiftNetClientConnection SwiftNetClientConnections[MAX_CLIENT_CONNECTIONS
 typedef struct {
     int sockfd;
     uint16_t server_port;
-    uint32_t buffer_size;
     void (* volatile packet_handler)(uint8_t*, SwiftNetPacketServerMetadata* restrict const);
     pthread_t handle_packets_thread;
     pthread_t process_packets_thread;
-    SwiftNetPacket packet;
     SwiftNetPendingMessage pending_messages[MAX_PENDING_MESSAGES];
     volatile SwiftNetPacketSending packets_sending[MAX_PACKETS_SENDING];
     volatile SwiftNetPacketCompleted packets_completed_history[MAX_COMPLETED_PACKETS_HISTORY_SIZE];
@@ -181,29 +177,20 @@ extern SwiftNetServer SwiftNetServers[MAX_SERVERS];
 
 extern void swiftnet_server_set_message_handler(SwiftNetServer* server, void (*new_handler)(uint8_t*, SwiftNetPacketServerMetadata* restrict const));
 extern void swiftnet_client_set_message_handler(SwiftNetClientConnection* client, void (*new_handler)(uint8_t*, SwiftNetPacketClientMetadata* restrict const));
-extern void swiftnet_client_set_buffer_size(SwiftNetClientConnection* const restrict client, const uint32_t new_buffer_size);
-extern void swiftnet_server_set_buffer_size(SwiftNetServer* const restrict server, const uint32_t new_buffer_size);
-extern void swiftnet_client_append_to_packet(SwiftNetClientConnection* const restrict client, const void* const restrict data, const uint32_t data_size);
-extern void swiftnet_server_append_to_packet(SwiftNetServer* const restrict server, const void* const restrict data, const uint32_t data_size);
+extern void swiftnet_client_append_to_packet(SwiftNetClientConnection* const restrict client, const void* const restrict data, const uint32_t data_size, SwiftNetPacketBuffer* restrict const packet);
+extern void swiftnet_server_append_to_packet(SwiftNetServer* const restrict server, const void* const restrict data, const uint32_t data_size, SwiftNetPacketBuffer* restrict const packet);
 extern void swiftnet_client_cleanup(const SwiftNetClientConnection* const restrict client);
 extern void swiftnet_server_cleanup(const SwiftNetServer* const restrict server);
 extern void swiftnet_initialize();
 extern void* swiftnet_server_handle_packets(void* restrict const server_void);
 extern void* swiftnet_client_handle_packets(void* restrict const client_void);
-extern void swiftnet_client_send_packet (SwiftNetClientConnection* restrict const client);
-extern void swiftnet_server_send_packet (SwiftNetServer* restrict const server, const SwiftNetClientAddrData target);
+extern void swiftnet_client_send_packet (SwiftNetClientConnection* restrict const client, SwiftNetPacketBuffer* restrict const packet);
+extern void swiftnet_server_send_packet (SwiftNetServer* restrict const server, SwiftNetPacketBuffer* restrict const packet, const SwiftNetClientAddrData target);
+
+extern SwiftNetPacketBuffer swiftnet_server_create_packet_buffer(const uint32_t buffer_size);
+extern SwiftNetPacketBuffer swiftnet_client_create_packet_buffer(const uint32_t buffer_size);
+extern void swiftnet_server_destroy_packet_buffer(SwiftNetPacketBuffer* restrict const packet);
+extern void swiftnet_client_destroy_packet_buffer(SwiftNetPacketBuffer* restrict const packet);
 
 extern SwiftNetServer* swiftnet_create_server(const uint16_t port);
 extern SwiftNetClientConnection* swiftnet_create_client(const char* const restrict ip_address, const uint16_t port);
-
-// ----------------
-// INLINE FUNCTIONS
-// ----------------
-
-static inline void swiftnet_server_clear_send_buffer(SwiftNetServer* restrict const server) {
-    server->packet.packet_append_pointer = server->packet.packet_data_start;
-}
-
-static inline void swiftnet_client_clear_send_buffer(SwiftNetClientConnection* restrict const client) {
-    client->packet.packet_append_pointer = client->packet.packet_data_start;
-}
