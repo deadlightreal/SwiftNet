@@ -6,12 +6,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
+#include <sys/_endian.h>
 #include <sys/socket.h>
 #include <time.h>
 #include <unistd.h>
 #include <arpa/inet.h>
 #include <netinet/ip.h>
 #include "internal/internal.h"
+#include <netinet/in.h>
 
 // These functions send the data from the packet buffer to the designated client or server.
 static inline volatile SwiftNetPacketSending* get_empty_packet_sending(volatile SwiftNetPacketSending* const packet_sending_array, const uint16_t size) {
@@ -84,6 +86,20 @@ static inline void handle_lost_packets(
         .chunk_size = maximum_transmission_unit - PACKET_HEADER_SIZE,
         .checksum = 0x00,
         .maximum_transmission_unit = maximum_transmission_unit
+    };
+
+    const struct ip ip_header = {
+        .ip_v = 4,
+        .ip_hl = 5,
+        .ip_tos = 0,
+        .ip_p = IPPROTO_RAW,
+        .ip_len = 0, // Change later to chunk size, and remove it from packet info
+        .ip_id = htons(0), // Change later to packet id
+        .ip_off = 0, // Change later to either chunk index, or offset
+        .ip_ttl = 64,
+        .ip_sum = 0, // Change later to checksum
+        .ip_src.s_addr = inet_addr(""),
+        .ip_dst = destination_address->sin_addr
     };
 
     uint8_t resend_chunk_buffer[maximum_transmission_unit - sizeof(struct ip)];
