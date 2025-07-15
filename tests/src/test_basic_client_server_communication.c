@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include "../config.h"
 
 SwiftNetServer* server;
 SwiftNetClientConnection* client;
@@ -37,7 +38,7 @@ int main() {
     server = swiftnet_create_server(8080);
     swiftnet_server_set_message_handler(server, server_message_handler);
 
-    client = swiftnet_create_client("127.0.0.1", 8080);
+    client = swiftnet_create_client(IP_ADDRESS, 8080);
     swiftnet_client_set_message_handler(client, client_message_handler);
 
     SwiftNetPacketBuffer buffer = swiftnet_client_create_packet_buffer(strlen(message));
