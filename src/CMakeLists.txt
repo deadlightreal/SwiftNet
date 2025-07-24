@@ -20,6 +20,7 @@ set(SOURCE_FILES
     destroy_packet_buffer.c
     internal/get_mtu.c
     internal/get_default_interface.c
+    internal/get_public_ip.c
 )
 
 set(OBJ_DIR ${CMAKE_SOURCE_DIR}/../build)

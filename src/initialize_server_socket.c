@@ -39,9 +39,15 @@ SwiftNetServer* swiftnet_create_server(const uint16_t port) {
     empty_server->server_port = port;
 
     // Create the socket
-    empty_server->sockfd = socket(AF_INET, SOCK_RAW, IPPROTO_RAW);
+    empty_server->sockfd = socket(AF_INET, SOCK_RAW, PROTOCOL_NUMBER);
     if (unlikely(empty_server->sockfd < 0)) {
         fprintf(stderr, "Socket creation failed\n");
+        exit(EXIT_FAILURE);
+    }
+
+    int on = 1;
+    if(setsockopt(empty_server->sockfd, IPPROTO_IP, IP_HDRINCL, &on, sizeof(on)) < 0) {
+        fprintf(stderr, "Failed to set sockopt IP_HDRINCL\n");
         exit(EXIT_FAILURE);
     }
 

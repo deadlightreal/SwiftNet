@@ -1,6 +1,10 @@
 #include "swift_net.h"
+#include <_printf.h>
+#include <_string.h>
+#include <arpa/inet.h>
 #include <stdatomic.h>
 #include <stdio.h>
+#include <sys/_types/_in_addr_t.h>
 #include <unistd.h>
 #include <string.h>
 #include <stdlib.h>
@@ -57,11 +61,17 @@ static inline void swiftnet_handle_packets(const int sockfd, const uint16_t sour
 
         const int received_sucessfully = recvfrom(sockfd, packet_buffer, maximum_transmission_unit, 0, (struct sockaddr *)&node->sender_address, &node->server_address_length);
         
+        printf("got msg\n");
         if(received_sucessfully < 0) {
             free(node);
             free(packet_buffer);
             continue;
         }
+
+        struct in_addr sender_addr;
+        memcpy(&sender_addr, &packet_buffer[offsetof(struct ip, ip_src)], sizeof(struct in_addr));
+
+        printf("recvfrom addr: %s\nstruct ip addr: %s\n", inet_ntoa(node->sender_address.sin_addr), inet_ntoa(sender_addr));
 
         node->data_read = received_sucessfully;
         node->data = packet_buffer;

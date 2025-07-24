@@ -1,3 +1,5 @@
+#include <_printf.h>
+#include <netinet/in.h>
 #include <stdatomic.h>
 #include <stdlib.h>
 #include <sys/socket.h>
@@ -12,8 +14,11 @@ SwiftNetDebug(
 )
 
 uint32_t maximum_transmission_unit = 0x00;
+struct in_addr public_ip_address;
 
 void swiftnet_initialize() {
+    get_public_ip();
+
     int temp_socket = socket(AF_INET, SOCK_DGRAM, 0);
     if (temp_socket < 0) {
         perror("socket");
@@ -39,6 +44,8 @@ void swiftnet_initialize() {
         fprintf(stderr, "Failed to get the default interface\n");
         exit(EXIT_FAILURE);
     }
+
+    printf("default interface: %s\n", default_network_interface);
 
     maximum_transmission_unit = get_mtu(default_network_interface, temp_socket);
     if(unlikely(maximum_transmission_unit == 0)) {

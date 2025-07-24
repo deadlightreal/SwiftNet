@@ -1,11 +1,12 @@
+#include "internal/internal.h"
 #include "swift_net.h"
 #include <stdint.h>
 #include <stdlib.h>
 
 static inline SwiftNetPacketBuffer create_packet_buffer(const uint32_t buffer_size) {
-    uint8_t* restrict const mem = malloc(buffer_size + sizeof(SwiftNetPacketInfo));
+    uint8_t* restrict const mem = malloc(buffer_size + PACKET_HEADER_SIZE);
 
-    uint8_t* restrict const data_pointer = mem + sizeof(SwiftNetPacketInfo);
+    uint8_t* restrict const data_pointer = mem + PACKET_HEADER_SIZE;
 
     return (SwiftNetPacketBuffer){
         .packet_buffer_start = mem,
