@@ -75,6 +75,7 @@ static inline void swiftnet_handle_packets(const int sockfd, const uint16_t sour
 
         node->data_read = received_sucessfully;
         node->data = packet_buffer;
+        node->sender_address.sin_addr = sender_addr;
         node->next = NULL;
 
         insert_queue_node(node, packet_queue, connection_type);

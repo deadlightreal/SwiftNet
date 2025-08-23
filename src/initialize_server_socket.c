@@ -52,7 +52,7 @@ SwiftNetServer* swiftnet_create_server(const uint16_t port) {
     }
 
     const uint8_t opt = 1;
-    setsockopt(empty_server->sockfd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
+    //setsockopt(empty_server->sockfd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
     
     empty_server->packet_queue = (PacketQueue){
         .first_node = NULL,

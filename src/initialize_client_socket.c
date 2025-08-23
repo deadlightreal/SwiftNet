@@ -154,7 +154,7 @@ SwiftNetClientConnection* swiftnet_create_client(const char* const restrict ip_a
     
     while(1) {
         const int bytes_received = recvfrom(empty_connection->sockfd, server_information_buffer, sizeof(server_information_buffer), 0x00, NULL, NULL);
-        if(bytes_received != PACKET_HEADER_SIZE + sizeof(SwiftNetServerInformation)) {
+        if(bytes_received != PACKET_HEADER_SIZE) {
             SwiftNetDebug(
                 if (check_debug_flag(DEBUG_INITIALIZATION)) {
                     send_debug_message("Invalid packet received from server. Expected server information: {\"bytes_received\": %d, \"expected_bytes\": %d}\n", bytes_received, PACKET_HEADER_SIZE + sizeof(SwiftNetServerInformation));
@@ -170,7 +170,7 @@ SwiftNetClientConnection* swiftnet_create_client(const char* const restrict ip_a
         if(packet_info->port_info.destination_port != empty_connection->port_info.source_port || packet_info->port_info.source_port != empty_connection->port_info.destination_port) {
             SwiftNetDebug(
                 if (check_debug_flag(DEBUG_INITIALIZATION)) {
-                    send_debug_message("Port info does not match: {\"destination_port\": %d, \"source_port\": %d, \"source_ip_address\": \"%s\"}\n", packet_info->port_info.destination_port, packet_info->port_info.source_port, ip_header->ip_src.s_addr);
+                    send_debug_message("Port info does not match: {\"destination_port\": %d, \"source_port\": %d, \"source_ip_address\": \"%s\"}\n", packet_info->port_info.destination_port, packet_info->port_info.source_port, inet_ntoa(ip_header->ip_src));
                 }
             )
             continue;
@@ -194,9 +194,11 @@ SwiftNetClientConnection* swiftnet_create_client(const char* const restrict ip_a
 
     pthread_join(send_request_thread, NULL);
 
+    const SwiftNetPacketInfo* const restrict packet_info = (SwiftNetPacketInfo*)&server_information_buffer[sizeof(struct ip)];
+
     const SwiftNetServerInformation* const restrict server_information = (SwiftNetServerInformation*)&server_information_buffer[PACKET_HEADER_SIZE];
 
-    empty_connection->maximum_transmission_unit = server_information->maximum_transmission_unit;
+    empty_connection->maximum_transmission_unit = packet_info->maximum_transmission_unit;
  
     pthread_create(&empty_connection->handle_packets_thread, NULL, swiftnet_client_handle_packets, empty_connection);
 

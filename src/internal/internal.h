@@ -1,5 +1,6 @@
 #pragma once
 
+#include <arpa/inet.h>
 #include <string.h>
 #include <netinet/in.h>
 #include <stdatomic.h>
@@ -22,7 +23,7 @@
 #define PACKET_CALLBACK_QUEUE_OWNER_PROCESS_PACKETS 0x01
 #define PACKET_CALLBACK_QUEUE_OWNER_EXECUTE_PACKET_CALLBACK 0x02
 
-#define PROTOCOL_NUMBER 222
+#define PROTOCOL_NUMBER IPPROTO_RAW
 
 #define SIZEOF_FIELD(type, field) sizeof(((type *)0)->field)
 
@@ -74,7 +75,6 @@ static inline uint16_t crc16(const uint8_t *data, size_t length) {
 
 extern const int get_default_interface(char* restrict const interface_name, const uint32_t interface_name_length, const int sockfd);
 extern const uint32_t get_mtu(const char* restrict const interface, const int sockfd);
-extern void get_public_ip();
 
 extern void* swiftnet_server_process_packets(void* restrict const void_server);
 extern void* swiftnet_client_process_packets(void* restrict const void_client);
@@ -82,7 +82,7 @@ extern void* swiftnet_client_process_packets(void* restrict const void_client);
 extern void* execute_packet_callback_client(void* void_client);
 extern void* execute_packet_callback_server(void* void_server);
 
-extern struct in_addr public_ip_address;
+extern struct in_addr private_ip_address;
 
 SwiftNetDebug(
     extern SwiftNetDebugger debugger;
@@ -123,7 +123,7 @@ static struct ip construct_ip_header(struct in_addr destination_addr, const uint
         .ip_off = chunk_index, // Change later to either chunk index, or offset
         .ip_ttl = 64,
         .ip_sum = 0, // Change later to checksum
-        .ip_src = public_ip_address,
+        .ip_src = private_ip_address,
         .ip_dst = destination_addr
     };
 

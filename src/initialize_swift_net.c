@@ -14,11 +14,9 @@ SwiftNetDebug(
 )
 
 uint32_t maximum_transmission_unit = 0x00;
-struct in_addr public_ip_address;
+struct in_addr private_ip_address;
 
 void swiftnet_initialize() {
-    get_public_ip();
-
     int temp_socket = socket(AF_INET, SOCK_DGRAM, 0);
     if (temp_socket < 0) {
         perror("socket");
@@ -35,6 +33,17 @@ void swiftnet_initialize() {
         close(temp_socket);
         exit(EXIT_FAILURE);
     }
+
+    struct sockaddr private_sockaddr;
+    socklen_t private_sockaddr_len = sizeof(private_sockaddr);
+
+    if(getsockname(temp_socket, &private_sockaddr, &private_sockaddr_len) == -1) {
+        fprintf(stderr, "Failed to get private ip address\n");
+        close(temp_socket);
+        exit(EXIT_FAILURE);
+    }
+
+    private_ip_address = ((struct sockaddr_in *)&private_sockaddr)->sin_addr;
 
     char default_network_interface[128];
 

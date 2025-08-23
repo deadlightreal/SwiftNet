@@ -78,6 +78,7 @@ typedef struct {
     SwiftNetPortInfo port_info;
     uint8_t packet_type;
     uint32_t chunk_amount;
+    uint32_t chunk_index;
     uint32_t maximum_transmission_unit;
 } SwiftNetPacketInfo;
 
