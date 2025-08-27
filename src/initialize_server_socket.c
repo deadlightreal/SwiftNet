@@ -51,9 +51,6 @@ SwiftNetServer* swiftnet_create_server(const uint16_t port) {
         exit(EXIT_FAILURE);
     }
 
-    const uint8_t opt = 1;
-    //setsockopt(empty_server->sockfd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
-    
     empty_server->packet_queue = (PacketQueue){
         .first_node = NULL,
         .last_node = NULL

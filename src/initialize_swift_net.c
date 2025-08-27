@@ -1,4 +1,3 @@
-#include <_printf.h>
 #include <netinet/in.h>
 #include <stdatomic.h>
 #include <stdlib.h>
@@ -53,8 +52,6 @@ void swiftnet_initialize() {
         fprintf(stderr, "Failed to get the default interface\n");
         exit(EXIT_FAILURE);
     }
-
-    printf("default interface: %s\n", default_network_interface);
 
     maximum_transmission_unit = get_mtu(default_network_interface, temp_socket);
     if(unlikely(maximum_transmission_unit == 0)) {

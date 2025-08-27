@@ -1,6 +1,5 @@
 #include "internal.h"
 
-#include <_printf.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -54,6 +53,6 @@ const int get_default_interface(char* const restrict interface_name, const uint3
 
     freeifaddrs(ifaddr);
     
-    fprintf(stderr, "No matching interface found for IP %s\n", local_ip);
+    fprintf(stderr, "Fatal Error: No matching interface found for IP %s\n", local_ip);
     return -1;
 }
