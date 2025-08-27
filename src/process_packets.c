@@ -516,7 +516,7 @@ static inline void swiftnet_process_packets(
                 goto next_packet;
             }
         } else {
-            const uint32_t bytes_to_copy = packet_info.chunk_amount == packet_info.chunk_index + 1 ? packet_info.packet_length % chunk_data_size : chunk_data_size;
+            const uint32_t bytes_to_copy = packet_info.chunk_amount == (packet_info.chunk_index + 1) ? packet_info.packet_length % chunk_data_size : chunk_data_size;
 
             if(pending_message->chunks_received_number + 1 >= packet_info.chunk_amount) {
                 // Completed the packet
