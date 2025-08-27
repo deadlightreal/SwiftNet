@@ -112,19 +112,19 @@ SwiftNetDebug(
     }
 );
 
-static struct ip construct_ip_header(struct in_addr destination_addr, const uint32_t packet_size, const uint16_t chunk_index, const uint16_t packet_id) {
+static struct ip construct_ip_header(struct in_addr destination_addr, const uint32_t packet_size, const uint16_t packet_id) {
     struct ip ip_header = {
-        .ip_v = 4,
-        .ip_hl = 5,
-        .ip_tos = 0,
-        .ip_p = PROTOCOL_NUMBER,
-        .ip_len = packet_size, // Change later to chunk size, and remove it from packet info
-        .ip_id = packet_id, // Change later to packet id
-        .ip_off = chunk_index, // Change later to either chunk index, or offset
-        .ip_ttl = 64,
-        .ip_sum = 0, // Change later to checksum
-        .ip_src = private_ip_address,
-        .ip_dst = destination_addr
+        .ip_v = 4, // Version (ipv4)
+        .ip_hl = 5, // Header length
+        .ip_tos = 0, // Type of service
+        .ip_p = PROTOCOL_NUMBER, // Protocol
+        .ip_len = packet_size, // Chunk size
+        .ip_id = packet_id, // Packet id
+        .ip_off = 0, // Not used
+        .ip_ttl = 64,// Time to live
+        .ip_sum = 0, // Checksum
+        .ip_src = private_ip_address, // Source ip
+        .ip_dst = destination_addr // Destination ip
     };
 
     return ip_header;

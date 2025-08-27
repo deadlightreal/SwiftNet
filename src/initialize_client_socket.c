@@ -1,7 +1,3 @@
-#include <_printf.h>
-#include <_stdio.h>
-#include <_stdlib.h>
-#include <_string.h>
 #include <pthread.h>
 #include <stdatomic.h>
 #include <stdint.h>
@@ -41,12 +37,6 @@ void* request_server_information(void* request_server_information_args_void) {
                 send_debug_message("Requested server information: {\"server_ip_address\": \"%s\"}\n", inet_ntoa(request_server_information_args->server_addr.sin_addr));
             }
         )
-
-        printf("sent: ");
-        for(size_t i = 0; i < request_server_information_args->size; i++) {
-            printf("%d ", ((uint8_t*)request_server_information_args->data)[i]);
-        }
-        printf("\n");
 
         sendto(request_server_information_args->sockfd, request_server_information_args->data, request_server_information_args->size, 0, (struct sockaddr *)&request_server_information_args->server_addr, request_server_information_args->server_addr_len);
 
@@ -117,7 +107,7 @@ SwiftNetClientConnection* swiftnet_create_client(const char* const restrict ip_a
         .maximum_transmission_unit = maximum_transmission_unit
     };
 
-    const struct ip request_server_info_ip_header = construct_ip_header(empty_connection->server_addr.sin_addr, PACKET_HEADER_SIZE, 0, rand());
+    const struct ip request_server_info_ip_header = construct_ip_header(empty_connection->server_addr.sin_addr, PACKET_HEADER_SIZE, rand());
 
     uint8_t request_server_info_buffer[PACKET_HEADER_SIZE];
 
@@ -125,8 +115,6 @@ SwiftNetClientConnection* swiftnet_create_client(const char* const restrict ip_a
     memcpy(request_server_info_buffer + sizeof(struct ip), &request_server_information_packet_info, sizeof(SwiftNetPacketInfo));
 
     const uint16_t checksum = crc16(request_server_info_buffer, sizeof(request_server_info_buffer));
-
-    printf("checksum calc: %d\n", checksum);
 
     memcpy(request_server_info_buffer + offsetof(struct ip, ip_sum), &checksum, SIZEOF_FIELD(struct ip, ip_sum));
 
@@ -160,6 +148,7 @@ SwiftNetClientConnection* swiftnet_create_client(const char* const restrict ip_a
                     send_debug_message("Invalid packet received from server. Expected server information: {\"bytes_received\": %d, \"expected_bytes\": %d}\n", bytes_received, PACKET_HEADER_SIZE + sizeof(SwiftNetServerInformation));
                 }
             )
+
             continue;
         }
 
@@ -173,6 +162,7 @@ SwiftNetClientConnection* swiftnet_create_client(const char* const restrict ip_a
                     send_debug_message("Port info does not match: {\"destination_port\": %d, \"source_port\": %d, \"source_ip_address\": \"%s\"}\n", packet_info->port_info.destination_port, packet_info->port_info.source_port, inet_ntoa(ip_header->ip_src));
                 }
             )
+
             continue;
         }
 
