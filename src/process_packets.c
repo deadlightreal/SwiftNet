@@ -1,6 +1,13 @@
 #include "internal/internal.h"
 #include "swift_net.h"
+#include <_printf.h>
+#include <_stdlib.h>
+#include <_string.h>
+#include <_strings.h>
+#include <_types/_uint32_t.h>
 #include <arpa/inet.h>
+#include <netinet/in.h>
+#include <netinet/ip.h>
 #include <stdatomic.h>
 #include <stdint.h>
 #include <stddef.h>
@@ -31,6 +38,7 @@ static inline const uint32_t return_lost_chunk_indexes(const uint8_t* const rest
                 }
 
                 if((chunks_received[byte] & (1 << bit)) == 0x00) {
+                    printf("setting buf num: %d\noffset: %d\n", byte * 8 + bit, offset);
                     buffer[offset] = byte * 8 + bit;
                     offset++;
                 }
@@ -44,18 +52,19 @@ static inline const uint32_t return_lost_chunk_indexes(const uint8_t* const rest
                 }
                 
                 if((chunks_received[byte] & (1 << bit)) == 0x00) {
+                    printf("setting buf num: %d\noffset: %d\n", byte * 8 + bit, offset);
                     buffer[offset] = byte * 8 + bit;
                     offset++;
                 }
             }
             
-            return offset * 4;
+            return offset;
         }
 
         byte++;
     }
 
-    return offset * 4;
+    return offset;
 }
 
 static inline void packet_completed(const uint16_t packet_id, const uint32_t packet_length, volatile SwiftNetPacketCompleted* const packets_completed_history) {
@@ -83,11 +92,11 @@ static inline bool check_packet_already_completed(const uint16_t packet_id, vola
     return false;
 }
 
-static inline SwiftNetPendingMessage* const restrict get_pending_message(const SwiftNetPacketInfo* const restrict packet_info, SwiftNetPendingMessage* const restrict pending_messages, const uint16_t pending_messages_size, const ConnectionType connection_type, const in_addr_t sender_address) {
+static inline SwiftNetPendingMessage* const restrict get_pending_message(const SwiftNetPacketInfo* const restrict packet_info, SwiftNetPendingMessage* const restrict pending_messages, const uint16_t pending_messages_size, const ConnectionType connection_type, const in_addr_t sender_address, const uint16_t packet_id) {
     for(uint16_t i = 0; i < pending_messages_size; i++) {
         SwiftNetPendingMessage* const restrict current_pending_message = &pending_messages[i];
 
-        if((connection_type == CONNECTION_TYPE_CLIENT && current_pending_message->packet_info.packet_id == packet_info->packet_id) || (connection_type == CONNECTION_TYPE_SERVER && current_pending_message->sender_address == sender_address)) {
+        if((connection_type == CONNECTION_TYPE_CLIENT && current_pending_message->packet_id == packet_id) || (connection_type == CONNECTION_TYPE_SERVER && current_pending_message->sender_address == sender_address)) {
             return current_pending_message;
         }
     }
@@ -138,9 +147,11 @@ static inline void chunk_received(uint8_t* const restrict chunks_received, const
     const uint8_t bit = index % 8;
 
     chunks_received[byte] |= 1 << bit;
+
+    printf("received chunk: %d\n", index);
 }
 
-static inline SwiftNetPendingMessage* restrict const create_new_pending_message(SwiftNetPendingMessage* restrict const pending_messages, const uint16_t pending_messages_size, const SwiftNetPacketInfo* const restrict packet_info, const ConnectionType connection_type, in_addr_t sender_address) {
+static inline SwiftNetPendingMessage* restrict const create_new_pending_message(SwiftNetPendingMessage* restrict const pending_messages, const uint16_t pending_messages_size, const SwiftNetPacketInfo* const restrict packet_info, const ConnectionType connection_type, in_addr_t sender_address, const uint16_t packet_id) {
     for(uint16_t i = 0; i < pending_messages_size; i++) {
         SwiftNetPendingMessage* restrict const current_pending_message = &pending_messages[i];
 
@@ -156,6 +167,8 @@ static inline SwiftNetPendingMessage* restrict const create_new_pending_message(
 
             current_pending_message->chunks_received_length = chunks_received_byte_size;
             current_pending_message->chunks_received = calloc(chunks_received_byte_size, 1);
+
+            current_pending_message->packet_id = packet_id;
 
             if(connection_type == CONNECTION_TYPE_SERVER) {
                 current_pending_message->sender_address = sender_address;
@@ -208,8 +221,8 @@ volatile PacketQueueNode* wait_for_next_packet(PacketQueue* restrict const packe
     return node_to_process;
 }
 
-static inline bool packet_corrupted(const uint32_t checksum, const uint32_t chunk_size, const uint8_t* restrict const buffer) {
-    return crc32(buffer, chunk_size) != checksum;
+static inline bool packet_corrupted(const uint16_t checksum, const uint32_t chunk_size, const uint8_t* restrict const buffer) {
+    return crc16(buffer, chunk_size) != checksum;
 }
 
 static inline void swiftnet_process_packets(
@@ -239,6 +252,8 @@ static inline void swiftnet_process_packets(
             continue;
         }
 
+        printf("got packet\n");
+
         uint8_t* restrict const packet_buffer = node->data;
         if(packet_buffer == NULL) {
             goto next_packet;
@@ -265,28 +280,44 @@ static inline void swiftnet_process_packets(
             goto next_packet;
         }
 
-        const uint32_t checksum_received = packet_info.checksum;
+        const uint16_t checksum_received = ip_header.ip_sum;
 
-        memset(&packet_buffer[sizeof(struct ip) + offsetof(SwiftNetPacketInfo, checksum)], 0x00, SIZEOF_FIELD(SwiftNetPacketInfo, checksum));
+        memset(&packet_buffer[offsetof(struct ip, ip_sum)], 0x00, SIZEOF_FIELD(struct ip, ip_sum));
 
-        if(packet_corrupted(checksum_received, packet_info.chunk_size + sizeof(SwiftNetPacketInfo), &packet_buffer[sizeof(struct ip)]) == true) {
-            SwiftNetDebug(
-                if (check_debug_flag(DEBUG_PACKETS_RECEIVING)) {
-                    send_debug_message("Received corrupted packet: {\"source_ip_address\": \"%s\", \"source_port\": %d, \"packet_id\": %d}\n", inet_ntoa(ip_header.ip_src), packet_info.port_info.source_port, packet_info.packet_id);
-                }
-            )
-            goto next_packet;
+        memcpy(packet_buffer + offsetof(struct ip, ip_len), (void*)&node->data_read, SIZEOF_FIELD(struct ip, ip_len));
+
+        printf("checksum got: %d\nchecksum real: %d\n", ip_header.ip_sum, crc16(node->data, node->data_read));
+
+        printf("ip hdr len: %d\nreal len: %d\n", ip_header.ip_len, node->data_read);
+
+        printf("received: ");
+        for(size_t i = 0; i < node->data_read; i++) {
+            printf("%d ", ((uint8_t*)node->data)[i]);
+        }
+        printf("\n");
+
+        if(memcmp(&ip_header.ip_src, &ip_header.ip_dst, sizeof(struct in_addr)) != 0) {
+            if(ip_header.ip_sum != 0 && packet_corrupted(checksum_received, node->data_read, packet_buffer) == true) {
+                SwiftNetDebug(
+                    if (check_debug_flag(DEBUG_PACKETS_RECEIVING)) {
+                        send_debug_message("Received corrupted packet: {\"source_ip_address\": \"%s\", \"source_port\": %d, \"packet_id\": %d}\n", inet_ntoa(ip_header.ip_src), packet_info.port_info.source_port, ip_header.ip_id);
+                    }
+                )
+                goto next_packet;
+            }
         }
 
         SwiftNetDebug(
             if (check_debug_flag(DEBUG_PACKETS_RECEIVING)) {
-                send_debug_message("Received packet: {\"source_ip_address\": \"%s\", \"source_port\": %d, \"packet_id\": %d, \"packet_type\": %d, \"packet_length\": %d}\n", inet_ntoa(ip_header.ip_src), packet_info.port_info.source_port, packet_info.packet_id, packet_info.packet_type, packet_info.packet_length);
+                send_debug_message("Received packet: {\"source_ip_address\": \"%s\", \"source_port\": %d, \"packet_id\": %d, \"packet_type\": %d, \"packet_length\": %d, \"chunk_index\": %d}\n", inet_ntoa(ip_header.ip_src), packet_info.port_info.source_port, ip_header.ip_id, packet_info.packet_type, packet_info.packet_length, packet_info.chunk_index);
             }
         )
 
         switch(packet_info.packet_type) {
             case PACKET_TYPE_REQUEST_INFORMATION:
             {
+                    const struct ip send_server_info_ip_header = construct_ip_header(node->sender_address.sin_addr, PACKET_HEADER_SIZE, 0, rand());
+
                     const SwiftNetPacketInfo packet_info_new = {
                         .port_info = (SwiftNetPortInfo){
                             .source_port = source_port,
@@ -294,27 +325,28 @@ static inline void swiftnet_process_packets(
                         },
                         .packet_type = PACKET_TYPE_REQUEST_INFORMATION,
                         .packet_length = sizeof(SwiftNetServerInformation),
-                        .chunk_size = sizeof(SwiftNetServerInformation),
                         .chunk_amount = 1,
-                        .packet_id = rand(),
-                        .checksum = 0x00,
                         .maximum_transmission_unit = maximum_transmission_unit
                     };
 
-                    const SwiftNetServerInformation server_information = {
+                    /*const SwiftNetServerInformation server_information = {
                         .maximum_transmission_unit = maximum_transmission_unit
-                    };
+                    };*/
 
-                    uint8_t send_buffer[sizeof(packet_info_new) + sizeof(SwiftNetServerInformation)];
+                    uint8_t send_buffer[PACKET_HEADER_SIZE];
         
-                    memcpy(send_buffer, &packet_info_new, sizeof(packet_info_new));
-                    memcpy(&send_buffer[sizeof(packet_info_new)], &server_information, sizeof(server_information));
+                    memcpy(send_buffer, &send_server_info_ip_header, sizeof(send_server_info_ip_header));
+                    memcpy(send_buffer + sizeof(struct ip), &packet_info_new, sizeof(packet_info_new));
 
-                    const uint32_t checksum = crc32(send_buffer, sizeof(send_buffer));
+                    const uint16_t checksum = crc16(send_buffer, sizeof(send_buffer));
 
-                    memcpy(&send_buffer[offsetof(SwiftNetPacketInfo, checksum)], &checksum, sizeof(checksum));
+                    memcpy(&send_buffer[offsetof(struct ip, ip_sum)], &checksum, SIZEOF_FIELD(struct ip, ip_sum));
+
+                    printf("sent server into to: %s\n", inet_ntoa(node->sender_address.sin_addr));
 
                     sendto(sockfd, send_buffer, sizeof(send_buffer), 0, (struct sockaddr *)&node->sender_address, node->server_address_length);
+
+                    printf("sent server info\n");
         
                     goto next_packet;
             }
@@ -322,39 +354,34 @@ static inline void swiftnet_process_packets(
             {
                 const uint32_t mtu = MIN(packet_info.maximum_transmission_unit, maximum_transmission_unit);
 
-                SwiftNetPacketInfo packet_info_new = {
-                    .port_info = (SwiftNetPortInfo){
-                        .destination_port = packet_info.port_info.source_port,
-                        .source_port = packet_info.port_info.destination_port
-                    },
-                    .checksum = 0x00,
-                    .packet_id = packet_info.packet_id,
-                    .packet_type = PACKET_TYPE_SEND_LOST_PACKETS_RESPONSE,
-                    .chunk_size = maximum_transmission_unit - PACKET_HEADER_SIZE,
-                    .maximum_transmission_unit = maximum_transmission_unit
-                };
-
-                SwiftNetPendingMessage* restrict const pending_message = get_pending_message(&packet_info, pending_messages, MAX_PENDING_MESSAGES, connection_type, ip_header.ip_src.s_addr);
+                SwiftNetPendingMessage* restrict const pending_message = get_pending_message(&packet_info, pending_messages, MAX_PENDING_MESSAGES, connection_type, ip_header.ip_src.s_addr, ip_header.ip_id);
                 if(pending_message == NULL) {
-                    const bool packet_already_completed = check_packet_already_completed(packet_info.packet_id, packets_completed_history);
+                    const bool packet_already_completed = check_packet_already_completed(ip_header.ip_id, packets_completed_history);
                     if(likely(packet_already_completed == true)) {
+                        const struct ip send_packet_ip_header = construct_ip_header(node->sender_address.sin_addr, PACKET_HEADER_SIZE, 0, ip_header.ip_id);
+
                         SwiftNetPacketInfo send_packet_info = {
                             .packet_length = 0x00,
-                            .chunk_size = 0x00,
                             .chunk_amount = 1,
-                            .packet_id = packet_info.packet_id,
                             .packet_type = PACKET_TYPE_SUCCESSFULLY_RECEIVED_PACKET,
                             .port_info = (SwiftNetPortInfo){
                                 .destination_port = packet_info.port_info.source_port,
                                 .source_port = packet_info.port_info.destination_port
                             },
-                            .checksum = 0x00,
-                            .maximum_transmission_unit = maximum_transmission_unit
+                            .maximum_transmission_unit = maximum_transmission_unit,
+                            .chunk_index = 0
                         };
 
-                        send_packet_info.checksum = crc32((uint8_t*)&send_packet_info, sizeof(send_packet_info));
+                        uint8_t send_buffer[PACKET_HEADER_SIZE];
 
-                        sendto(sockfd, &send_packet_info, sizeof(SwiftNetPacketInfo), 0x00, (const struct sockaddr *)&node->sender_address, node->server_address_length);
+                        memcpy(send_buffer, &send_packet_ip_header, sizeof(send_packet_ip_header));
+                        memcpy(send_buffer + sizeof(send_packet_ip_header), &send_packet_info, sizeof(send_packet_info));
+
+                        const uint16_t checksum = crc16(send_buffer, sizeof(send_buffer));
+
+                        memcpy(send_buffer, &checksum, SIZEOF_FIELD(struct ip, ip_sum));
+
+                        sendto(sockfd, &send_buffer, sizeof(send_buffer), 0x00, (const struct sockaddr *)&node->sender_address, node->server_address_length);
 
                         goto next_packet;
                     }
@@ -362,29 +389,52 @@ static inline void swiftnet_process_packets(
                     goto next_packet;
                 }
 
-                uint8_t send_buffer[mtu - sizeof(struct ip)];
-                const uint32_t lost_chunk_indexes = return_lost_chunk_indexes(pending_message->chunks_received, pending_message->packet_info.chunk_amount, mtu - PACKET_HEADER_SIZE, (uint32_t*)&send_buffer[sizeof(SwiftNetPacketInfo)]);
-                for(uint32_t i = 0; i < lost_chunk_indexes; i += 4) {
+                struct ip send_lost_packets_ip_header = construct_ip_header(node->sender_address.sin_addr, 0, 0, ip_header.ip_id);
+
+                SwiftNetPacketInfo packet_info_new = {
+                    .port_info = (SwiftNetPortInfo){
+                        .destination_port = packet_info.port_info.source_port,
+                        .source_port = packet_info.port_info.destination_port
+                    },
+                    .packet_type = PACKET_TYPE_SEND_LOST_PACKETS_RESPONSE,
+                    .chunk_amount = 1,
+                    .chunk_index = 0,
+                    .maximum_transmission_unit = maximum_transmission_unit
+                };
+
+                uint8_t send_buffer[mtu];
+                memset(send_buffer, 0, mtu);
+                const uint32_t lost_chunk_indexes = return_lost_chunk_indexes(pending_message->chunks_received, pending_message->packet_info.chunk_amount, mtu - PACKET_HEADER_SIZE, (uint32_t*)(send_buffer + PACKET_HEADER_SIZE));
+                printf("lost chunk indexes: %d", lost_chunk_indexes);
+                for(uint32_t i = 0; i < lost_chunk_indexes; i++) {
                     // Cast to uint32_t pointer before dereferencing to ensure correct size
-                    uint32_t *packet = (uint32_t*)&send_buffer[sizeof(SwiftNetPacketInfo) + i];
+                    uint32_t* lost_index = (uint32_t*)(send_buffer + PACKET_HEADER_SIZE + (i*4));
+
+                    printf("\n\nlost index: %d\n\n", *lost_index);
                 }
 
-                packet_info_new.packet_length = lost_chunk_indexes;
-                packet_info_new.chunk_size = lost_chunk_indexes;
+                packet_info_new.packet_length = lost_chunk_indexes * sizeof(uint32_t);
 
-                memcpy(send_buffer, &packet_info_new, sizeof(SwiftNetPacketInfo));
+                send_lost_packets_ip_header.ip_len = lost_chunk_indexes + PACKET_HEADER_SIZE;
 
-                const uint32_t checksum = crc32(send_buffer, sizeof(SwiftNetPacketInfo) + lost_chunk_indexes);
+                const uint32_t packet_length = PACKET_HEADER_SIZE + (lost_chunk_indexes * sizeof(uint32_t));
 
-                memcpy(&send_buffer[offsetof(SwiftNetPacketInfo, checksum)], &checksum, sizeof(checksum));
+                memcpy(send_buffer, &send_lost_packets_ip_header, sizeof(send_lost_packets_ip_header));
+                memcpy(send_buffer + sizeof(struct ip), &packet_info_new, sizeof(packet_info_new));
 
-                sendto(sockfd, send_buffer, sizeof(SwiftNetPacketInfo) + lost_chunk_indexes, 0x00, (const struct sockaddr *)&node->sender_address, node->server_address_length);
+                memcpy(send_buffer + offsetof(struct ip, ip_len), &packet_length, SIZEOF_FIELD(struct ip, ip_len));
+
+                const uint16_t checksum = crc16(send_buffer, packet_length);
+
+                memcpy(&send_buffer[offsetof(struct ip, ip_sum)], &checksum, SIZEOF_FIELD(struct ip, ip_sum));
+
+                sendto(sockfd, send_buffer, packet_length, 0x00, (const struct sockaddr *)&node->sender_address, node->server_address_length);
 
                 goto next_packet;
             }
             case PACKET_TYPE_SEND_LOST_PACKETS_RESPONSE:
             {
-                volatile SwiftNetPacketSending* const target_packet_sending = get_packet_sending(packet_sending, packet_sending_size, packet_info.packet_id);
+                volatile SwiftNetPacketSending* const target_packet_sending = get_packet_sending(packet_sending, packet_sending_size, ip_header.ip_id);
 
                 if(unlikely(target_packet_sending == NULL)) {
                     goto next_packet;
@@ -393,6 +443,8 @@ static inline void swiftnet_process_packets(
                 if(unlikely(target_packet_sending->lost_chunks == NULL)) {
                     target_packet_sending->lost_chunks = malloc(maximum_transmission_unit - PACKET_HEADER_SIZE);
                 }
+
+                const uint32_t packets_lost = (packet_info.packet_length) / sizeof(uint32_t);
 
                 memcpy((void*)target_packet_sending->lost_chunks, packet_data, packet_info.packet_length);
 
@@ -404,7 +456,7 @@ static inline void swiftnet_process_packets(
             }
             case PACKET_TYPE_SUCCESSFULLY_RECEIVED_PACKET:
             {
-                volatile SwiftNetPacketSending* const target_packet_sending = get_packet_sending(packet_sending, packet_sending_size, packet_info.packet_id);
+                volatile SwiftNetPacketSending* const target_packet_sending = get_packet_sending(packet_sending, packet_sending_size, ip_header.ip_id);
 
                 if(unlikely(target_packet_sending == NULL)) {
                     goto next_packet;
@@ -427,12 +479,12 @@ static inline void swiftnet_process_packets(
         const uint32_t mtu = MIN(packet_info.maximum_transmission_unit, maximum_transmission_unit);
         const uint32_t chunk_data_size = mtu - PACKET_HEADER_SIZE;
 
-        SwiftNetPendingMessage* const restrict pending_message = get_pending_message(&packet_info, pending_messages, MAX_PENDING_MESSAGES, connection_type, node->sender_address.sin_addr.s_addr);
+        SwiftNetPendingMessage* const restrict pending_message = get_pending_message(&packet_info, pending_messages, MAX_PENDING_MESSAGES, connection_type, node->sender_address.sin_addr.s_addr, ip_header.ip_id);
 
         if(pending_message == NULL) {
             if(packet_info.packet_length + PACKET_HEADER_SIZE > mtu) {
                 // Split packet into chunks
-                SwiftNetPendingMessage* restrict const new_pending_message = create_new_pending_message(pending_messages, MAX_PENDING_MESSAGES, &packet_info, connection_type, node->sender_address.sin_addr.s_addr);
+                SwiftNetPendingMessage* restrict const new_pending_message = create_new_pending_message(pending_messages, MAX_PENDING_MESSAGES, &packet_info, connection_type, node->sender_address.sin_addr.s_addr, ip_header.ip_id);
 
                 new_pending_message->chunks_received_number++;
 
@@ -446,7 +498,7 @@ static inline void swiftnet_process_packets(
             } else {
                 current_read_pointer = packet_buffer + PACKET_HEADER_SIZE;
 
-                packet_completed(packet_info.packet_id, packet_info.packet_length, packets_completed_history);
+                packet_completed(ip_header.ip_id, packet_info.packet_length, packets_completed_history);
 
                 if(connection_type == CONNECTION_TYPE_SERVER) {
                     SwiftNetPacketServerMetadata* packet_metadata = malloc(sizeof(SwiftNetPacketServerMetadata));
@@ -464,7 +516,7 @@ static inline void swiftnet_process_packets(
                 goto next_packet;
             }
         } else {
-            const uint32_t bytes_to_copy = packet_info.chunk_amount == packet_info.chunk_index + 1 ? packet_info.packet_length % chunk_data_size : chunk_data_size;
+            const uint32_t bytes_to_copy = packet_info.chunk_amount == (packet_info.chunk_index + 1) ? packet_info.packet_length % chunk_data_size : chunk_data_size;
 
             if(pending_message->chunks_received_number + 1 >= packet_info.chunk_amount) {
                 // Completed the packet
@@ -472,7 +524,7 @@ static inline void swiftnet_process_packets(
 
                 current_read_pointer = pending_message->packet_data_start;
 
-                packet_completed(packet_info.packet_id, packet_info.packet_length, packets_completed_history);
+                packet_completed(ip_header.ip_id, packet_info.packet_length, packets_completed_history);
 
                 if(connection_type == CONNECTION_TYPE_SERVER) {
                     SwiftNetPacketServerMetadata* packet_metadata = malloc(sizeof(SwiftNetPacketServerMetadata));
