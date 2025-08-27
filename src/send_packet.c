@@ -208,16 +208,16 @@ static inline void swiftnet_send_packet(
         
             if(current_offset + mtu > packet_info.packet_length) {
                 // Last chunk
-                const uint32_t bytes_to_send = packet_length - current_offset;
+                const uint16_t bytes_to_send = (uint16_t)packet_length - current_offset + PACKET_HEADER_SIZE;
 
-                memcpy(&buffer[PACKET_HEADER_SIZE], packet->packet_data_start + current_offset, bytes_to_send);
+                memcpy(&buffer[PACKET_HEADER_SIZE], packet->packet_data_start + current_offset, bytes_to_send - PACKET_HEADER_SIZE);
                 memcpy(&buffer[offsetof(struct ip, ip_len)], &bytes_to_send + PACKET_HEADER_SIZE, sizeof(bytes_to_send));
 
-                const uint16_t checksum = crc16(buffer, bytes_to_send + PACKET_HEADER_SIZE);
+                const uint16_t checksum = crc16(buffer, bytes_to_send);
 
                 memcpy(&buffer[offsetof(struct ip, ip_sum)], &checksum, sizeof(checksum));
 
-                sendto(sockfd, buffer, bytes_to_send + PACKET_HEADER_SIZE, 0x00, (const struct sockaddr *)target_addr, *target_addr_len);
+                sendto(sockfd, buffer, bytes_to_send, 0x00, (const struct sockaddr *)target_addr, *target_addr_len);
 
                 handle_lost_packets(packets_sending, mtu, packet, sockfd, target_addr, target_addr_len, port_info.source_port, port_info.destination_port);
                 

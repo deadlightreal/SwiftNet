@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <netinet/ip.h>
 #include "internal/internal.h"
+#include <stddef.h>
 
 static inline void insert_queue_node(PacketQueueNode* const restrict new_node, PacketQueue* restrict const packet_queue, const ConnectionType contype) {
     if(new_node == NULL) {

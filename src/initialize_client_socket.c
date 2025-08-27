@@ -13,6 +13,7 @@
 #include "internal/internal.h"
 #include "swift_net.h"
 #include <fcntl.h>
+#include <stddef.h>
 
 bool exit_thread = false;
 
