@@ -1,5 +1,9 @@
 #pragma once
 
+#ifdef __cplusplus
+    #define restrict __restrict__
+#endif
+
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <stdint.h>
