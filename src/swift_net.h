@@ -1,5 +1,11 @@
 #pragma once
 
+#ifdef __cplusplus
+    extern "C" {
+
+    #define restrict __restrict__
+#endif
+
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <stdint.h>
@@ -194,3 +200,9 @@ extern void swiftnet_client_destroy_packet_buffer(SwiftNetPacketBuffer* restrict
 
 extern SwiftNetServer* swiftnet_create_server(const uint16_t port);
 extern SwiftNetClientConnection* swiftnet_create_client(const char* const restrict ip_address, const uint16_t port);
+
+extern void swiftnet_add_debug_flags(const uint32_t flags);
+
+#ifdef __cplusplus
+    }
+#endif
