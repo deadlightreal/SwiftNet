@@ -56,10 +56,12 @@ typedef struct {
 
 typedef struct {
     uint32_t data_length;
+    SwiftNetPortInfo port_info;
 } SwiftNetPacketClientMetadata;
 
 typedef struct {
     uint32_t data_length;
+    SwiftNetPortInfo port_info;
     SwiftNetClientAddrData sender;
 } SwiftNetPacketServerMetadata;
 
