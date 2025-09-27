@@ -39,16 +39,18 @@ SwiftNetServer* swiftnet_create_server(const uint16_t port) {
     empty_server->server_port = port;
 
     // Create the socket
-    empty_server->sockfd = socket(AF_INET, SOCK_RAW, IPPROTO_RAW);
+    empty_server->sockfd = socket(AF_INET, SOCK_RAW, PROTOCOL_NUMBER);
     if (unlikely(empty_server->sockfd < 0)) {
         fprintf(stderr, "Socket creation failed\n");
         exit(EXIT_FAILURE);
     }
 
-    const uint8_t opt = 1;
-    setsockopt(empty_server->sockfd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
+    int on = 1;
+    if(setsockopt(empty_server->sockfd, IPPROTO_IP, IP_HDRINCL, &on, sizeof(on)) < 0) {
+        fprintf(stderr, "Failed to set sockopt IP_HDRINCL\n");
+        exit(EXIT_FAILURE);
+    }
 
-    
     empty_server->packet_queue = (PacketQueue){
         .first_node = NULL,
         .last_node = NULL
@@ -68,6 +70,12 @@ SwiftNetServer* swiftnet_create_server(const uint16_t port) {
 
     // Create a new thread that will handle all packets received
     pthread_create(&empty_server->handle_packets_thread, NULL, swiftnet_server_handle_packets, empty_server);
+
+    SwiftNetDebug(
+        if (check_debug_flag(DEBUG_INITIALIZATION)) {
+            send_debug_message("Successfully initialized server\n");
+        }
+    )
 
     return empty_server;
 }

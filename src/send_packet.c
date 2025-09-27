@@ -1,17 +1,16 @@
 #include "swift_net.h"
-#include <stdarg.h>
+#include <_printf.h>
 #include <stddef.h>
-#include <stdint.h>
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <errno.h>
 #include <sys/socket.h>
 #include <time.h>
 #include <unistd.h>
 #include <arpa/inet.h>
 #include <netinet/ip.h>
 #include "internal/internal.h"
+#include <netinet/in.h>
 
 // These functions send the data from the packet buffer to the designated client or server.
 static inline volatile SwiftNetPacketSending* get_empty_packet_sending(volatile SwiftNetPacketSending* const packet_sending_array, const uint16_t size) {
@@ -28,6 +27,10 @@ static inline volatile SwiftNetPacketSending* get_empty_packet_sending(volatile 
 
 static inline uint8_t request_lost_packets_bitarray(const uint8_t* restrict const raw_data, const uint32_t data_size, const struct sockaddr* restrict const destination, const int sockfd, volatile SwiftNetPacketSending* const packet_sending) {
     while(1) {
+        if(check_debug_flag(DEBUG_LOST_PACKETS)) {
+            send_debug_message("Requested list of lost packets: {\"packet_id\": %d}", packet_sending->packet_id);
+        }
+
         sendto(sockfd, raw_data, data_size, 0, destination, sizeof(*destination));
 
         for(uint8_t times_checked = 0; times_checked < 0xFF; times_checked++) {
@@ -47,7 +50,7 @@ static inline uint8_t request_lost_packets_bitarray(const uint8_t* restrict cons
 
 static inline void handle_lost_packets(
     volatile SwiftNetPacketSending* const packet_sending,
-    const uint32_t maximum_transmission_unit,
+    const uint32_t mtu,
     const volatile SwiftNetPacketBuffer* const packet, 
     const int sockfd,
     const struct sockaddr_in* restrict const destination_address,
@@ -60,38 +63,46 @@ static inline void handle_lost_packets(
         .destination_port = destination_port
     };
 
+    const struct ip request_lost_packets_ip_header = construct_ip_header(destination_address->sin_addr, PACKET_HEADER_SIZE, packet_sending->packet_id);
+
     SwiftNetPacketInfo request_lost_packets_bit_array = {
         .packet_type = PACKET_TYPE_SEND_LOST_PACKETS_REQUEST,
-        .packet_id = packet_sending->packet_id,
         .port_info = port_info,
         .packet_length = 0x00,
-        .chunk_size = 0x00,
-        .checksum = 0x00,
-        .maximum_transmission_unit = maximum_transmission_unit
+        .maximum_transmission_unit = mtu,
+        .chunk_index = 0
     };
+
+    uint8_t request_lost_packets_buffer[PACKET_HEADER_SIZE];
+
+    memcpy(request_lost_packets_buffer, &request_lost_packets_ip_header, sizeof(struct ip));
+    memcpy(request_lost_packets_buffer + sizeof(struct ip), &request_lost_packets_bit_array, sizeof(SwiftNetPacketInfo));
  
-    request_lost_packets_bit_array.checksum = crc32((uint8_t*)&request_lost_packets_bit_array, sizeof(request_lost_packets_bit_array));
+    uint16_t checksum = crc16(request_lost_packets_buffer, sizeof(request_lost_packets_buffer));
+
+    memcpy(request_lost_packets_buffer + offsetof(struct ip, ip_sum), &checksum, SIZEOF_FIELD(struct ip, ip_sum));
  
     const uint32_t packet_length = packet->packet_append_pointer - packet->packet_data_start;
-    const uint32_t chunk_amount = (packet_length + (maximum_transmission_unit - PACKET_HEADER_SIZE) - 1) / (maximum_transmission_unit - PACKET_HEADER_SIZE);
+    const uint32_t chunk_amount = (packet_length + (mtu - PACKET_HEADER_SIZE) - 1) / (mtu - PACKET_HEADER_SIZE);
 
     const SwiftNetPacketInfo resend_chunk_packet_info = {
         .packet_type = PACKET_TYPE_MESSAGE,
         .port_info = port_info,
-        .packet_id = packet_sending->packet_id,
         .packet_length = packet_length,
         .chunk_amount = chunk_amount,
-        .chunk_size = maximum_transmission_unit - PACKET_HEADER_SIZE,
-        .checksum = 0x00,
         .maximum_transmission_unit = maximum_transmission_unit
     };
+ 
+    const struct ip resend_chunk_ip_header = construct_ip_header(destination_address->sin_addr, mtu, packet_sending->packet_id);
 
-    uint8_t resend_chunk_buffer[maximum_transmission_unit - sizeof(struct ip)];
+    uint8_t resend_chunk_buffer[mtu];
 
-    memcpy(resend_chunk_buffer, &resend_chunk_packet_info, sizeof(SwiftNetPacketInfo));
+    memcpy(resend_chunk_buffer, &resend_chunk_ip_header, sizeof(struct ip));
+
+    memcpy(resend_chunk_buffer + sizeof(struct ip), &resend_chunk_packet_info, sizeof(SwiftNetPacketInfo));
 
     while(1) {
-        const uint8_t request_lost_packets_bitarray_response = request_lost_packets_bitarray((uint8_t*)&request_lost_packets_bit_array, sizeof(SwiftNetPacketInfo), (const struct sockaddr*)destination_address, sockfd, packet_sending);
+        const uint8_t request_lost_packets_bitarray_response = request_lost_packets_bitarray((uint8_t*)&request_lost_packets_buffer, PACKET_HEADER_SIZE, (const struct sockaddr*)destination_address, sockfd, packet_sending);
 
         switch (request_lost_packets_bitarray_response) {
             case REQUEST_LOST_PACKETS_RETURN_UPDATED_BIT_ARRAY:
@@ -103,35 +114,38 @@ static inline void handle_lost_packets(
     
         for(uint32_t i = 0; i < packet_sending->lost_chunks_size; i++) {
             const uint32_t lost_chunk_index = packet_sending->lost_chunks[i];
-    
-            memcpy(&resend_chunk_buffer[offsetof(SwiftNetPacketInfo, chunk_index)], &lost_chunk_index, SIZEOF_FIELD(SwiftNetPacketInfo, chunk_index));
-    
-            const uint32_t current_offset = lost_chunk_index * (maximum_transmission_unit - PACKET_HEADER_SIZE);
 
-            if(current_offset + maximum_transmission_unit - PACKET_HEADER_SIZE > packet_length) {
+            if (check_debug_flag(DEBUG_LOST_PACKETS) == true) {
+                send_debug_message("Packet lost: {\"packet_id\": %d, \"chunk index\": %d}", lost_chunk_index);
+            }
+    
+            memcpy(&resend_chunk_buffer[sizeof(struct ip) + offsetof(SwiftNetPacketInfo, chunk_index)], &lost_chunk_index, SIZEOF_FIELD(SwiftNetPacketInfo, chunk_index));
+    
+            const uint32_t current_offset = lost_chunk_index * (mtu - PACKET_HEADER_SIZE);
+
+            if(current_offset + mtu - PACKET_HEADER_SIZE >= packet_length) {
                 const uint32_t bytes_to_complete = packet_length - current_offset;
 
-                memcpy(&resend_chunk_buffer[offsetof(SwiftNetPacketInfo, packet_length)], &bytes_to_complete, sizeof(bytes_to_complete));
-
-                memcpy(&resend_chunk_buffer[offsetof(SwiftNetPacketInfo, chunk_size)], &bytes_to_complete, SIZEOF_FIELD(SwiftNetPacketInfo, chunk_size));
+                const uint16_t new_ip_len = bytes_to_complete + PACKET_HEADER_SIZE;
+                memcpy(&resend_chunk_buffer[offsetof(struct ip, ip_len)], &new_ip_len, SIZEOF_FIELD(struct ip, ip_len));
                 
-                memcpy(&resend_chunk_buffer[sizeof(SwiftNetPacketInfo)], &packet->packet_data_start[current_offset], bytes_to_complete);
+                memcpy(&resend_chunk_buffer[PACKET_HEADER_SIZE], &packet->packet_data_start[current_offset], bytes_to_complete);
                 
-                memset(&resend_chunk_buffer[offsetof(SwiftNetPacketInfo, checksum)], 0x00, SIZEOF_FIELD(SwiftNetPacketInfo, checksum));
+                memset(&resend_chunk_buffer[offsetof(struct ip, ip_sum)], 0x00, SIZEOF_FIELD(struct ip, ip_len));
 
-                const uint32_t checksum = crc32(resend_chunk_buffer, bytes_to_complete);
+                const uint16_t checksum = crc16(resend_chunk_buffer, bytes_to_complete + PACKET_HEADER_SIZE);
 
-                memcpy(&resend_chunk_buffer[offsetof(SwiftNetPacketInfo, checksum)], &checksum, SIZEOF_FIELD(SwiftNetPacketInfo, checksum));
+                memcpy(&resend_chunk_buffer[offsetof(struct ip, ip_sum)], &checksum, SIZEOF_FIELD(struct ip, ip_sum));
     
-                sendto(sockfd, resend_chunk_buffer, bytes_to_complete, 0, (const struct sockaddr*)destination_address, *destination_address_len);
+                sendto(sockfd, resend_chunk_buffer, bytes_to_complete + PACKET_HEADER_SIZE, 0, (const struct sockaddr*)destination_address, *destination_address_len);
             } else {
-                memcpy(&resend_chunk_buffer[sizeof(SwiftNetPacketInfo)], &packet->packet_data_start[current_offset], maximum_transmission_unit - PACKET_HEADER_SIZE);
+                memcpy(&resend_chunk_buffer[PACKET_HEADER_SIZE], &packet->packet_data_start[current_offset], mtu - PACKET_HEADER_SIZE);
 
-                memset(&resend_chunk_buffer[offsetof(SwiftNetPacketInfo, checksum)], 0x00, SIZEOF_FIELD(SwiftNetPacketInfo, checksum));
+                memset(&resend_chunk_buffer[offsetof(struct ip, ip_sum)], 0x00, SIZEOF_FIELD(struct ip, ip_sum));
 
-                const uint32_t checksum = crc32(resend_chunk_buffer, maximum_transmission_unit - sizeof(struct ip));
+                const uint16_t checksum = crc16(resend_chunk_buffer, sizeof(resend_chunk_buffer));
 
-                memcpy(&resend_chunk_buffer[offsetof(SwiftNetPacketInfo, checksum)], &checksum, SIZEOF_FIELD(SwiftNetPacketInfo, checksum));
+                memcpy(&resend_chunk_buffer[offsetof(struct ip, ip_sum)], &checksum, SIZEOF_FIELD(struct ip, ip_sum));
     
                 sendto(sockfd, resend_chunk_buffer, sizeof(resend_chunk_buffer), 0, (const struct sockaddr*)destination_address, *destination_address_len);
             }
@@ -154,19 +168,23 @@ static inline void swiftnet_send_packet(
 
     const uint32_t mtu = MIN(target_maximum_transmission_unit, maximum_transmission_unit);
 
-    SwiftNetPacketInfo packet_info = {
-        .packet_type = PACKET_TYPE_MESSAGE,
-        .port_info = port_info,
-        .packet_length = packet_length,
-        .packet_id = packet_id,
-        .chunk_size = mtu - PACKET_HEADER_SIZE,
-        .checksum = 0x00,
-        .maximum_transmission_unit = maximum_transmission_unit
-    };
-
-    memcpy(packet->packet_buffer_start, &packet_info, sizeof(SwiftNetPacketInfo));
+    SwiftNetDebug(
+        if (check_debug_flag(DEBUG_PACKETS_SENDING)) {
+            send_debug_message("Sending packet: {\"destination_ip_address\": \"%s\", \"destination_port\": %d, \"packet_length\": %d}\n", inet_ntoa(target_addr->sin_addr), port_info.destination_port, packet_length);
+        }
+    )
 
     if(packet_length > mtu) {
+        SwiftNetPacketInfo packet_info = {
+            .packet_type = PACKET_TYPE_MESSAGE,
+            .port_info = port_info,
+            .packet_length = packet_length,
+            .maximum_transmission_unit = maximum_transmission_unit,
+            .chunk_index = 0
+        };
+
+        const struct ip ip_header = construct_ip_header(target_addr->sin_addr, mtu, packet_id);
+
         volatile SwiftNetPacketSending* const empty_packet_sending = get_empty_packet_sending((volatile SwiftNetPacketSending* const)packets_sending, MAX_PACKETS_SENDING);
         if(unlikely(empty_packet_sending == NULL)) {
             fprintf(stderr, "Failed to send a packet: exceeded maximum amount of sending packets at the same time\n");
@@ -179,55 +197,71 @@ static inline void swiftnet_send_packet(
 
         packet_info.chunk_amount = chunk_amount;
 
-        uint8_t buffer[mtu - sizeof(struct ip)];
+        uint8_t buffer[mtu];
 
-        memcpy(buffer, &packet_info, sizeof(SwiftNetPacketInfo));
+        memcpy(buffer, &ip_header, sizeof(ip_header));
+        memcpy(buffer + sizeof(ip_header), &packet_info, sizeof(packet_info));
 
         for(uint32_t i = 0; ; i++) {
             const uint32_t current_offset = i * (mtu - PACKET_HEADER_SIZE);
 
-            memcpy(&buffer[offsetof(SwiftNetPacketInfo, chunk_index)], &i, SIZEOF_FIELD(SwiftNetPacketInfo, chunk_index));
+            SwiftNetDebug(
+                if (check_debug_flag(DEBUG_PACKETS_SENDING)) {
+                    send_debug_message("Sent chunk: {\"chunk_index\": %d}\n", i);
+                }
+            )
+
+            memcpy(&buffer[sizeof(struct ip) + offsetof(SwiftNetPacketInfo, chunk_index)], &i, SIZEOF_FIELD(struct ip, ip_off));
             
-            memset(&buffer[offsetof(SwiftNetPacketInfo, checksum)], 0x00, SIZEOF_FIELD(SwiftNetPacketInfo, checksum));
+            memset(&buffer[offsetof(struct ip, ip_sum)], 0x00, SIZEOF_FIELD(struct ip, ip_sum));
         
             if(current_offset + mtu > packet_info.packet_length) {
-                // last chunk
-                const uint32_t bytes_to_send = packet_length - current_offset;
+                // Last chunk
+                const uint16_t bytes_to_send = (uint16_t)packet_length - current_offset + PACKET_HEADER_SIZE;
 
-                memcpy(&buffer[sizeof(SwiftNetPacketInfo)], packet->packet_data_start + current_offset, bytes_to_send);
-                memcpy(&buffer[offsetof(SwiftNetPacketInfo, chunk_size)], &bytes_to_send, sizeof(bytes_to_send));
+                memcpy(&buffer[PACKET_HEADER_SIZE], packet->packet_data_start + current_offset, bytes_to_send - PACKET_HEADER_SIZE);
+                memcpy(&buffer[offsetof(struct ip, ip_len)], &bytes_to_send + PACKET_HEADER_SIZE, sizeof(bytes_to_send));
 
-                const uint32_t checksum = crc32(buffer, bytes_to_send + sizeof(SwiftNetPacketInfo));
-                memcpy(&buffer[offsetof(SwiftNetPacketInfo, checksum)], &checksum, sizeof(checksum));
+                const uint16_t checksum = crc16(buffer, bytes_to_send);
 
-                sendto(sockfd, buffer, bytes_to_send + sizeof(SwiftNetPacketInfo), 0x00, (const struct sockaddr *)target_addr, *target_addr_len);
+                memcpy(&buffer[offsetof(struct ip, ip_sum)], &checksum, sizeof(checksum));
+
+                sendto(sockfd, buffer, bytes_to_send, 0x00, (const struct sockaddr *)target_addr, *target_addr_len);
 
                 handle_lost_packets(packets_sending, mtu, packet, sockfd, target_addr, target_addr_len, port_info.source_port, port_info.destination_port);
                 
                 break;
             } else {
-                memcpy(&buffer[sizeof(SwiftNetPacketInfo)], packet->packet_data_start + current_offset, mtu - PACKET_HEADER_SIZE);
+                memcpy(buffer + PACKET_HEADER_SIZE, packet->packet_data_start + current_offset, mtu - PACKET_HEADER_SIZE);
 
-                const uint32_t checksum = crc32(buffer, sizeof(buffer));
+                const uint16_t checksum = crc16(buffer, sizeof(buffer));
 
-                memcpy(&buffer[offsetof(SwiftNetPacketInfo, checksum)], &checksum, sizeof(checksum));
+                memcpy(&buffer[offsetof(struct ip, ip_sum)], &checksum, sizeof(checksum));
 
                 sendto(sockfd, buffer, sizeof(buffer), 0, (const struct sockaddr *)target_addr, sizeof(*target_addr));
             }
         }
     } else {
-        const uint32_t chunk_amount = 1;
-        const uint32_t chunk_index = 0;
+        const uint32_t final_packet_size = PACKET_HEADER_SIZE + packet_length;
 
-        memcpy(packet->packet_buffer_start + offsetof(SwiftNetPacketInfo, chunk_size), &packet_length, SIZEOF_FIELD(SwiftNetPacketInfo, chunk_size));
-        memcpy(packet->packet_buffer_start + offsetof(SwiftNetPacketInfo, chunk_amount), &chunk_amount, SIZEOF_FIELD(SwiftNetPacketInfo, chunk_amount));
-        memcpy(packet->packet_buffer_start + offsetof(SwiftNetPacketInfo, chunk_index), &chunk_index, SIZEOF_FIELD(SwiftNetPacketInfo, chunk_index));
+        const SwiftNetPacketInfo packet_info = {
+            .packet_type = PACKET_TYPE_MESSAGE,
+            .port_info = port_info,
+            .packet_length = packet_length,
+            .maximum_transmission_unit = maximum_transmission_unit,
+            .chunk_amount = 1,
+        };
 
-        const uint32_t checksum = crc32(packet->packet_buffer_start, packet_length + sizeof(SwiftNetPacketInfo));
+        const struct ip ip_header = construct_ip_header(target_addr->sin_addr, final_packet_size, packet_id);
 
-        memcpy(packet->packet_buffer_start + offsetof(SwiftNetPacketInfo, checksum), &checksum, SIZEOF_FIELD(SwiftNetPacketInfo, checksum));
+        memcpy(packet->packet_buffer_start, &ip_header, sizeof(struct ip));
+        memcpy(packet->packet_buffer_start + sizeof(struct ip), &packet_info, sizeof(SwiftNetPacketInfo));
 
-        sendto(sockfd, packet->packet_buffer_start, packet_length + sizeof(SwiftNetPacketInfo), 0, (const struct sockaddr *)target_addr, sizeof(*target_addr));
+        const uint16_t checksum = crc16(packet->packet_buffer_start, final_packet_size);
+
+        memcpy(packet->packet_buffer_start + offsetof(struct ip, ip_sum), &checksum, SIZEOF_FIELD(struct ip, ip_sum));
+
+        sendto(sockfd, packet->packet_buffer_start, final_packet_size, 0, (const struct sockaddr *)target_addr, sizeof(*target_addr));
     }
 }
 

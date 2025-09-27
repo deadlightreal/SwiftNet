@@ -1,4 +1,5 @@
 #include "swift_net.h"
+#include <arpa/inet.h>
 #include <stdatomic.h>
 #include <stdio.h>
 #include <unistd.h>
@@ -6,6 +7,7 @@
 #include <stdlib.h>
 #include <netinet/ip.h>
 #include "internal/internal.h"
+#include <stddef.h>
 
 static inline void insert_queue_node(PacketQueueNode* const restrict new_node, PacketQueue* restrict const packet_queue, const ConnectionType contype) {
     if(new_node == NULL) {
@@ -63,8 +65,12 @@ static inline void swiftnet_handle_packets(const int sockfd, const uint16_t sour
             continue;
         }
 
+        struct in_addr sender_addr;
+        memcpy(&sender_addr, &packet_buffer[offsetof(struct ip, ip_src)], sizeof(struct in_addr));
+
         node->data_read = received_sucessfully;
         node->data = packet_buffer;
+        node->sender_address.sin_addr = sender_addr;
         node->next = NULL;
 
         insert_queue_node(node, packet_queue, connection_type);

@@ -16,6 +16,7 @@ set(SOURCE_FILES
     process_packets.c
     execute_packet_callback.c
     create_packet_buffer.c
+    add_debug_flags.c
     destroy_packet_buffer.c
     internal/get_mtu.c
     internal/get_default_interface.c
