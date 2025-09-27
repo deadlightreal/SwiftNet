@@ -1,7 +1,7 @@
 #pragma once
 
 #ifdef __cplusplus
-    extern "C"
+    extern "C" {
 
     #define restrict __restrict__
 #endif
@@ -73,10 +73,12 @@ typedef struct {
 
 typedef struct {
     uint32_t data_length;
+    SwiftNetPortInfo port_info;
 } SwiftNetPacketClientMetadata;
 
 typedef struct {
     uint32_t data_length;
+    SwiftNetPortInfo port_info;
     SwiftNetClientAddrData sender;
 } SwiftNetPacketServerMetadata;
 
@@ -218,3 +220,7 @@ extern SwiftNetClientConnection* swiftnet_create_client(const char* const restri
 SwiftNetDebug(
     extern void swiftnet_add_debug_flags(const uint32_t flags);
 )
+
+#ifdef __cplusplus
+    }
+#endif

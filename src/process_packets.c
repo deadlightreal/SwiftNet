@@ -468,11 +468,13 @@ static inline void swiftnet_process_packets(
                     SwiftNetPacketServerMetadata* packet_metadata = malloc(sizeof(SwiftNetPacketServerMetadata));
                     packet_metadata->data_length = packet_info.packet_length;
                     packet_metadata->sender = sender;
+                    packet_metadata->port_info = packet_info.port_info;
 
                     pass_callback_execution(packet_metadata, packet_buffer + PACKET_HEADER_SIZE, packet_callback_queue, NULL);
                 } else {
                     SwiftNetPacketClientMetadata* packet_metadata = malloc(sizeof(SwiftNetPacketClientMetadata));
                     packet_metadata->data_length = packet_info.packet_length;
+                    packet_metadata->port_info = packet_info.port_info;
 
                     pass_callback_execution(packet_metadata, packet_buffer + PACKET_HEADER_SIZE, packet_callback_queue, NULL);
                 }
@@ -494,11 +496,13 @@ static inline void swiftnet_process_packets(
                     SwiftNetPacketServerMetadata* packet_metadata = malloc(sizeof(SwiftNetPacketServerMetadata));
                     packet_metadata->data_length = packet_info.packet_length;
                     packet_metadata->sender = sender;
+                    packet_metadata->port_info = packet_info.port_info; 
 
                     pass_callback_execution(packet_metadata, pending_message->packet_data_start, packet_callback_queue, pending_message);
                 } else {
                     SwiftNetPacketClientMetadata* packet_metadata = malloc(sizeof(SwiftNetPacketClientMetadata));
                     packet_metadata->data_length = packet_info.packet_length;
+                    packet_metadata->port_info = packet_info.port_info;
 
                     pass_callback_execution(packet_metadata, pending_message->packet_data_start, packet_callback_queue, pending_message);
                 }
