@@ -10,21 +10,21 @@ SwiftNetClientConnection* client;
 
 const char* restrict const message = "hello";
 
-void client_message_handler(uint8_t* data, SwiftNetPacketClientMetadata* restrict const metadata) {
-    if(memcmp(data, message, metadata->data_length) == 0) {
+void client_message_handler(SwiftNetClientPacketData* restrict const packet_data) {
+    if(memcmp(packet_data->data, message, packet_data->metadata.data_length) == 0) {
         swiftnet_server_cleanup(server);
         swiftnet_client_cleanup(client);
         exit(EXIT_SUCCESS);
     }
 }
 
-void server_message_handler(uint8_t* data, SwiftNetPacketServerMetadata* restrict const metadata) {
-    if(memcmp(data, message, metadata->data_length) == 0) {
+void server_message_handler(SwiftNetServerPacketData* restrict const packet_data) {
+    if(memcmp(packet_data->data, message, packet_data->metadata.data_length) == 0) {
         SwiftNetPacketBuffer buffer = swiftnet_server_create_packet_buffer(strlen(message));
 
         swiftnet_server_append_to_packet(server, message, strlen(message), &buffer);
 
-        swiftnet_server_send_packet(server, &buffer, metadata->sender);
+        swiftnet_server_send_packet(server, &buffer, packet_data->metadata.sender);
 
         swiftnet_server_destroy_packet_buffer(&buffer);
     };

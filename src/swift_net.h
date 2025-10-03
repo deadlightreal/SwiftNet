@@ -143,11 +143,22 @@ typedef struct {
 typedef struct PacketCallbackQueueNode PacketCallbackQueueNode;
 
 struct PacketCallbackQueueNode {
-    uint8_t* data;
-    void* metadata;
+    void* packet_data;
     SwiftNetPendingMessage* pending_message;
     PacketCallbackQueueNode* next;
 };
+
+typedef struct {
+    uint8_t* data;
+    uint8_t* current_pointer;
+    SwiftNetPacketServerMetadata metadata;
+} SwiftNetServerPacketData;
+
+typedef struct {
+    uint8_t* data;
+    uint8_t* current_pointer;
+    SwiftNetPacketClientMetadata metadata;
+} SwiftNetClientPacketData;
 
 typedef struct {
     atomic_uint owner;
@@ -166,7 +177,7 @@ typedef struct {
     SwiftNetPortInfo port_info;
     struct sockaddr_in server_addr;
     socklen_t server_addr_len;
-    void (* volatile packet_handler)(uint8_t*, SwiftNetPacketClientMetadata* restrict const);
+    void (* volatile packet_handler)(SwiftNetClientPacketData* restrict const);
     pthread_t handle_packets_thread;
     pthread_t process_packets_thread;
     uint32_t maximum_transmission_unit;
@@ -184,7 +195,7 @@ extern SwiftNetClientConnection SwiftNetClientConnections[MAX_CLIENT_CONNECTIONS
 typedef struct {
     int sockfd;
     uint16_t server_port;
-    void (* volatile packet_handler)(uint8_t*, SwiftNetPacketServerMetadata* restrict const);
+    void (* volatile packet_handler)(SwiftNetServerPacketData* restrict const);
     pthread_t handle_packets_thread;
     pthread_t process_packets_thread;
     SwiftNetPendingMessage pending_messages[MAX_PENDING_MESSAGES];
@@ -198,8 +209,8 @@ typedef struct {
 
 extern SwiftNetServer SwiftNetServers[MAX_SERVERS];
 
-extern void swiftnet_server_set_message_handler(SwiftNetServer* server, void (*new_handler)(uint8_t*, SwiftNetPacketServerMetadata* restrict const));
-extern void swiftnet_client_set_message_handler(SwiftNetClientConnection* client, void (*new_handler)(uint8_t*, SwiftNetPacketClientMetadata* restrict const));
+extern void swiftnet_server_set_message_handler(SwiftNetServer* server, void (*new_handler)(SwiftNetServerPacketData* restrict const));
+extern void swiftnet_client_set_message_handler(SwiftNetClientConnection* client, void (*new_handler)(SwiftNetClientPacketData* restrict const));
 extern void swiftnet_client_append_to_packet(SwiftNetClientConnection* const restrict client, const void* const restrict data, const uint32_t data_size, SwiftNetPacketBuffer* restrict const packet);
 extern void swiftnet_server_append_to_packet(SwiftNetServer* const restrict server, const void* const restrict data, const uint32_t data_size, SwiftNetPacketBuffer* restrict const packet);
 extern void swiftnet_client_cleanup(const SwiftNetClientConnection* const restrict client);

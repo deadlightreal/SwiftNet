@@ -32,23 +32,27 @@ volatile PacketCallbackQueueNode* wait_for_next_packet_callback(PacketCallbackQu
     return node_to_process;
 }
 
-void execute_packet_callback(PacketCallbackQueue* restrict const queue, void (* const volatile * const packet_handler) (uint8_t*, void*)) {
+void execute_packet_callback(PacketCallbackQueue* restrict const queue, void (* const volatile * const packet_handler) (void*), const uint8_t connection_type) {
     while (1) {
         const volatile PacketCallbackQueueNode* const node = wait_for_next_packet_callback(queue);
         if(node == NULL) {
             continue;
         }
 
-        (*packet_handler)(node->data, node->metadata);
+        (*packet_handler)(node->packet_data);
 
         if(node->pending_message != NULL) {
             free(node->pending_message->chunks_received);
             memset(node->pending_message, 0x00, sizeof(SwiftNetPendingMessage));
         } else {
-            free(node->data - PACKET_HEADER_SIZE);
+            if (connection_type == 0) {
+                free(((SwiftNetClientPacketData*)(node->packet_data))->data - PACKET_HEADER_SIZE);
+            } else {
+                free(((SwiftNetServerPacketData*)(node->packet_data))->data - PACKET_HEADER_SIZE);
+            }
         }
 
-        free(node->metadata);
+        free(node->packet_data);
         free((void*)node);
     }
 }
@@ -56,7 +60,7 @@ void execute_packet_callback(PacketCallbackQueue* restrict const queue, void (* 
 void* execute_packet_callback_client(void* void_client) {
     SwiftNetClientConnection* client = void_client;
 
-    execute_packet_callback(&client->packet_callback_queue, (void (* const volatile * const) (uint8_t*, void*))&client->packet_handler);
+    execute_packet_callback(&client->packet_callback_queue, (void (* const volatile * const) (void*))&client->packet_handler, 0);
 
     return NULL;
 }
@@ -64,7 +68,7 @@ void* execute_packet_callback_client(void* void_client) {
 void* execute_packet_callback_server(void* void_server) {
     SwiftNetServer* server = void_server;
 
-    execute_packet_callback(&server->packet_callback_queue, (void (* const volatile * const) (uint8_t*, void*))&server->packet_handler);
+    execute_packet_callback(&server->packet_callback_queue, (void (* const volatile * const) (void*))&server->packet_handler, 1);
 
     return NULL;
 }
