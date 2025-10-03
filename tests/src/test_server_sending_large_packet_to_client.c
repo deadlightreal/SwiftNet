@@ -14,10 +14,10 @@ uint8_t* random_generated_data = NULL;
 
 #define REQUEST_SEND_LARGE_PACKET 0xFF
 
-void client_message_handler(uint8_t* data, SwiftNetPacketClientMetadata* restrict const metadata) {
-    for(uint32_t i = 0; i < metadata->data_length; i++) {
-        if(random_generated_data[i] != data[i]) {
-            fprintf(stderr, "invalid byte at index: %d\ndata received: %d\ndata sent: %d\n", i, data[i], random_generated_data[i]);
+void client_message_handler(SwiftNetClientPacketData* restrict const packet_data) {
+    for(uint32_t i = 0; i < packet_data->metadata.data_length; i++) {
+        if(random_generated_data[i] != packet_data->data[i]) {
+            fprintf(stderr, "invalid byte at index: %d\ndata received: %d\ndata sent: %d\n", i, packet_data->data[i], random_generated_data[i]);
             swiftnet_server_cleanup(server);
             swiftnet_client_cleanup(client);
             free(random_generated_data);
@@ -31,13 +31,13 @@ void client_message_handler(uint8_t* data, SwiftNetPacketClientMetadata* restric
     exit(EXIT_SUCCESS);
 }
 
-void server_message_handler(uint8_t* data, SwiftNetPacketServerMetadata* restrict const metadata) {
-    if (data[0] == REQUEST_SEND_LARGE_PACKET) {
+void server_message_handler(SwiftNetServerPacketData* restrict const packet_data) {
+    if (packet_data->data[0] == REQUEST_SEND_LARGE_PACKET) {
         SwiftNetPacketBuffer buffer = swiftnet_server_create_packet_buffer(DATA_TO_SEND);
 
         swiftnet_server_append_to_packet(server, random_generated_data, DATA_TO_SEND, &buffer);
 
-        swiftnet_server_send_packet(server, &buffer, metadata->sender);
+        swiftnet_server_send_packet(server, &buffer, packet_data->metadata.sender);
 
         swiftnet_server_destroy_packet_buffer(&buffer);
     }

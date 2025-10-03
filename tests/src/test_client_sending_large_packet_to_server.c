@@ -12,13 +12,13 @@ SwiftNetServer* server;
 
 uint8_t* random_generated_data = NULL;
 
-void client_message_handler(uint8_t* data, SwiftNetPacketClientMetadata* restrict const metadata) {
+void client_message_handler(SwiftNetClientPacketData* restrict const packet_data) {
 }
 
-void server_message_handler(uint8_t* data, SwiftNetPacketServerMetadata* restrict const metadata) {
-    for(uint32_t i = 0; i < metadata->data_length; i++) {
-        if(random_generated_data[i] != data[i]) {
-            fprintf(stderr, "invalid byte at index: %d\ndata received: %d\ndata sent: %d\n", i, data[i], random_generated_data[i]);
+void server_message_handler(SwiftNetServerPacketData* restrict const packet_data) {
+    for(uint32_t i = 0; i < packet_data->metadata.data_length; i++) {
+        if(random_generated_data[i] != packet_data->data[i]) {
+            fprintf(stderr, "invalid byte at index: %d\ndata received: %d\ndata sent: %d\n", i, packet_data->data[i], random_generated_data[i]);
             swiftnet_server_cleanup(server);
             swiftnet_client_cleanup(client);
             free(random_generated_data);
