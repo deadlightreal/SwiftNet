@@ -1,4 +1,5 @@
 #include "../../src/swift_net.h"
+#include <stdint.h>
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -11,7 +12,9 @@ SwiftNetClientConnection* client;
 const char* restrict const message = "hello";
 
 void client_message_handler(SwiftNetClientPacketData* restrict const packet_data) {
-    if(memcmp(packet_data->data, message, packet_data->metadata.data_length) == 0) {
+    uint8_t* data = swiftnet_client_read_packet(packet_data, packet_data->metadata.data_length);
+
+    if(memcmp(data, message, packet_data->metadata.data_length) == 0) {
         swiftnet_server_cleanup(server);
         swiftnet_client_cleanup(client);
         exit(EXIT_SUCCESS);
@@ -19,7 +22,9 @@ void client_message_handler(SwiftNetClientPacketData* restrict const packet_data
 }
 
 void server_message_handler(SwiftNetServerPacketData* restrict const packet_data) {
-    if(memcmp(packet_data->data, message, packet_data->metadata.data_length) == 0) {
+    uint8_t* data = swiftnet_server_read_packet(packet_data, packet_data->metadata.data_length);
+
+    if(memcmp(data, message, packet_data->metadata.data_length) == 0) {
         SwiftNetPacketBuffer buffer = swiftnet_server_create_packet_buffer(strlen(message));
 
         swiftnet_server_append_to_packet(server, message, strlen(message), &buffer);
