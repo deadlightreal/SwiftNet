@@ -28,7 +28,7 @@ static inline volatile SwiftNetPacketSending* get_empty_packet_sending(volatile 
 static inline uint8_t request_lost_packets_bitarray(const uint8_t* restrict const raw_data, const uint32_t data_size, const struct sockaddr* restrict const destination, const int sockfd, volatile SwiftNetPacketSending* const packet_sending) {
     while(1) {
         if(check_debug_flag(DEBUG_LOST_PACKETS)) {
-            send_debug_message("Requested list of lost packets: {\"packet_id\": %d}", packet_sending->packet_id);
+            send_debug_message("Requested list of lost packets: {\"packet_id\": %d}\n", packet_sending->packet_id);
         }
 
         sendto(sockfd, raw_data, data_size, 0, destination, sizeof(*destination));
@@ -116,7 +116,7 @@ static inline void handle_lost_packets(
             const uint32_t lost_chunk_index = packet_sending->lost_chunks[i];
 
             if (check_debug_flag(DEBUG_LOST_PACKETS) == true) {
-                send_debug_message("Packet lost: {\"packet_id\": %d, \"chunk index\": %d}", lost_chunk_index);
+                send_debug_message("Packet lost: {\"packet_id\": %d, \"chunk index\": %d}\n", lost_chunk_index);
             }
     
             memcpy(&resend_chunk_buffer[sizeof(struct ip) + offsetof(SwiftNetPacketInfo, chunk_index)], &lost_chunk_index, SIZEOF_FIELD(SwiftNetPacketInfo, chunk_index));
