@@ -47,30 +47,28 @@ install(TARGETS swift_net
     PUBLIC_HEADER DESTINATION include
 )
 
-# ---- Export the targets ----
 install(EXPORT swiftnetTargets
     FILE swiftnetTargets.cmake
     NAMESPACE swiftnet::
     DESTINATION lib/cmake/swiftnet
 )
 
-# ---- Generate and install the config files ----
 include(CMakePackageConfigHelpers)
 
 configure_package_config_file(
-    ${CMAKE_CURRENT_BINARY_DIR}/cmake/swiftnetConfig.cmake.in
+    ${CMAKE_CURRENT_SOURCE_DIR}/cmake/swiftnetConfig.cmake.in
     ${CMAKE_CURRENT_BINARY_DIR}/cmake/swiftnetConfig.cmake
     INSTALL_DESTINATION lib/cmake/swiftnet
 )
 
 write_basic_package_version_file(
-    ${CMAKE_CURRENT_BINARY_DIR}/swiftnetConfigVersion.cmake
+    ${CMAKE_CURRENT_BINARY_DIR}/cmake/swiftnetConfigVersion.cmake
     VERSION 1.0.0
     COMPATIBILITY AnyNewerVersion
 )
 
 install(FILES
-    ${CMAKE_CURRENT_BINARY_DIR}/swiftnetConfig.cmake
-    ${CMAKE_CURRENT_BINARY_DIR}/swiftnetConfigVersion.cmake
+    ${CMAKE_CURRENT_BINARY_DIR}/cmake/swiftnetConfig.cmake
+    ${CMAKE_CURRENT_BINARY_DIR}/cmake/swiftnetConfigVersion.cmake
     DESTINATION lib/cmake/swiftnet
 )
