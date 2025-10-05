@@ -55,6 +55,8 @@ install(EXPORT swiftnetTargets
 
 include(CMakePackageConfigHelpers)
 
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/cmake)
+
 configure_package_config_file(
     ${CMAKE_CURRENT_SOURCE_DIR}/cmake/swiftnetConfig.cmake.in
     ${CMAKE_CURRENT_BINARY_DIR}/cmake/swiftnetConfig.cmake
