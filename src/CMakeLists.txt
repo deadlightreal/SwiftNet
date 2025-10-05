@@ -24,16 +24,53 @@ set(SOURCE_FILES
 
 set(OBJ_DIR ${CMAKE_SOURCE_DIR}/../build)
 
-# SwiftNet Client Library
 add_library(swift_net STATIC ${SOURCE_FILES})
+
 set_target_properties(swift_net PROPERTIES
     ARCHIVE_OUTPUT_DIRECTORY ${OBJ_DIR}/output
-    OUTPUT_NAME "swift_net"
-    RUNTIME_OUTPUT_DIRECTORY ${OBJ_DIR}/output
     LIBRARY_OUTPUT_DIRECTORY ${OBJ_DIR}/output
+    RUNTIME_OUTPUT_DIRECTORY ${OBJ_DIR}/output
+    OUTPUT_NAME "swift_net"
+    PUBLIC_HEADER "${CMAKE_SOURCE_DIR}/swift_net.h"
 )
 
 add_custom_target(clean_objects
     COMMAND ${CMAKE_COMMAND} -E rm -f ${OBJ_DIR}/output/*.o
     COMMENT "Cleaning up object files"
+)
+
+install(TARGETS swift_net
+    EXPORT swiftnetTargets
+    ARCHIVE DESTINATION lib
+    LIBRARY DESTINATION lib
+    RUNTIME DESTINATION bin
+    PUBLIC_HEADER DESTINATION include
+)
+
+# ---- Export the targets ----
+install(EXPORT swiftnetTargets
+    FILE swiftnetTargets.cmake
+    NAMESPACE swiftnet::
+    DESTINATION lib/cmake/swiftnet
+)
+
+# ---- Generate and install the config files ----
+include(CMakePackageConfigHelpers)
+
+configure_package_config_file(
+    ${CMAKE_CURRENT_BINARY_DIR}/cmake/swiftnetConfig.cmake.in
+    ${CMAKE_CURRENT_BINARY_DIR}/cmake/swiftnetConfig.cmake
+    INSTALL_DESTINATION lib/cmake/swiftnet
+)
+
+write_basic_package_version_file(
+    ${CMAKE_CURRENT_BINARY_DIR}/swiftnetConfigVersion.cmake
+    VERSION 1.0.0
+    COMPATIBILITY AnyNewerVersion
+)
+
+install(FILES
+    ${CMAKE_CURRENT_BINARY_DIR}/swiftnetConfig.cmake
+    ${CMAKE_CURRENT_BINARY_DIR}/swiftnetConfigVersion.cmake
+    DESTINATION lib/cmake/swiftnet
 )
