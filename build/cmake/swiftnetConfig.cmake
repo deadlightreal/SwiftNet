@@ -25,3 +25,4 @@ endmacro()
 ####################################################################################
 
 include("${CMAKE_CURRENT_LIST_DIR}/swiftnetTargets.cmake")
+set(SWIFTNET_LIBRARIES swiftnet::swift_net)
