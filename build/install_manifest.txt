@@ -1,0 +1,6 @@
+/usr/local/lib/libswift_net.a
+/usr/local/include/swift_net.h
+/usr/local/lib/cmake/swiftnet/swiftnetTargets.cmake
+/usr/local/lib/cmake/swiftnet/swiftnetTargets-debug.cmake
+/usr/local/lib/cmake/swiftnet/swiftnetConfig.cmake
+/usr/local/lib/cmake/swiftnet/swiftnetConfigVersion.cmake
