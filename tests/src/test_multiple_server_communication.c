@@ -7,24 +7,31 @@
 #include <unistd.h>
 #include "../config.h"
 
-#define MAX_ITERATIONS 3000
-
-const uint16_t ports_to_test[] = {
-    1, 2, 3
-};
+#define MAX_ITERATIONS 5000
 
 SwiftNetServer* server;
 SwiftNetClientConnection* client;
 
-const char* restrict const message = "hello";
+SwiftNetServer* second_server;
+SwiftNetClientConnection* second_client;
 
-bool received_response_successfully = false;
+#define FIRST_PORT 7070
+#define SECOND_PORT 8080
+
+bool first_port_response = false;
+bool second_port_response = false;
+
+const char* restrict const message = "hello";
 
 void client_message_handler(SwiftNetClientPacketData* restrict const packet_data) {
     uint8_t* data = swiftnet_client_read_packet(packet_data, packet_data->metadata.data_length);
 
     if(memcmp(data, message, packet_data->metadata.data_length) == 0) {
-        received_response_successfully = true;
+        if (packet_data->metadata.port_info.source_port == FIRST_PORT) {
+            first_port_response = true;
+        } else if (packet_data->metadata.port_info.source_port == SECOND_PORT) {
+            second_port_response = true;
+        }
     }
 }
 
@@ -34,9 +41,16 @@ void server_message_handler(SwiftNetServerPacketData* restrict const packet_data
     if(memcmp(data, message, packet_data->metadata.data_length) == 0) {
         SwiftNetPacketBuffer buffer = swiftnet_server_create_packet_buffer(strlen(message));
 
-        swiftnet_server_append_to_packet(server, message, strlen(message), &buffer);
+        SwiftNetServer* srvr = NULL;
+        if (packet_data->metadata.port_info.destination_port == FIRST_PORT) {
+            srvr = server;
+        } else if (packet_data->metadata.port_info.destination_port == SECOND_PORT) {
+            srvr = second_server;
+        }
 
-        swiftnet_server_send_packet(server, &buffer, packet_data->metadata.sender);
+        swiftnet_server_append_to_packet(srvr, message, strlen(message), &buffer);
+
+        swiftnet_server_send_packet(srvr, &buffer, packet_data->metadata.sender);
 
         swiftnet_server_destroy_packet_buffer(&buffer);
     };
@@ -47,46 +61,57 @@ int main() {
 
     swiftnet_initialize();
 
-    for (uint32_t i = 0; i < (sizeof(ports_to_test) / sizeof(ports_to_test[0])); i++) {
-        const uint16_t port_to_test = ports_to_test[i];
+    server = swiftnet_create_server(FIRST_PORT);
+    swiftnet_server_set_message_handler(server, server_message_handler);
 
-        server = swiftnet_create_server(port_to_test);
-        swiftnet_server_set_message_handler(server, server_message_handler);
+    client = swiftnet_create_client(IP_ADDRESS, FIRST_PORT);
+    swiftnet_client_set_message_handler(client, client_message_handler);
 
-        client = swiftnet_create_client(IP_ADDRESS, port_to_test);
-        swiftnet_client_set_message_handler(client, client_message_handler);   
+    server = swiftnet_create_server(SECOND_PORT);
+    swiftnet_server_set_message_handler(second_server, server_message_handler);
 
-        SwiftNetPacketBuffer buffer = swiftnet_client_create_packet_buffer(strlen(message));
+    client = swiftnet_create_client(IP_ADDRESS, SECOND_PORT);
+    swiftnet_client_set_message_handler(second_client, client_message_handler);
 
-        swiftnet_client_append_to_packet(client, message, strlen(message), &buffer);
+    SwiftNetPacketBuffer buffer = swiftnet_client_create_packet_buffer(strlen(message));
 
-        swiftnet_client_send_packet(client, &buffer);
+    swiftnet_client_append_to_packet(client, message, strlen(message), &buffer);
 
-        swiftnet_client_destroy_packet_buffer(&buffer);
+    swiftnet_client_send_packet(client, &buffer);
 
-        uint32_t iterations = 0;
+    swiftnet_client_destroy_packet_buffer(&buffer);
 
-        while (!received_response_successfully) {
-            iterations++;
+    SwiftNetPacketBuffer second_buffer = swiftnet_client_create_packet_buffer(strlen(message));
 
-            if (iterations >= MAX_ITERATIONS) {
-                swiftnet_client_cleanup(client);
-                swiftnet_server_cleanup(server);
+    swiftnet_client_append_to_packet(second_client, message, strlen(message), &second_buffer);
 
-                exit(EXIT_FAILURE);
-            }
+    swiftnet_client_send_packet(second_client, &second_buffer);
 
-            usleep(1000);
+    swiftnet_client_destroy_packet_buffer(&second_buffer);
+
+    uint32_t iterations = 0;
+
+    while (first_port_response == false || second_port_response == false) {
+        iterations++;
+
+        if (iterations >= MAX_ITERATIONS) {
+            swiftnet_server_cleanup(server);
+            swiftnet_server_cleanup(second_server);
+
+            swiftnet_client_cleanup(client);
+            swiftnet_client_cleanup(second_client);
+
+            exit(EXIT_FAILURE);
         }
 
-        received_response_successfully = false;
-
-        swiftnet_server_cleanup(server);
-        swiftnet_client_cleanup(client);
-
-        server = NULL;
-        client = NULL;
+        usleep(1000);
     }
 
-    return 0;
+    swiftnet_server_cleanup(server);
+    swiftnet_server_cleanup(second_server);
+
+    swiftnet_client_cleanup(client);
+    swiftnet_client_cleanup(second_client);
+
+    exit(EXIT_SUCCESS);
 }
