@@ -16,6 +16,14 @@ uint32_t maximum_transmission_unit = 0x00;
 struct in_addr private_ip_address;
 
 void swiftnet_initialize() {
+    for (uint32_t i = 0; i < MAX_SERVERS; i++) {
+        SwiftNetServers[i].sockfd = -1;
+    }
+
+    for (uint32_t i = 0; i < MAX_CLIENT_CONNECTIONS; i++) {
+        SwiftNetClientConnections[i].sockfd = -1;
+    }
+
     int temp_socket = socket(AF_INET, SOCK_DGRAM, 0);
     if (temp_socket < 0) {
         perror("socket");

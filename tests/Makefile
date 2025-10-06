@@ -143,6 +143,19 @@ test_client_sending_large_packet_to_server/fast:
 .PHONY : test_client_sending_large_packet_to_server/fast
 
 #=============================================================================
+# Target rules for targets named test_multiple_server_communication
+
+# Build rule for target.
+test_multiple_server_communication: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 test_multiple_server_communication
+.PHONY : test_multiple_server_communication
+
+# fast build rule for target.
+test_multiple_server_communication/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_multiple_server_communication.dir/build.make CMakeFiles/test_multiple_server_communication.dir/build
+.PHONY : test_multiple_server_communication/fast
+
+#=============================================================================
 # Target rules for targets named test_server_sending_large_packet_to_client
 
 # Build rule for target.
@@ -240,6 +253,30 @@ src/test_client_sending_large_packet_to_server.c.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_client_sending_large_packet_to_server.dir/build.make CMakeFiles/test_client_sending_large_packet_to_server.dir/src/test_client_sending_large_packet_to_server.c.s
 .PHONY : src/test_client_sending_large_packet_to_server.c.s
 
+src/test_multiple_server_communication.o: src/test_multiple_server_communication.c.o
+.PHONY : src/test_multiple_server_communication.o
+
+# target to build an object file
+src/test_multiple_server_communication.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_multiple_server_communication.dir/build.make CMakeFiles/test_multiple_server_communication.dir/src/test_multiple_server_communication.c.o
+.PHONY : src/test_multiple_server_communication.c.o
+
+src/test_multiple_server_communication.i: src/test_multiple_server_communication.c.i
+.PHONY : src/test_multiple_server_communication.i
+
+# target to preprocess a source file
+src/test_multiple_server_communication.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_multiple_server_communication.dir/build.make CMakeFiles/test_multiple_server_communication.dir/src/test_multiple_server_communication.c.i
+.PHONY : src/test_multiple_server_communication.c.i
+
+src/test_multiple_server_communication.s: src/test_multiple_server_communication.c.s
+.PHONY : src/test_multiple_server_communication.s
+
+# target to generate assembly for a file
+src/test_multiple_server_communication.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_multiple_server_communication.dir/build.make CMakeFiles/test_multiple_server_communication.dir/src/test_multiple_server_communication.c.s
+.PHONY : src/test_multiple_server_communication.c.s
+
 src/test_server_sending_large_packet_to_client.o: src/test_server_sending_large_packet_to_client.c.o
 .PHONY : src/test_server_sending_large_packet_to_client.o
 
@@ -275,6 +312,7 @@ help:
 	@echo "... run_all_tests"
 	@echo "... test_basic_client_server_communication"
 	@echo "... test_client_sending_large_packet_to_server"
+	@echo "... test_multiple_server_communication"
 	@echo "... test_server_sending_large_packet_to_client"
 	@echo "... run_all_tests.o"
 	@echo "... run_all_tests.i"
@@ -285,6 +323,9 @@ help:
 	@echo "... src/test_client_sending_large_packet_to_server.o"
 	@echo "... src/test_client_sending_large_packet_to_server.i"
 	@echo "... src/test_client_sending_large_packet_to_server.s"
+	@echo "... src/test_multiple_server_communication.o"
+	@echo "... src/test_multiple_server_communication.i"
+	@echo "... src/test_multiple_server_communication.s"
 	@echo "... src/test_server_sending_large_packet_to_client.o"
 	@echo "... src/test_server_sending_large_packet_to_client.i"
 	@echo "... src/test_server_sending_large_packet_to_client.s"
