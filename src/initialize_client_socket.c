@@ -30,6 +30,10 @@ void* request_server_information(void* request_server_information_args_void) {
 
     while (1) {
         if(exit_thread == true) {
+            exit_thread = false;
+
+            printf("Exiting thread\n");
+
             return NULL;
         }
 
