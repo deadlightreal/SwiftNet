@@ -67,10 +67,10 @@ int main() {
     client = swiftnet_create_client(IP_ADDRESS, FIRST_PORT);
     swiftnet_client_set_message_handler(client, client_message_handler);
 
-    server = swiftnet_create_server(SECOND_PORT);
+    second_server = swiftnet_create_server(SECOND_PORT);
     swiftnet_server_set_message_handler(second_server, server_message_handler);
 
-    client = swiftnet_create_client(IP_ADDRESS, SECOND_PORT);
+    second_client = swiftnet_create_client(IP_ADDRESS, SECOND_PORT);
     swiftnet_client_set_message_handler(second_client, client_message_handler);
 
     SwiftNetPacketBuffer buffer = swiftnet_client_create_packet_buffer(strlen(message));
