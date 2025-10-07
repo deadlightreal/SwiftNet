@@ -112,6 +112,33 @@ SwiftNetDebug(
     }
 );
 
+typedef struct {
+    uint32_t capacity;
+    uint32_t size;
+    void* data;
+    uint32_t item_size;
+    void* next;
+    void* previous;
+} SwiftNetMemoryAllocatorStack;
+
+typedef struct {
+    void* first_item;
+    void* last_item;
+    void* current_chunk;
+} ChunkStorageManager;
+
+typedef struct {
+    ChunkStorageManager free_memory_pointers;
+    ChunkStorageManager data;
+} SwiftNetMemoryAllocator;
+
+extern SwiftNetMemoryAllocator allocator_create(const uint32_t item_size, const uint32_t chunk_item_amount);
+extern void* allocator_allocate(SwiftNetMemoryAllocator* restrict const memory_allocator);
+extern void allocator_free(SwiftNetMemoryAllocator* restrict const memory_allocator, void* restrict const memory_location);
+extern void allocator_destroy(SwiftNetMemoryAllocator* restrict const memory_allocator);
+
+extern SwiftNetMemoryAllocator packet_queue_node_memory_allocator;
+
 static struct ip construct_ip_header(struct in_addr destination_addr, const uint32_t packet_size, const uint16_t packet_id) {
     struct ip ip_header = {
         .ip_v = 4, // Version (ipv4)
