@@ -44,7 +44,7 @@ static inline void swiftnet_handle_packets(const int sockfd, const uint16_t sour
     }
 
     while(1) {
-        PacketQueueNode* const restrict node = malloc(sizeof(PacketQueueNode));
+        PacketQueueNode* const restrict node = allocator_allocate(&packet_queue_node_memory_allocator);
         if(unlikely(node == NULL)) {
             continue;
         }
@@ -53,14 +53,14 @@ static inline void swiftnet_handle_packets(const int sockfd, const uint16_t sour
 
         uint8_t* const restrict packet_buffer = malloc(maximum_transmission_unit);
         if(packet_buffer == NULL) {
-            free(node);
+            allocator_free(&packet_queue_node_memory_allocator, node);
             continue;
         }
 
         const int received_sucessfully = recvfrom(sockfd, packet_buffer, maximum_transmission_unit, 0, (struct sockaddr *)&node->sender_address, &node->server_address_length);
         
         if(received_sucessfully < 0) {
-            free(node);
+            allocator_free(&packet_queue_node_memory_allocator, node);
             free(packet_buffer);
             continue;
         }

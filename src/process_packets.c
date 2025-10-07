@@ -565,7 +565,7 @@ static inline void swiftnet_process_packets(
         goto next_packet;
 
     next_packet:
-        free((void*)node);
+        allocator_free(&packet_queue_node_memory_allocator, (void*)node);
 
         continue;
     }

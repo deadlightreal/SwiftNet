@@ -133,9 +133,9 @@ typedef struct {
 } SwiftNetMemoryAllocator;
 
 extern SwiftNetMemoryAllocator allocator_create(const uint32_t item_size, const uint32_t chunk_item_amount);
-extern void* allocator_allocate(SwiftNetMemoryAllocator* restrict const memory_allocator);
-extern void allocator_free(SwiftNetMemoryAllocator* restrict const memory_allocator, void* restrict const memory_location);
-extern void allocator_destroy(SwiftNetMemoryAllocator* restrict const memory_allocator);
+extern void* allocator_allocate(volatile SwiftNetMemoryAllocator* const memory_allocator);
+extern void allocator_free(volatile SwiftNetMemoryAllocator* const memory_allocator, void* const memory_location);
+extern void allocator_destroy(volatile SwiftNetMemoryAllocator* const memory_allocator);
 
 extern SwiftNetMemoryAllocator packet_queue_node_memory_allocator;
 

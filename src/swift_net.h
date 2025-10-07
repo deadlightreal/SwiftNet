@@ -230,6 +230,8 @@ extern SwiftNetClientConnection* swiftnet_create_client(const char* const restri
 extern void* swiftnet_client_read_packet(SwiftNetClientPacketData* restrict const packet_data, const uint32_t data_size);
 extern void* swiftnet_server_read_packet(SwiftNetServerPacketData* restrict const packet_data, const uint32_t data_size);
 
+extern void swiftnet_cleanup();
+
 SwiftNetDebug(
     extern void swiftnet_add_debug_flags(const uint32_t flags);
 )
