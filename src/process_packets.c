@@ -317,6 +317,8 @@ static inline void swiftnet_process_packets(
                     memcpy(&send_buffer[offsetof(struct ip, ip_sum)], &checksum, SIZEOF_FIELD(struct ip, ip_sum));
 
                     sendto(sockfd, send_buffer, sizeof(send_buffer), 0, (struct sockaddr *)&node->sender_address, node->server_address_length);
+
+                    free(node->data);
         
                     goto next_packet;
             }
@@ -353,8 +355,12 @@ static inline void swiftnet_process_packets(
 
                         sendto(sockfd, &send_buffer, sizeof(send_buffer), 0x00, (const struct sockaddr *)&node->sender_address, node->server_address_length);
 
+                        free(node->data);
+
                         goto next_packet;
                     }
+
+                    free(node->data);
 
                     goto next_packet;
                 }
@@ -393,6 +399,8 @@ static inline void swiftnet_process_packets(
 
                 sendto(sockfd, send_buffer, packet_length, 0x00, (const struct sockaddr *)&node->sender_address, node->server_address_length);
 
+                free(node->data);
+
                 goto next_packet;
             }
             case PACKET_TYPE_SEND_LOST_PACKETS_RESPONSE:
@@ -400,6 +408,8 @@ static inline void swiftnet_process_packets(
                 volatile SwiftNetPacketSending* const target_packet_sending = get_packet_sending(packet_sending, packet_sending_size, ip_header.ip_id);
 
                 if(unlikely(target_packet_sending == NULL)) {
+                    free(node->data);
+
                     goto next_packet;
                 }
 
@@ -415,6 +425,8 @@ static inline void swiftnet_process_packets(
 
                 target_packet_sending->updated_lost_chunks = true;
 
+                free(node->data);
+
                 goto next_packet;
             }
             case PACKET_TYPE_SUCCESSFULLY_RECEIVED_PACKET:
@@ -422,10 +434,14 @@ static inline void swiftnet_process_packets(
                 volatile SwiftNetPacketSending* const target_packet_sending = get_packet_sending(packet_sending, packet_sending_size, ip_header.ip_id);
 
                 if(unlikely(target_packet_sending == NULL)) {
+                    free(node->data);
+
                     goto next_packet;
                 }
 
                 target_packet_sending->successfully_received = true;
+
+                free(node->data);
 
                 goto next_packet;
             }

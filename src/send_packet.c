@@ -215,12 +215,12 @@ static inline void swiftnet_send_packet(
             
             memset(&buffer[offsetof(struct ip, ip_sum)], 0x00, SIZEOF_FIELD(struct ip, ip_sum));
         
-            if(current_offset + mtu > packet_info.packet_length) {
+            if(current_offset + (mtu - PACKET_HEADER_SIZE) >= packet_info.packet_length) {
                 // Last chunk
                 const uint16_t bytes_to_send = (uint16_t)packet_length - current_offset + PACKET_HEADER_SIZE;
 
                 memcpy(&buffer[PACKET_HEADER_SIZE], packet->packet_data_start + current_offset, bytes_to_send - PACKET_HEADER_SIZE);
-                memcpy(&buffer[offsetof(struct ip, ip_len)], &bytes_to_send + PACKET_HEADER_SIZE, sizeof(bytes_to_send));
+                memcpy(&buffer[offsetof(struct ip, ip_len)], &bytes_to_send, sizeof(bytes_to_send));
 
                 const uint16_t checksum = crc16(buffer, bytes_to_send);
 
