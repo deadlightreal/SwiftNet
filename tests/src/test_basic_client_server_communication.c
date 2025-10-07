@@ -17,6 +17,9 @@ void client_message_handler(SwiftNetClientPacketData* restrict const packet_data
     if(memcmp(data, message, packet_data->metadata.data_length) == 0) {
         swiftnet_server_cleanup(server);
         swiftnet_client_cleanup(client);
+
+        swiftnet_cleanup();
+
         exit(EXIT_SUCCESS);
     }
 }

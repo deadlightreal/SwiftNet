@@ -15,7 +15,7 @@ SwiftNetDebug(
 uint32_t maximum_transmission_unit = 0x00;
 struct in_addr private_ip_address;
 
-SwiftNetStack packet_nodes_stack;
+SwiftNetMemoryAllocator packet_queue_node_memory_allocator;
 
 void swiftnet_initialize() {
     for (uint32_t i = 0; i < MAX_SERVERS; i++) {
@@ -71,6 +71,8 @@ void swiftnet_initialize() {
     }
 
     close(temp_socket);
+
+    packet_queue_node_memory_allocator = allocator_create(sizeof(PacketQueueNode), 1000);
 
     return;
 }

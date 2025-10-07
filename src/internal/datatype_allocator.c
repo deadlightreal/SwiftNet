@@ -40,10 +40,10 @@ SwiftNetMemoryAllocator allocator_create(const uint32_t item_size, const uint32_
     return new_allocator;
 }
 
-void* allocator_allocate(SwiftNetMemoryAllocator* restrict const memory_allocator) {
-    SwiftNetMemoryAllocatorStack* restrict const current_stack = memory_allocator->free_memory_pointers.current_chunk;
+void* allocator_allocate(volatile SwiftNetMemoryAllocator* const memory_allocator) {
+    volatile SwiftNetMemoryAllocatorStack* const current_stack = memory_allocator->free_memory_pointers.current_chunk;
 
-    current_stack->size--;
+    current_stack->size -= 1;
 
     void** restrict const ptr_to_data = current_stack->data + (sizeof(void*) * current_stack->size);
 
@@ -52,7 +52,7 @@ void* allocator_allocate(SwiftNetMemoryAllocator* restrict const memory_allocato
     return item_ptr;
 }
 
-void allocator_free(SwiftNetMemoryAllocator* restrict const memory_allocator, void* restrict const memory_location) {
+void allocator_free(volatile SwiftNetMemoryAllocator* const memory_allocator, void* const memory_location) {
     SwiftNetMemoryAllocatorStack* restrict const current_stack = memory_allocator->free_memory_pointers.current_chunk;
 
     *(void**)(current_stack->data + (sizeof(void*) * current_stack->size)) = memory_location;
@@ -60,7 +60,7 @@ void allocator_free(SwiftNetMemoryAllocator* restrict const memory_allocator, vo
     current_stack->size++;
 }
 
-void allocator_destroy(SwiftNetMemoryAllocator* restrict const memory_allocator) {
+void allocator_destroy(volatile SwiftNetMemoryAllocator* const memory_allocator) {
     SwiftNetMemoryAllocatorStack* restrict current_stack_pointers = memory_allocator->free_memory_pointers.first_item;
 
     while (1) {

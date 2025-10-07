@@ -101,6 +101,8 @@ int main() {
             swiftnet_client_cleanup(client);
             swiftnet_client_cleanup(second_client);
 
+            swiftnet_cleanup();
+
             exit(EXIT_FAILURE);
         }
 
@@ -112,6 +114,8 @@ int main() {
 
     swiftnet_client_cleanup(client);
     swiftnet_client_cleanup(second_client);
+
+    swiftnet_cleanup();
 
     exit(EXIT_SUCCESS);
 }

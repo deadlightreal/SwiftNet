@@ -21,6 +21,7 @@ void client_message_handler(SwiftNetClientPacketData* restrict const packet_data
             swiftnet_server_cleanup(server);
             swiftnet_client_cleanup(client);
             free(random_generated_data);
+            swiftnet_cleanup();
             exit(EXIT_FAILURE);
         }
     }
@@ -28,6 +29,7 @@ void client_message_handler(SwiftNetClientPacketData* restrict const packet_data
     swiftnet_server_cleanup(server);
     swiftnet_client_cleanup(client);
     free(random_generated_data);
+    swiftnet_cleanup();
     exit(EXIT_SUCCESS);
 }
 

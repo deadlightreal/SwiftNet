@@ -18,8 +18,10 @@ set(SOURCE_FILES
     create_packet_buffer.c
     add_debug_flags.c
     destroy_packet_buffer.c
+    cleanup.c
     internal/get_mtu.c
     internal/get_default_interface.c
+    internal/datatype_allocator.c
 )
 
 set(OBJ_DIR ${CMAKE_SOURCE_DIR}/../build)
