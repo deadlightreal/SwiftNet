@@ -19,6 +19,7 @@ SwiftNetMemoryAllocator packet_queue_node_memory_allocator;
 SwiftNetMemoryAllocator packet_callback_queue_node_memory_allocator;
 SwiftNetMemoryAllocator server_packet_data_memory_allocator;
 SwiftNetMemoryAllocator client_packet_data_memory_allocator;
+SwiftNetMemoryAllocator packet_buffer_memory_allocator;
 
 void swiftnet_initialize() {
     for (uint32_t i = 0; i < MAX_SERVERS; i++) {
@@ -79,6 +80,7 @@ void swiftnet_initialize() {
     packet_callback_queue_node_memory_allocator = allocator_create(sizeof(PacketCallbackQueueNode), 1000);
     server_packet_data_memory_allocator = allocator_create(sizeof(SwiftNetServerPacketData), 1000);
     client_packet_data_memory_allocator = allocator_create(sizeof(SwiftNetClientPacketData), 1000);
+    packet_buffer_memory_allocator = allocator_create(maximum_transmission_unit, 1000);
 
     return;
 }
