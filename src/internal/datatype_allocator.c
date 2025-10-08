@@ -101,6 +101,9 @@ void allocator_free(SwiftNetMemoryAllocator* restrict const memory_allocator, vo
     ChunkStorageManager* restrict const free_pointers_chunk_storage = &memory_allocator->free_memory_pointers;
     SwiftNetMemoryAllocatorStack* restrict current_stack = free_pointers_chunk_storage->current_chunk;
 
+    // temp until issues with double free is resolved!
+    memset(memory_location, 0x00, memory_allocator->item_size);
+
     if (current_stack->size >= current_stack->capacity) {
         if (current_stack->next == NULL) {
             fprintf(stderr, "failed to free in allocator");

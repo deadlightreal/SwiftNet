@@ -139,6 +139,9 @@ extern void allocator_free(SwiftNetMemoryAllocator* restrict const memory_alloca
 extern void allocator_destroy(volatile SwiftNetMemoryAllocator* const memory_allocator);
 
 extern SwiftNetMemoryAllocator packet_queue_node_memory_allocator;
+extern SwiftNetMemoryAllocator packet_callback_queue_node_memory_allocator;
+extern SwiftNetMemoryAllocator server_packet_data_memory_allocator;
+extern SwiftNetMemoryAllocator client_packet_data_memory_allocator;
 
 static struct ip construct_ip_header(struct in_addr destination_addr, const uint32_t packet_size, const uint16_t packet_id) {
     struct ip ip_header = {

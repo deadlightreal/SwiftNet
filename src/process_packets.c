@@ -125,7 +125,7 @@ static inline void insert_callback_queue_node(PacketCallbackQueueNode* const res
 }
 
 static inline void pass_callback_execution(void* restrict const packet_data, PacketCallbackQueue* restrict const queue, SwiftNetPendingMessage* restrict const pending_message) {
-    PacketCallbackQueueNode* node = malloc(sizeof(PacketCallbackQueueNode));
+    PacketCallbackQueueNode* node = allocator_allocate(&packet_callback_queue_node_memory_allocator);
     node->packet_data = packet_data;
     node->next = NULL;
     node->pending_message = pending_message;
@@ -265,6 +265,8 @@ static inline void swiftnet_process_packets(
 
         // Check if the packet is meant to be for this server
         if(packet_info.port_info.destination_port != source_port) {
+            free(node->data);
+
             goto next_packet;
         }
 
@@ -281,6 +283,9 @@ static inline void swiftnet_process_packets(
                         send_debug_message("Received corrupted packet: {\"source_ip_address\": \"%s\", \"source_port\": %d, \"packet_id\": %d}\n", inet_ntoa(ip_header.ip_src), packet_info.port_info.source_port, ip_header.ip_id);
                     }
                 )
+
+                free(node->data);
+
                 goto next_packet;
             }
         }
@@ -482,7 +487,7 @@ static inline void swiftnet_process_packets(
                 if(connection_type == CONNECTION_TYPE_SERVER) {
                     uint8_t* ptr = packet_buffer + PACKET_HEADER_SIZE;
 
-                    SwiftNetServerPacketData* packet_data = malloc(sizeof(SwiftNetServerPacketData)) ;
+                    SwiftNetServerPacketData* packet_data = allocator_allocate(&server_packet_data_memory_allocator) ;
                     packet_data->data = ptr;
                     packet_data->current_pointer = ptr;
                     packet_data->metadata = (SwiftNetPacketServerMetadata){
@@ -495,7 +500,7 @@ static inline void swiftnet_process_packets(
                 } else {
                     uint8_t* ptr = packet_buffer + PACKET_HEADER_SIZE;
 
-                    SwiftNetClientPacketData* packet_data = malloc(sizeof(SwiftNetClientPacketData)) ;
+                    SwiftNetClientPacketData* packet_data = allocator_allocate(&client_packet_data_memory_allocator) ;
                     packet_data->data = ptr;
                     packet_data->current_pointer = ptr;
                     packet_data->metadata = (SwiftNetPacketClientMetadata){
@@ -522,7 +527,7 @@ static inline void swiftnet_process_packets(
                 if(connection_type == CONNECTION_TYPE_SERVER) {
                     uint8_t* ptr = pending_message->packet_data_start;
 
-                    SwiftNetServerPacketData* packet_data = malloc(sizeof(SwiftNetServerPacketData)) ;
+                    SwiftNetServerPacketData* packet_data = allocator_allocate(&server_packet_data_memory_allocator);
                     packet_data->data = ptr;
                     packet_data->current_pointer = ptr;
                     packet_data->metadata = (SwiftNetPacketServerMetadata){
@@ -535,7 +540,7 @@ static inline void swiftnet_process_packets(
                 } else {
                     uint8_t* ptr = pending_message->packet_data_start;
 
-                    SwiftNetClientPacketData* packet_data = malloc(sizeof(SwiftNetClientPacketData)) ;
+                    SwiftNetClientPacketData* packet_data = allocator_allocate(&client_packet_data_memory_allocator) ;
                     packet_data->data = ptr;
                     packet_data->current_pointer = ptr;
                     packet_data->metadata = (SwiftNetPacketClientMetadata){
