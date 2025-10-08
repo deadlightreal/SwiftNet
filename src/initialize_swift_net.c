@@ -72,7 +72,7 @@ void swiftnet_initialize() {
 
     close(temp_socket);
 
-    packet_queue_node_memory_allocator = allocator_create(sizeof(PacketQueueNode), 1000);
+    packet_queue_node_memory_allocator = allocator_create(sizeof(PacketQueueNode), 1);
 
     return;
 }

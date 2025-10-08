@@ -116,7 +116,6 @@ typedef struct {
     uint32_t capacity;
     uint32_t size;
     void* data;
-    uint32_t item_size;
     void* next;
     void* previous;
 } SwiftNetMemoryAllocatorStack;
@@ -130,11 +129,13 @@ typedef struct {
 typedef struct {
     ChunkStorageManager free_memory_pointers;
     ChunkStorageManager data;
+    uint32_t item_size;
+    uint32_t chunk_item_amount;
 } SwiftNetMemoryAllocator;
 
 extern SwiftNetMemoryAllocator allocator_create(const uint32_t item_size, const uint32_t chunk_item_amount);
 extern void* allocator_allocate(volatile SwiftNetMemoryAllocator* const memory_allocator);
-extern void allocator_free(volatile SwiftNetMemoryAllocator* const memory_allocator, void* const memory_location);
+extern void allocator_free(SwiftNetMemoryAllocator* restrict const memory_allocator, void* const memory_location);
 extern void allocator_destroy(volatile SwiftNetMemoryAllocator* const memory_allocator);
 
 extern SwiftNetMemoryAllocator packet_queue_node_memory_allocator;
