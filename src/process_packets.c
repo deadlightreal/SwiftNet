@@ -265,7 +265,7 @@ static inline void swiftnet_process_packets(
 
         // Check if the packet is meant to be for this server
         if(packet_info.port_info.destination_port != source_port) {
-            free(node->data);
+            allocator_free(&packet_buffer_memory_allocator, packet_buffer);
 
             goto next_packet;
         }
@@ -284,7 +284,7 @@ static inline void swiftnet_process_packets(
                     }
                 )
 
-                free(node->data);
+                allocator_free(&packet_buffer_memory_allocator, packet_buffer);
 
                 goto next_packet;
             }
@@ -323,7 +323,7 @@ static inline void swiftnet_process_packets(
 
                     sendto(sockfd, send_buffer, sizeof(send_buffer), 0, (struct sockaddr *)&node->sender_address, node->server_address_length);
 
-                    free(node->data);
+                    allocator_free(&packet_buffer_memory_allocator, packet_buffer);
         
                     goto next_packet;
             }
@@ -360,12 +360,12 @@ static inline void swiftnet_process_packets(
 
                         sendto(sockfd, &send_buffer, sizeof(send_buffer), 0x00, (const struct sockaddr *)&node->sender_address, node->server_address_length);
 
-                        free(node->data);
+                        allocator_free(&packet_buffer_memory_allocator, packet_buffer);
 
                         goto next_packet;
                     }
 
-                    free(node->data);
+                    allocator_free(&packet_buffer_memory_allocator, packet_buffer);
 
                     goto next_packet;
                 }
@@ -404,7 +404,7 @@ static inline void swiftnet_process_packets(
 
                 sendto(sockfd, send_buffer, packet_length, 0x00, (const struct sockaddr *)&node->sender_address, node->server_address_length);
 
-                free(node->data);
+                allocator_free(&packet_buffer_memory_allocator, packet_buffer);
 
                 goto next_packet;
             }
@@ -413,7 +413,7 @@ static inline void swiftnet_process_packets(
                 volatile SwiftNetPacketSending* const target_packet_sending = get_packet_sending(packet_sending, packet_sending_size, ip_header.ip_id);
 
                 if(unlikely(target_packet_sending == NULL)) {
-                    free(node->data);
+                    allocator_free(&packet_buffer_memory_allocator, packet_buffer);
 
                     goto next_packet;
                 }
@@ -430,7 +430,7 @@ static inline void swiftnet_process_packets(
 
                 target_packet_sending->updated_lost_chunks = true;
 
-                free(node->data);
+                allocator_free(&packet_buffer_memory_allocator, packet_buffer);
 
                 goto next_packet;
             }
@@ -439,14 +439,14 @@ static inline void swiftnet_process_packets(
                 volatile SwiftNetPacketSending* const target_packet_sending = get_packet_sending(packet_sending, packet_sending_size, ip_header.ip_id);
 
                 if(unlikely(target_packet_sending == NULL)) {
-                    free(node->data);
+                    allocator_free(&packet_buffer_memory_allocator, packet_buffer);
 
                     goto next_packet;
                 }
 
                 target_packet_sending->successfully_received = true;
 
-                free(node->data);
+                allocator_free(&packet_buffer_memory_allocator, packet_buffer);
 
                 goto next_packet;
             }
@@ -476,7 +476,7 @@ static inline void swiftnet_process_packets(
                     
                 memcpy(new_pending_message->packet_data_start, &packet_buffer[PACKET_HEADER_SIZE], chunk_data_size);
 
-                free(node->data);
+                allocator_free(&packet_buffer_memory_allocator, packet_buffer);
 
                 goto next_packet;
             } else {
@@ -551,7 +551,7 @@ static inline void swiftnet_process_packets(
                     pass_callback_execution(packet_data, packet_callback_queue, pending_message);
                 }
 
-                free(node->data);
+                allocator_free(&packet_buffer_memory_allocator, packet_buffer);
 
                 goto next_packet;
             } else {
@@ -561,7 +561,7 @@ static inline void swiftnet_process_packets(
 
                 pending_message->chunks_received_number++;
 
-                free(node->data);
+                allocator_free(&packet_buffer_memory_allocator, packet_buffer);
 
                 goto next_packet;
             }

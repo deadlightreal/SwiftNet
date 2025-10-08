@@ -44,17 +44,22 @@ void execute_packet_callback(PacketCallbackQueue* restrict const queue, void (* 
         if(node->pending_message != NULL) {
             free(node->pending_message->chunks_received);
             memset(node->pending_message, 0x00, sizeof(SwiftNetPendingMessage));
+
+            if (connection_type == 0) {
+                free(((SwiftNetClientPacketData*)(node->packet_data))->data);
+            } else {
+                free(((SwiftNetServerPacketData*)(node->packet_data))->data);
+            }
         } else {
             if (connection_type == 0) {
-                free(((SwiftNetClientPacketData*)(node->packet_data))->data - PACKET_HEADER_SIZE);
+                allocator_free(&packet_buffer_memory_allocator, ((SwiftNetClientPacketData*)(node->packet_data))->data - PACKET_HEADER_SIZE);
                 allocator_free(&client_packet_data_memory_allocator, node->packet_data);
             } else {
-                free(((SwiftNetServerPacketData*)(node->packet_data))->data - PACKET_HEADER_SIZE);
+                allocator_free(&packet_buffer_memory_allocator, ((SwiftNetServerPacketData*)(node->packet_data))->data - PACKET_HEADER_SIZE);
                 allocator_free(&server_packet_data_memory_allocator, node->packet_data);
             }
         }
 
-        (node->packet_data);
         allocator_free(&packet_callback_queue_node_memory_allocator, (void*)node);
     }
 }
