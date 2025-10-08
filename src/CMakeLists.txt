@@ -27,8 +27,8 @@ set(SOURCE_FILES
 set(OBJ_DIR ${CMAKE_SOURCE_DIR}/../build)
 
 add_library(swift_net STATIC ${SOURCE_FILES})
-target_compile_options(swift_net PRIVATE -fno-omit-frame-pointer -g)
-target_link_options(swift_net PRIVATE -g)
+target_compile_options(swift_net PRIVATE -fno-omit-frame-pointer -g -o0)
+target_link_options(swift_net PRIVATE -g -o0)
 
 set_target_properties(swift_net PROPERTIES
     ARCHIVE_OUTPUT_DIRECTORY ${OBJ_DIR}/output
