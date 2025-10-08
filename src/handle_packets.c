@@ -52,7 +52,7 @@ static inline void swiftnet_handle_packets(const int sockfd, const uint16_t sour
         node->server_address_length = sizeof(node->sender_address);
 
         uint8_t* const restrict packet_buffer = malloc(maximum_transmission_unit);
-        if(packet_buffer == NULL) {
+        if(unlikely(packet_buffer == NULL)) {
             allocator_free(&packet_queue_node_memory_allocator, node);
             continue;
         }

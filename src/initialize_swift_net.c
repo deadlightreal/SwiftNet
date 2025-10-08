@@ -16,6 +16,9 @@ uint32_t maximum_transmission_unit = 0x00;
 struct in_addr private_ip_address;
 
 SwiftNetMemoryAllocator packet_queue_node_memory_allocator;
+SwiftNetMemoryAllocator packet_callback_queue_node_memory_allocator;
+SwiftNetMemoryAllocator server_packet_data_memory_allocator;
+SwiftNetMemoryAllocator client_packet_data_memory_allocator;
 
 void swiftnet_initialize() {
     for (uint32_t i = 0; i < MAX_SERVERS; i++) {
@@ -72,7 +75,10 @@ void swiftnet_initialize() {
 
     close(temp_socket);
 
-    packet_queue_node_memory_allocator = allocator_create(sizeof(PacketQueueNode), 1);
+    packet_queue_node_memory_allocator = allocator_create(sizeof(PacketQueueNode), 1000);
+    packet_callback_queue_node_memory_allocator = allocator_create(sizeof(PacketCallbackQueueNode), 1000);
+    server_packet_data_memory_allocator = allocator_create(sizeof(SwiftNetServerPacketData), 1000);
+    client_packet_data_memory_allocator = allocator_create(sizeof(SwiftNetClientPacketData), 1000);
 
     return;
 }

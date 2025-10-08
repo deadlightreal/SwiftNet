@@ -47,13 +47,15 @@ void execute_packet_callback(PacketCallbackQueue* restrict const queue, void (* 
         } else {
             if (connection_type == 0) {
                 free(((SwiftNetClientPacketData*)(node->packet_data))->data - PACKET_HEADER_SIZE);
+                allocator_free(&client_packet_data_memory_allocator, node->packet_data);
             } else {
                 free(((SwiftNetServerPacketData*)(node->packet_data))->data - PACKET_HEADER_SIZE);
+                allocator_free(&server_packet_data_memory_allocator, node->packet_data);
             }
         }
 
-        free(node->packet_data);
-        free((void*)node);
+        (node->packet_data);
+        allocator_free(&packet_callback_queue_node_memory_allocator, (void*)node);
     }
 }
 

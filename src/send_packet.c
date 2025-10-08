@@ -116,7 +116,7 @@ static inline void handle_lost_packets(
             const uint32_t lost_chunk_index = packet_sending->lost_chunks[i];
 
             if (check_debug_flag(DEBUG_LOST_PACKETS) == true) {
-                send_debug_message("Packet lost: {\"packet_id\": %d, \"chunk index\": %d}\n", lost_chunk_index);
+                send_debug_message("Packet lost: {\"packet_id\": %d, \"chunk index\": %d}\n", packet_sending->packet_id, lost_chunk_index);
             }
     
             memcpy(&resend_chunk_buffer[sizeof(struct ip) + offsetof(SwiftNetPacketInfo, chunk_index)], &lost_chunk_index, SIZEOF_FIELD(SwiftNetPacketInfo, chunk_index));
