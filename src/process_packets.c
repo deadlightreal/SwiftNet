@@ -89,7 +89,7 @@ static inline SwiftNetPendingMessage* const restrict get_pending_message(const S
     for(uint16_t i = 0; i < pending_messages_size; i++) {
         SwiftNetPendingMessage* const restrict current_pending_message = &pending_messages[i];
 
-        if((connection_type == CONNECTION_TYPE_CLIENT && current_pending_message->packet_id == packet_id) || (connection_type == CONNECTION_TYPE_SERVER && current_pending_message->sender_address == sender_address)) {
+        if((connection_type == CONNECTION_TYPE_CLIENT && current_pending_message->packet_id == packet_id) || (connection_type == CONNECTION_TYPE_SERVER && current_pending_message->sender_address == sender_address && current_pending_message->packet_id == packet_id)) {
             return current_pending_message;
         }
     }
@@ -141,11 +141,13 @@ static inline void chunk_received(uint8_t* const restrict chunks_received, const
     chunks_received[byte] |= 1 << bit;
 }
 
-static inline SwiftNetPendingMessage* restrict const create_new_pending_message(SwiftNetPendingMessage* restrict const pending_messages, const uint16_t pending_messages_size, const SwiftNetPacketInfo* const restrict packet_info, const ConnectionType connection_type, in_addr_t sender_address, const uint16_t packet_id) {
-    for(uint16_t i = 0; i < pending_messages_size; i++) {
-        SwiftNetPendingMessage* restrict const current_pending_message = &pending_messages[i];
+static inline SwiftNetPendingMessage* restrict const create_new_pending_message(volatile SwiftNetPendingMessage* const pending_messages, const uint16_t pending_messages_size, const SwiftNetPacketInfo* const restrict packet_info, const ConnectionType connection_type, in_addr_t sender_address, const uint16_t packet_id) {
+    const static SwiftNetPendingMessage zero_pending_message = {0};
 
-        if(current_pending_message->packet_data_start == NULL) {
+    for(uint16_t i = 0; i < pending_messages_size; i++) {
+        volatile SwiftNetPendingMessage* const current_pending_message = &pending_messages[i];
+
+        if(memcmp((void*)current_pending_message, &zero_pending_message, sizeof(SwiftNetPendingMessage)) == 0) {
             uint8_t* restrict const allocated_memory = malloc(packet_info->packet_length);
 
             const uint32_t chunks_received_byte_size = (packet_info->chunk_amount + 7) / 8;
@@ -164,7 +166,7 @@ static inline SwiftNetPendingMessage* restrict const create_new_pending_message(
                 current_pending_message->sender_address = sender_address;
             }
 
-            return current_pending_message;
+            return (SwiftNetPendingMessage*)current_pending_message;
         }
     }
 
@@ -239,6 +241,11 @@ static inline void swiftnet_process_packets(
     while(1) {
         volatile PacketQueueNode* const node = wait_for_next_packet(packet_queue);
         if(node == NULL) {
+            continue;
+        }
+
+        if(node->data_read == 0) {
+            allocator_free(&packet_queue_node_memory_allocator, (void*)node);
             continue;
         }
 
