@@ -39,6 +39,11 @@ void execute_packet_callback(PacketCallbackQueue* restrict const queue, void (* 
             continue;
         }
 
+        if(node->packet_data == NULL) {
+            allocator_free(&packet_callback_queue_node_memory_allocator, (void*)node);
+            continue;
+        }
+
         (*packet_handler)(node->packet_data);
 
         if(node->pending_message != NULL) {
