@@ -202,9 +202,6 @@ void allocator_free(SwiftNetMemoryAllocator* restrict const memory_allocator, vo
         }
     )
 
-    // temp until issues with double free is resolved!
-    memset(memory_location, 0x00, memory_allocator->item_size);
-
     SwiftNetMemoryAllocatorStack* free_stack = find_free_pointer_stack(memory_allocator);
     if (free_stack == NULL) {
         create_new_stack(memory_allocator);
