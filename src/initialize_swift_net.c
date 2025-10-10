@@ -76,11 +76,11 @@ void swiftnet_initialize() {
 
     close(temp_socket);
 
-    packet_queue_node_memory_allocator = allocator_create(sizeof(PacketQueueNode), 1000);
-    packet_callback_queue_node_memory_allocator = allocator_create(sizeof(PacketCallbackQueueNode), 1000);
-    server_packet_data_memory_allocator = allocator_create(sizeof(SwiftNetServerPacketData), 1000);
-    client_packet_data_memory_allocator = allocator_create(sizeof(SwiftNetClientPacketData), 1000);
-    packet_buffer_memory_allocator = allocator_create(maximum_transmission_unit, 1000);
+    packet_queue_node_memory_allocator = allocator_create(sizeof(PacketQueueNode), 100);
+    packet_callback_queue_node_memory_allocator = allocator_create(sizeof(PacketCallbackQueueNode), 100);
+    server_packet_data_memory_allocator = allocator_create(sizeof(SwiftNetServerPacketData), 100);
+    client_packet_data_memory_allocator = allocator_create(sizeof(SwiftNetClientPacketData), 100);
+    packet_buffer_memory_allocator = allocator_create(maximum_transmission_unit, 100);
 
     return;
 }

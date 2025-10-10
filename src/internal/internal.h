@@ -118,6 +118,7 @@ typedef struct {
     void* data;
     void* next;
     void* previous;
+    atomic_uint owner;
 } SwiftNetMemoryAllocatorStack;
 
 typedef struct {
