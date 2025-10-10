@@ -1,3 +1,3 @@
 #pragma once
 
-#define IP_ADDRESS "192.168.1.64"
+#define IP_ADDRESS "127.0.0.1"
