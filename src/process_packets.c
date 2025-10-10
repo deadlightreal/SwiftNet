@@ -363,7 +363,7 @@ static inline void swiftnet_process_packets(
 
                         const uint16_t checksum = crc16(send_buffer, sizeof(send_buffer));
 
-                        memcpy(send_buffer, &checksum, SIZEOF_FIELD(struct ip, ip_sum));
+                        memcpy(send_buffer + offsetof(struct ip, ip_sum), &checksum, SIZEOF_FIELD(struct ip, ip_sum));
 
                         sendto(sockfd, &send_buffer, sizeof(send_buffer), 0x00, (const struct sockaddr *)&node->sender_address, node->server_address_length);
 

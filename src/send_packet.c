@@ -1,5 +1,4 @@
 #include "swift_net.h"
-#include <_printf.h>
 #include <stddef.h>
 #include <string.h>
 #include <stdio.h>
@@ -131,7 +130,7 @@ static inline void handle_lost_packets(
                 
                 memcpy(&resend_chunk_buffer[PACKET_HEADER_SIZE], &packet->packet_data_start[current_offset], bytes_to_complete);
                 
-                memset(&resend_chunk_buffer[offsetof(struct ip, ip_sum)], 0x00, SIZEOF_FIELD(struct ip, ip_len));
+                memset(&resend_chunk_buffer[offsetof(struct ip, ip_sum)], 0x00, SIZEOF_FIELD(struct ip, ip_sum));
 
                 const uint16_t checksum = crc16(resend_chunk_buffer, bytes_to_complete + PACKET_HEADER_SIZE);
 
@@ -211,7 +210,7 @@ static inline void swiftnet_send_packet(
                 }
             )
 
-            memcpy(&buffer[sizeof(struct ip) + offsetof(SwiftNetPacketInfo, chunk_index)], &i, SIZEOF_FIELD(struct ip, ip_off));
+            memcpy(&buffer[sizeof(struct ip) + offsetof(SwiftNetPacketInfo, chunk_index)], &i, SIZEOF_FIELD(SwiftNetPacketInfo, chunk_index));
             
             memset(&buffer[offsetof(struct ip, ip_sum)], 0x00, SIZEOF_FIELD(struct ip, ip_sum));
         
@@ -220,11 +219,11 @@ static inline void swiftnet_send_packet(
                 const uint16_t bytes_to_send = (uint16_t)packet_length - current_offset + PACKET_HEADER_SIZE;
 
                 memcpy(&buffer[PACKET_HEADER_SIZE], packet->packet_data_start + current_offset, bytes_to_send - PACKET_HEADER_SIZE);
-                memcpy(&buffer[offsetof(struct ip, ip_len)], &bytes_to_send, sizeof(bytes_to_send));
+                memcpy(&buffer[offsetof(struct ip, ip_len)], &bytes_to_send, SIZEOF_FIELD(struct ip, ip_len));
 
                 const uint16_t checksum = crc16(buffer, bytes_to_send);
 
-                memcpy(&buffer[offsetof(struct ip, ip_sum)], &checksum, sizeof(checksum));
+                memcpy(&buffer[offsetof(struct ip, ip_sum)], &checksum, SIZEOF_FIELD(struct ip, ip_sum));
 
                 sendto(sockfd, buffer, bytes_to_send, 0x00, (const struct sockaddr *)target_addr, *target_addr_len);
 
@@ -236,7 +235,7 @@ static inline void swiftnet_send_packet(
 
                 const uint16_t checksum = crc16(buffer, sizeof(buffer));
 
-                memcpy(&buffer[offsetof(struct ip, ip_sum)], &checksum, sizeof(checksum));
+                memcpy(&buffer[offsetof(struct ip, ip_sum)], &checksum, SIZEOF_FIELD(struct ip, ip_sum));
 
                 sendto(sockfd, buffer, sizeof(buffer), 0, (const struct sockaddr *)target_addr, sizeof(*target_addr));
             }
