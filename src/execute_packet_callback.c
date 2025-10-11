@@ -1,5 +1,6 @@
 #include "internal/internal.h"
 #include "swift_net.h"
+#include <stdatomic.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -32,7 +33,7 @@ volatile PacketCallbackQueueNode* wait_for_next_packet_callback(PacketCallbackQu
     return node_to_process;
 }
 
-void execute_packet_callback(PacketCallbackQueue* restrict const queue, void (* const volatile * const packet_handler) (void*), const uint8_t connection_type) {
+void execute_packet_callback(PacketCallbackQueue* restrict const queue, void (* const _Atomic * const packet_handler) (void*), const uint8_t connection_type) {
     while (1) {
         const volatile PacketCallbackQueueNode* const node = wait_for_next_packet_callback(queue);
         if(node == NULL) {
@@ -44,7 +45,9 @@ void execute_packet_callback(PacketCallbackQueue* restrict const queue, void (* 
             continue;
         }
 
-        (*packet_handler)(node->packet_data);
+        void (*const packet_handler_loaded)(void*) = atomic_load(packet_handler);
+
+        (*packet_handler_loaded)(node->packet_data);
 
         if(node->pending_message != NULL) {
             free(node->pending_message->chunks_received);

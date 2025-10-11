@@ -97,10 +97,10 @@ typedef struct {
 
 typedef struct {
     uint16_t packet_id;
-    volatile bool updated_lost_chunks;
+    _Atomic volatile bool updated_lost_chunks;
     volatile uint32_t* lost_chunks;
     volatile uint32_t lost_chunks_size;
-    volatile bool successfully_received;
+    _Atomic volatile bool successfully_received;
 } SwiftNetPacketSending;
 
 typedef struct {
@@ -177,7 +177,7 @@ typedef struct {
     SwiftNetPortInfo port_info;
     struct sockaddr_in server_addr;
     socklen_t server_addr_len;
-    void (* volatile packet_handler)(SwiftNetClientPacketData* restrict const);
+    _Atomic(void (*)(SwiftNetClientPacketData* restrict const)) packet_handler;
     pthread_t handle_packets_thread;
     pthread_t process_packets_thread;
     uint32_t maximum_transmission_unit;
@@ -195,7 +195,7 @@ extern SwiftNetClientConnection SwiftNetClientConnections[MAX_CLIENT_CONNECTIONS
 typedef struct {
     int sockfd;
     uint16_t server_port;
-    void (* volatile packet_handler)(SwiftNetServerPacketData* restrict const);
+    _Atomic(void (*)(SwiftNetServerPacketData* restrict const)) packet_handler;
     pthread_t handle_packets_thread;
     pthread_t process_packets_thread;
     SwiftNetPendingMessage pending_messages[MAX_PENDING_MESSAGES];

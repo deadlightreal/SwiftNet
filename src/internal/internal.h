@@ -112,19 +112,24 @@ SwiftNetDebug(
     }
 );
 
+#define STACK_CREATING_LOCKED 0
+#define STACK_CREATING_UNLOCKED 1
+
+#define ALLOCATOR_STACK_OCCUPIED 1
+#define ALLOCATOR_STACK_FREE 0
+
 typedef struct {
     uint32_t capacity;
     uint32_t size;
     void* data;
-    void* next;
-    void* previous;
-    atomic_uint owner;
+    _Atomic(void*) next;
+    _Atomic(void*) previous;
+    _Atomic uint8_t owner;
 } SwiftNetMemoryAllocatorStack;
 
 typedef struct {
-    void* first_item;
-    void* last_item;
-    void* current_chunk;
+    _Atomic(void*) first_item;
+    _Atomic(void*) last_item;
 } ChunkStorageManager;
 
 typedef struct {
@@ -132,6 +137,7 @@ typedef struct {
     ChunkStorageManager data;
     uint32_t item_size;
     uint32_t chunk_item_amount;
+    _Atomic uint8_t creating_stack;
 } SwiftNetMemoryAllocator;
 
 extern SwiftNetMemoryAllocator allocator_create(const uint32_t item_size, const uint32_t chunk_item_amount);

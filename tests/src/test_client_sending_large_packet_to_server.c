@@ -10,20 +10,25 @@
 SwiftNetClientConnection* client;
 SwiftNetServer* server;
 
-uint8_t* random_generated_data = NULL;
+uint32_t* random_generated_data = NULL;
 
 void client_message_handler(SwiftNetClientPacketData* restrict const packet_data) {
 }
 
 void server_message_handler(SwiftNetServerPacketData* restrict const packet_data) {
-    for(uint32_t i = 0; i < packet_data->metadata.data_length; i++) {
-        if(random_generated_data[i] != packet_data->data[i]) {
+    for(uint32_t i = 0; i < packet_data->metadata.data_length / 4; i++) {
+        const uint32_t data_received = *(uint32_t*)swiftnet_server_read_packet(packet_data, 4);
+
+        if(random_generated_data[i] != data_received) {
             fprintf(stderr, "invalid byte at index: %d\ndata received: %d\ndata sent: %d\n", i, packet_data->data[i], random_generated_data[i]);
+            printf("next bytes: %d %d %d before bytes: %d %d %d\n", packet_data->data[i+1], packet_data->data[i+2], packet_data->data[i+3], packet_data->data[i-1], packet_data->data[i-2], packet_data->data[i-3]);
+            fflush(stdout);
+            fflush(stderr);
+            abort();
             swiftnet_server_cleanup(server);
             swiftnet_client_cleanup(client);
             free(random_generated_data);
             swiftnet_cleanup();
-            exit(EXIT_FAILURE);
         }
     }
 
@@ -43,8 +48,8 @@ int main() {
         return EXIT_FAILURE;
     }
 
-    for(uint32_t i = 0; i < DATA_TO_SEND; i++) {
-        random_generated_data[i] = rand();
+    for(uint32_t i = 0; i < DATA_TO_SEND / 4; i++) {
+        random_generated_data[i] = i;
     }
 
     swiftnet_initialize();
