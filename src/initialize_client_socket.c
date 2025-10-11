@@ -95,7 +95,8 @@ SwiftNetClientConnection* swiftnet_create_client(const char* const restrict ip_a
 
     empty_connection->port_info.destination_port = port;
     empty_connection->port_info.source_port = clientPort;
-    empty_connection->packet_handler = NULL;
+
+    atomic_store(&empty_connection->packet_handler, NULL);
 
     memset(&empty_connection->server_addr, 0, sizeof(struct sockaddr_in));
     empty_connection->server_addr.sin_family = AF_INET;

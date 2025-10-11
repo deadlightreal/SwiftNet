@@ -218,7 +218,7 @@ static inline bool packet_corrupted(const uint16_t checksum, const uint32_t chun
 }
 
 static inline void swiftnet_process_packets(
-    void (* const volatile * const packet_handler) (uint8_t*, void*),
+    void* _Atomic * packet_handler,
     const int sockfd,
     const uint16_t source_port,
     volatile SwiftNetPacketSending* const packet_sending,
@@ -258,7 +258,10 @@ static inline void swiftnet_process_packets(
 
         // Check if user set a function that will execute with the packet data received as arg
         SwiftNetErrorCheck(
-            if(unlikely(*packet_handler == NULL)) {
+            void* packet_handler_derenfernced = atomic_load(packet_handler);
+            if(unlikely(packet_handler_derenfernced == NULL)) {
+                allocator_free(&packet_queue_node_memory_allocator, node);
+                allocator_free(&packet_buffer_memory_allocator, packet_buffer);
                 fprintf(stderr, "Message Handler not set!!\n");
                 continue;
             }
@@ -435,7 +438,7 @@ static inline void swiftnet_process_packets(
 
                 target_packet_sending->lost_chunks_size = packet_info.packet_length / 4;
 
-                target_packet_sending->updated_lost_chunks = true;
+                atomic_store(&target_packet_sending->updated_lost_chunks, true);
 
                 allocator_free(&packet_buffer_memory_allocator, packet_buffer);
 
@@ -451,7 +454,7 @@ static inline void swiftnet_process_packets(
                     goto next_packet;
                 }
 
-                target_packet_sending->successfully_received = true;
+                atomic_store(&target_packet_sending->successfully_received, true);
 
                 allocator_free(&packet_buffer_memory_allocator, packet_buffer);
 
@@ -521,13 +524,29 @@ static inline void swiftnet_process_packets(
                 goto next_packet;
             }
         } else {
-            const uint32_t bytes_to_copy = packet_info.chunk_amount == (packet_info.chunk_index + 1) ? packet_info.packet_length % chunk_data_size : chunk_data_size;
+            const uint32_t bytes_to_write = (packet_info.chunk_index + 1) >= packet_info.chunk_amount ? packet_info.packet_length % chunk_data_size : chunk_data_size;
 
             if(pending_message->chunks_received_number + 1 >= packet_info.chunk_amount) {
                 // Completed the packet
-                memcpy(pending_message->packet_data_start + (chunk_data_size * packet_info.chunk_index), &packet_buffer[PACKET_HEADER_SIZE], bytes_to_copy);
+                memcpy(pending_message->packet_data_start + (chunk_data_size * packet_info.chunk_index), &packet_buffer[PACKET_HEADER_SIZE], bytes_to_write);
 
                 current_read_pointer = pending_message->packet_data_start;
+
+                chunk_received(pending_message->chunks_received, packet_info.chunk_index);
+
+                SwiftNetDebug(
+                    uint32_t lost_chunks_buffer[mtu - PACKET_HEADER_SIZE];
+
+                    const uint32_t lost_chunks_num = return_lost_chunk_indexes(pending_message->chunks_received, packet_info.chunk_amount, mtu - PACKET_HEADER_SIZE, (uint32_t*)lost_chunks_buffer);
+
+                    if (lost_chunks_num != 0) {
+                        fprintf(stderr, "Packet marked as completed, but %d chunks are missing\n", lost_chunks_num);
+
+                        for (uint32_t i = 0; i < lost_chunks_num; i++) {
+                            printf("chunk index missing: %d\n", *(lost_chunks_buffer + i));  
+                        }
+                    }
+                )
 
                 packet_completed(ip_header.ip_id, packet_info.packet_length, packets_completed_history);
 
@@ -562,7 +581,7 @@ static inline void swiftnet_process_packets(
 
                 goto next_packet;
             } else {
-                memcpy(pending_message->packet_data_start + (chunk_data_size * packet_info.chunk_index), &packet_buffer[PACKET_HEADER_SIZE], bytes_to_copy);
+                memcpy(pending_message->packet_data_start + (chunk_data_size * packet_info.chunk_index), &packet_buffer[PACKET_HEADER_SIZE], bytes_to_write);
 
                 chunk_received(pending_message->chunks_received, packet_info.chunk_index);
 
@@ -586,7 +605,7 @@ static inline void swiftnet_process_packets(
 void* swiftnet_server_process_packets(void* restrict const void_server) {
     SwiftNetServer* restrict const server = (SwiftNetServer*)void_server;
 
-    swiftnet_process_packets((void (* const volatile * const) (uint8_t*, void*))&server->packet_handler, server->sockfd, server->server_port, server->packets_sending, server->pending_messages, MAX_PACKETS_SENDING, server->current_read_pointer, server->packets_completed_history, CONNECTION_TYPE_SERVER, &server->packet_queue, &server->packet_callback_queue, server);
+    swiftnet_process_packets(&server->packet_handler, server->sockfd, server->server_port, server->packets_sending, server->pending_messages, MAX_PACKETS_SENDING, server->current_read_pointer, server->packets_completed_history, CONNECTION_TYPE_SERVER, &server->packet_queue, &server->packet_callback_queue, server);
 
     return NULL;
 }
@@ -594,7 +613,7 @@ void* swiftnet_server_process_packets(void* restrict const void_server) {
 void* swiftnet_client_process_packets(void* restrict const void_client) {
     SwiftNetClientConnection* restrict const client = (SwiftNetClientConnection*)void_client;
 
-    swiftnet_process_packets((void (* const volatile * const) (uint8_t*, void*))&client->packet_handler, client->sockfd, client->port_info.source_port, client->packets_sending, client->pending_messages, MAX_PACKETS_SENDING, client->current_read_pointer, client->packets_completed_history, CONNECTION_TYPE_CLIENT, &client->packet_queue, &client->packet_callback_queue, client);
+    swiftnet_process_packets(&client->packet_handler, client->sockfd, client->port_info.source_port, client->packets_sending, client->pending_messages, MAX_PACKETS_SENDING, client->current_read_pointer, client->packets_completed_history, CONNECTION_TYPE_CLIENT, &client->packet_queue, &client->packet_callback_queue, client);
 
     return NULL;
 }

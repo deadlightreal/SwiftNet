@@ -24,11 +24,27 @@ set(SOURCE_FILES
     internal/datatype_allocator.c
 )
 
+if(SANITIZER STREQUAL "address")
+    message(STATUS "Using AddressSanitizer")
+    add_compile_options(-fsanitize=address -fno-omit-frame-pointer)
+    add_link_options(-fsanitize=address)
+elseif(SANITIZER STREQUAL "thread")
+    message(STATUS "Using ThreadSanitizer")
+    add_compile_options(-fsanitize=thread -fno-omit-frame-pointer)
+    add_link_options(-fsanitize=thread)
+elseif(SANITIZER STREQUAL "undefined")
+    message(STATUS "Using UndefinedBehaviorSanitizer")
+    add_compile_options(-fsanitize=undefined -fno-omit-frame-pointer)
+    add_link_options(-fsanitize=undefined)
+else()
+    message(STATUS "No sanitizer enabled")
+endif()
+
 set(OBJ_DIR ${CMAKE_SOURCE_DIR}/../build)
 
 add_library(swift_net STATIC ${SOURCE_FILES})
-target_compile_options(swift_net PRIVATE -fsanitize=address -fno-omit-frame-pointer -g -O0)
-target_link_options(swift_net PRIVATE -g -O0 -fsanitize=address)
+target_compile_options(swift_net PRIVATE -g -O0)
+target_link_options(swift_net PRIVATE -g -O0)
 
 set_target_properties(swift_net PROPERTIES
     ARCHIVE_OUTPUT_DIRECTORY ${OBJ_DIR}/output

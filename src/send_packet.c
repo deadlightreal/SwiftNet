@@ -33,12 +33,12 @@ static inline uint8_t request_lost_packets_bitarray(const uint8_t* restrict cons
         sendto(sockfd, raw_data, data_size, 0, destination, sizeof(*destination));
 
         for(uint8_t times_checked = 0; times_checked < 0xFF; times_checked++) {
-            if(packet_sending->updated_lost_chunks == true) {
-                packet_sending->updated_lost_chunks = false;
+            if(atomic_load(&packet_sending->updated_lost_chunks) == true) {
+                atomic_store(&packet_sending->updated_lost_chunks, false);
                 return REQUEST_LOST_PACKETS_RETURN_UPDATED_BIT_ARRAY;
             }
 
-            if(packet_sending->successfully_received == true) {
+            if(atomic_load(&packet_sending->successfully_received) == true) {
                 return REQUEST_LOST_PACKETS_RETURN_COMPLETED_PACKET;
             }
 
