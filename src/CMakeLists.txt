@@ -22,6 +22,7 @@ set(SOURCE_FILES
     internal/get_mtu.c
     internal/get_default_interface.c
     internal/datatype_allocator.c
+    internal/datatype_vector.c
 )
 
 if(SANITIZER STREQUAL "address")

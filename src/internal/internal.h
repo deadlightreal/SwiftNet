@@ -118,28 +118,6 @@ SwiftNetDebug(
 #define ALLOCATOR_STACK_OCCUPIED 1
 #define ALLOCATOR_STACK_FREE 0
 
-typedef struct {
-    uint32_t capacity;
-    uint32_t size;
-    void* data;
-    _Atomic(void*) next;
-    _Atomic(void*) previous;
-    _Atomic uint8_t owner;
-} SwiftNetMemoryAllocatorStack;
-
-typedef struct {
-    _Atomic(void*) first_item;
-    _Atomic(void*) last_item;
-} ChunkStorageManager;
-
-typedef struct {
-    ChunkStorageManager free_memory_pointers;
-    ChunkStorageManager data;
-    uint32_t item_size;
-    uint32_t chunk_item_amount;
-    _Atomic uint8_t creating_stack;
-} SwiftNetMemoryAllocator;
-
 extern SwiftNetMemoryAllocator allocator_create(const uint32_t item_size, const uint32_t chunk_item_amount);
 extern void* allocator_allocate(volatile SwiftNetMemoryAllocator* const memory_allocator);
 extern void allocator_free(SwiftNetMemoryAllocator* restrict const memory_allocator, void* const memory_location);
@@ -150,6 +128,15 @@ extern SwiftNetMemoryAllocator packet_callback_queue_node_memory_allocator;
 extern SwiftNetMemoryAllocator server_packet_data_memory_allocator;
 extern SwiftNetMemoryAllocator client_packet_data_memory_allocator;
 extern SwiftNetMemoryAllocator packet_buffer_memory_allocator;
+extern SwiftNetMemoryAllocator server_memory_allocator;
+extern SwiftNetMemoryAllocator client_connection_memory_allocator;
+extern SwiftNetMemoryAllocator pending_message_memory_allocator;
+
+void* vector_get(SwiftNetVector* vector, const uint32_t index);
+void vector_remove(SwiftNetVector* vector, const uint32_t index);
+void vector_push(SwiftNetVector* vector, void* data);
+void vector_destroy(SwiftNetVector* vector);
+SwiftNetVector vector_create(const uint32_t starting_amount);
 
 static struct ip construct_ip_header(struct in_addr destination_addr, const uint32_t packet_size, const uint16_t packet_id) {
     struct ip ip_header = {
