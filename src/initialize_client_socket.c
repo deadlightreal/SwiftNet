@@ -105,7 +105,6 @@ SwiftNetClientConnection* swiftnet_create_client(const char* const restrict ip_a
 
     memcpy(request_server_info_buffer + offsetof(struct ip, ip_sum), &checksum, SIZEOF_FIELD(struct ip, ip_sum));
 
-    memset((void *)new_connection->packets_sending, 0x00, MAX_PACKETS_SENDING * sizeof(SwiftNetPacketSending));
     memset((void *)new_connection->sent_successfully_completed_packet_signal, 0x00, MAX_SENT_SUCCESSFULLY_COMPLETED_PACKET_SIGNAL * sizeof(SwiftNetSentSuccessfullyCompletedPacketSignal));
     memset((void *)new_connection->packets_completed_history, 0x00, MAX_COMPLETED_PACKETS_HISTORY_SIZE * sizeof(SwiftNetPacketCompleted));
 
@@ -178,6 +177,8 @@ SwiftNetClientConnection* swiftnet_create_client(const char* const restrict ip_a
 
     new_connection->pending_messages_memory_allocator = allocator_create(sizeof(SwiftNetPendingMessage), 100);
     new_connection->pending_messages = vector_create(100);
+    new_connection->packets_sending_memory_allocator = allocator_create(sizeof(SwiftNetPacketSending), 100);
+    new_connection->packets_sending = vector_create(100);
 
     pthread_create(&new_connection->handle_packets_thread, NULL, swiftnet_client_handle_packets, new_connection);
 

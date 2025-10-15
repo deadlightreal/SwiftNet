@@ -208,7 +208,8 @@ typedef struct {
     uint32_t maximum_transmission_unit;
     SwiftNetVector pending_messages;
     SwiftNetMemoryAllocator pending_messages_memory_allocator;
-    volatile SwiftNetPacketSending packets_sending[MAX_PACKETS_SENDING];
+    SwiftNetVector packets_sending;
+    SwiftNetMemoryAllocator packets_sending_memory_allocator;
     volatile SwiftNetPacketCompleted packets_completed_history[MAX_COMPLETED_PACKETS_HISTORY_SIZE];
     SwiftNetSentSuccessfullyCompletedPacketSignal sent_successfully_completed_packet_signal[MAX_SENT_SUCCESSFULLY_COMPLETED_PACKET_SIGNAL];
     uint8_t* current_read_pointer;
@@ -224,7 +225,8 @@ typedef struct {
     pthread_t process_packets_thread;
     SwiftNetVector pending_messages;
     SwiftNetMemoryAllocator pending_messages_memory_allocator;
-    volatile SwiftNetPacketSending packets_sending[MAX_PACKETS_SENDING];
+    SwiftNetVector packets_sending;
+    SwiftNetMemoryAllocator packets_sending_memory_allocator;
     volatile SwiftNetPacketCompleted packets_completed_history[MAX_COMPLETED_PACKETS_HISTORY_SIZE];
     SwiftNetSentSuccessfullyCompletedPacketSignal sent_successfully_completed_packet_signal[MAX_SENT_SUCCESSFULLY_COMPLETED_PACKET_SIGNAL];
     uint8_t* current_read_pointer;
