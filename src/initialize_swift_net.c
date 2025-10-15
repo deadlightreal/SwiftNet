@@ -20,16 +20,11 @@ SwiftNetMemoryAllocator packet_callback_queue_node_memory_allocator;
 SwiftNetMemoryAllocator server_packet_data_memory_allocator;
 SwiftNetMemoryAllocator client_packet_data_memory_allocator;
 SwiftNetMemoryAllocator packet_buffer_memory_allocator;
+SwiftNetMemoryAllocator server_memory_allocator;
+SwiftNetMemoryAllocator client_connection_memory_allocator;
+SwiftNetMemoryAllocator pending_message_memory_allocator;
 
 void swiftnet_initialize() {
-    for (uint32_t i = 0; i < MAX_SERVERS; i++) {
-        SwiftNetServers[i].sockfd = -1;
-    }
-
-    for (uint32_t i = 0; i < MAX_CLIENT_CONNECTIONS; i++) {
-        SwiftNetClientConnections[i].sockfd = -1;
-    }
-
     int temp_socket = socket(AF_INET, SOCK_DGRAM, 0);
     if (temp_socket < 0) {
         perror("socket");
@@ -81,6 +76,9 @@ void swiftnet_initialize() {
     server_packet_data_memory_allocator = allocator_create(sizeof(SwiftNetServerPacketData), 100);
     client_packet_data_memory_allocator = allocator_create(sizeof(SwiftNetClientPacketData), 100);
     packet_buffer_memory_allocator = allocator_create(maximum_transmission_unit, 100);
+    server_memory_allocator = allocator_create(sizeof(SwiftNetServer), 10);
+    client_connection_memory_allocator = allocator_create(sizeof(SwiftNetClientConnection), 10);
+    pending_message_memory_allocator = allocator_create(sizeof(SwiftNetPendingMessage), 100);
 
     return;
 }

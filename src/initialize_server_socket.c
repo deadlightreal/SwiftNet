@@ -12,66 +12,52 @@
 #include "internal/internal.h"
 #include "swift_net.h"
 
-static inline SwiftNetServer* get_empty_server(SwiftNetServer* const restrict servers, const uint32_t server_count) {
-    for(uint16_t i = 0; i < server_count; i++) {
-        SwiftNetServer* const restrict current_server = &servers[i];
-        if(current_server->sockfd == -1) {
-            return current_server;
-        }
-    }
-
-    return NULL;
-}
-
 SwiftNetServer* swiftnet_create_server(const uint16_t port) {
-    SwiftNetServer* restrict empty_server = get_empty_server(SwiftNetServers, MAX_SERVERS);
-    if(unlikely(empty_server == NULL)) {
-        return NULL;
-    }
-    
+    SwiftNetServer* restrict const new_server = allocator_allocate(&server_memory_allocator);
+
     SwiftNetErrorCheck(
-        if(unlikely(empty_server == NULL)) {
+        if(unlikely(new_server == NULL)) {
             fprintf(stderr, "Failed to get an empty server\n");
             exit(EXIT_FAILURE);
         }
     )
 
-    empty_server->server_port = port;
+    new_server->server_port = port;
 
     // Create the socket
-    empty_server->sockfd = socket(AF_INET, SOCK_RAW, PROTOCOL_NUMBER);
-    if (unlikely(empty_server->sockfd < 0)) {
+    new_server->sockfd = socket(AF_INET, SOCK_RAW, PROTOCOL_NUMBER);
+    if (unlikely(new_server->sockfd < 0)) {
         fprintf(stderr, "Socket creation failed\n");
         exit(EXIT_FAILURE);
     }
 
     int on = 1;
-    if(setsockopt(empty_server->sockfd, IPPROTO_IP, IP_HDRINCL, &on, sizeof(on)) < 0) {
+    if(setsockopt(new_server->sockfd, IPPROTO_IP, IP_HDRINCL, &on, sizeof(on)) < 0) {
         fprintf(stderr, "Failed to set sockopt IP_HDRINCL\n");
         exit(EXIT_FAILURE);
     }
 
-    empty_server->packet_queue = (PacketQueue){
+    new_server->packet_queue = (PacketQueue){
         .first_node = NULL,
         .last_node = NULL
     };
 
-    atomic_store(&empty_server->packet_queue.owner, PACKET_QUEUE_OWNER_NONE);
+    atomic_store(&new_server->packet_queue.owner, PACKET_QUEUE_OWNER_NONE);
 
-    memset(empty_server->pending_messages, 0x00, MAX_PENDING_MESSAGES * sizeof(SwiftNetPendingMessage));
-    // Initialize transfer clients to NULL | 0x00
+    memset((void *)new_server->packets_sending, 0x00, MAX_PACKETS_SENDING * sizeof(SwiftNetPacketSending));
+    memset((void *)new_server->packets_sending, 0x00, MAX_SENT_SUCCESSFULLY_COMPLETED_PACKET_SIGNAL * sizeof(SwiftNetSentSuccessfullyCompletedPacketSignal));
+    memset((void *)new_server->packets_completed_history, 0x00, MAX_COMPLETED_PACKETS_HISTORY_SIZE * sizeof(SwiftNetPacketCompleted));
 
-    memset((void *)empty_server->packets_sending, 0x00, MAX_PACKETS_SENDING * sizeof(SwiftNetPacketSending));
-    memset((void *)empty_server->packets_sending, 0x00, MAX_SENT_SUCCESSFULLY_COMPLETED_PACKET_SIGNAL * sizeof(SwiftNetSentSuccessfullyCompletedPacketSignal));
-    memset((void *)empty_server->packets_completed_history, 0x00, MAX_COMPLETED_PACKETS_HISTORY_SIZE * sizeof(SwiftNetPacketCompleted));
+    memset(&new_server->packet_callback_queue, 0x00, sizeof(PacketCallbackQueue));
+    atomic_store(&new_server->packet_callback_queue.owner, PACKET_CALLBACK_QUEUE_OWNER_NONE);
 
-    memset(&empty_server->packet_callback_queue, 0x00, sizeof(PacketCallbackQueue));
-    atomic_store(&empty_server->packet_callback_queue.owner, PACKET_CALLBACK_QUEUE_OWNER_NONE);
+    atomic_store(&new_server->packet_handler, NULL);
 
-    atomic_store(&empty_server->packet_handler, NULL);
+    new_server->pending_messages_memory_allocator = allocator_create(sizeof(SwiftNetPendingMessage), 100);
+    new_server->pending_messages = vector_create(100);
 
     // Create a new thread that will handle all packets received
-    pthread_create(&empty_server->handle_packets_thread, NULL, swiftnet_server_handle_packets, empty_server);
+    pthread_create(&new_server->handle_packets_thread, NULL, swiftnet_server_handle_packets, new_server);
 
     SwiftNetDebug(
         if (check_debug_flag(DEBUG_INITIALIZATION)) {
@@ -79,5 +65,5 @@ SwiftNetServer* swiftnet_create_server(const uint16_t port) {
         }
     )
 
-    return empty_server;
+    return new_server;
 }

@@ -33,7 +33,7 @@ volatile PacketCallbackQueueNode* wait_for_next_packet_callback(PacketCallbackQu
     return node_to_process;
 }
 
-void execute_packet_callback(PacketCallbackQueue* restrict const queue, void (* const _Atomic * const packet_handler) (void*), const uint8_t connection_type) {
+void execute_packet_callback(PacketCallbackQueue* restrict const queue, void (* const _Atomic * const packet_handler) (void*), const uint8_t connection_type, SwiftNetMemoryAllocator* const restrict pending_message_memory_allocator) {
     while (1) {
         const volatile PacketCallbackQueueNode* const node = wait_for_next_packet_callback(queue);
         if(node == NULL) {
@@ -51,7 +51,7 @@ void execute_packet_callback(PacketCallbackQueue* restrict const queue, void (* 
 
         if(node->pending_message != NULL) {
             free(node->pending_message->chunks_received);
-            memset(node->pending_message, 0x00, sizeof(SwiftNetPendingMessage));
+            allocator_free(pending_message_memory_allocator, node->pending_message);
 
             if (connection_type == 0) {
                 free(((SwiftNetClientPacketData*)(node->packet_data))->data);
@@ -75,7 +75,7 @@ void execute_packet_callback(PacketCallbackQueue* restrict const queue, void (* 
 void* execute_packet_callback_client(void* void_client) {
     SwiftNetClientConnection* client = void_client;
 
-    execute_packet_callback(&client->packet_callback_queue, (void (* const volatile * const) (void*))&client->packet_handler, 0);
+    execute_packet_callback(&client->packet_callback_queue, &client->packet_handler, 0, &client->pending_messages_memory_allocator);
 
     return NULL;
 }
@@ -83,7 +83,7 @@ void* execute_packet_callback_client(void* void_client) {
 void* execute_packet_callback_server(void* void_server) {
     SwiftNetServer* server = void_server;
 
-    execute_packet_callback(&server->packet_callback_queue, (void (* const volatile * const) (void*))&server->packet_handler, 1);
+    execute_packet_callback(&server->packet_callback_queue, &server->packet_handler, 1, &server->pending_messages_memory_allocator);
 
     return NULL;
 }

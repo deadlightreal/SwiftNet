@@ -17,8 +17,6 @@
 #include <stdbool.h>
 #include <stdatomic.h>
 
-#define MAX_CLIENT_CONNECTIONS 0x0A
-#define MAX_SERVERS 0x0A
 #define MAX_PENDING_MESSAGES 0x0A
 #define MAX_PACKETS_SENDING 0x0A
 #define MAX_SENT_SUCCESSFULLY_COMPLETED_PACKET_SIGNAL 0x64
@@ -171,6 +169,33 @@ typedef struct {
     volatile bool confirmed;
 } SwiftNetSentSuccessfullyCompletedPacketSignal;
 
+typedef struct {
+    uint32_t size;
+    void* data;
+    _Atomic(void*) next;
+    _Atomic(void*) previous;
+    _Atomic uint8_t owner;
+} SwiftNetMemoryAllocatorStack;
+
+typedef struct {
+    _Atomic(void*) first_item;
+    _Atomic(void*) last_item;
+} SwiftNetChunkStorageManager;
+
+typedef struct {
+    SwiftNetChunkStorageManager free_memory_pointers;
+    SwiftNetChunkStorageManager data;
+    uint32_t item_size;
+    uint32_t chunk_item_amount;
+    _Atomic uint8_t creating_stack;
+} SwiftNetMemoryAllocator;
+
+typedef struct {
+    void* data;
+    uint32_t size;
+    uint32_t capacity;
+} SwiftNetVector;
+
 // Connection data
 typedef struct {
     int sockfd;
@@ -181,7 +206,8 @@ typedef struct {
     pthread_t handle_packets_thread;
     pthread_t process_packets_thread;
     uint32_t maximum_transmission_unit;
-    SwiftNetPendingMessage pending_messages[MAX_PENDING_MESSAGES];
+    SwiftNetVector pending_messages;
+    SwiftNetMemoryAllocator pending_messages_memory_allocator;
     volatile SwiftNetPacketSending packets_sending[MAX_PACKETS_SENDING];
     volatile SwiftNetPacketCompleted packets_completed_history[MAX_COMPLETED_PACKETS_HISTORY_SIZE];
     SwiftNetSentSuccessfullyCompletedPacketSignal sent_successfully_completed_packet_signal[MAX_SENT_SUCCESSFULLY_COMPLETED_PACKET_SIGNAL];
@@ -190,15 +216,14 @@ typedef struct {
     PacketCallbackQueue packet_callback_queue;
 } SwiftNetClientConnection;
 
-extern SwiftNetClientConnection SwiftNetClientConnections[MAX_CLIENT_CONNECTIONS];
-
 typedef struct {
     int sockfd;
     uint16_t server_port;
     _Atomic(void (*)(SwiftNetServerPacketData* restrict const)) packet_handler;
     pthread_t handle_packets_thread;
     pthread_t process_packets_thread;
-    SwiftNetPendingMessage pending_messages[MAX_PENDING_MESSAGES];
+    SwiftNetVector pending_messages;
+    SwiftNetMemoryAllocator pending_messages_memory_allocator;
     volatile SwiftNetPacketSending packets_sending[MAX_PACKETS_SENDING];
     volatile SwiftNetPacketCompleted packets_completed_history[MAX_COMPLETED_PACKETS_HISTORY_SIZE];
     SwiftNetSentSuccessfullyCompletedPacketSignal sent_successfully_completed_packet_signal[MAX_SENT_SUCCESSFULLY_COMPLETED_PACKET_SIGNAL];
@@ -207,14 +232,12 @@ typedef struct {
     PacketCallbackQueue packet_callback_queue;
 } SwiftNetServer;
 
-extern SwiftNetServer SwiftNetServers[MAX_SERVERS];
-
 extern void swiftnet_server_set_message_handler(SwiftNetServer* server, void (*new_handler)(SwiftNetServerPacketData* restrict const));
 extern void swiftnet_client_set_message_handler(SwiftNetClientConnection* client, void (*new_handler)(SwiftNetClientPacketData* restrict const));
 extern void swiftnet_client_append_to_packet(SwiftNetClientConnection* const restrict client, const void* const restrict data, const uint32_t data_size, SwiftNetPacketBuffer* restrict const packet);
 extern void swiftnet_server_append_to_packet(SwiftNetServer* const restrict server, const void* const restrict data, const uint32_t data_size, SwiftNetPacketBuffer* restrict const packet);
-extern void swiftnet_client_cleanup(const SwiftNetClientConnection* const restrict client);
-extern void swiftnet_server_cleanup(const SwiftNetServer* const restrict server);
+extern void swiftnet_client_cleanup(SwiftNetClientConnection* const restrict client);
+extern void swiftnet_server_cleanup(SwiftNetServer* const restrict server);
 extern void swiftnet_initialize();
 extern void* swiftnet_server_handle_packets(void* restrict const server_void);
 extern void* swiftnet_client_handle_packets(void* restrict const client_void);

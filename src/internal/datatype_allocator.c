@@ -24,7 +24,7 @@ SwiftNetMemoryAllocatorStack* find_free_pointer_stack(SwiftNetMemoryAllocator* r
 
         atomic_thread_fence(memory_order_acquire);
 
-        if (current_stack->size < current_stack->capacity) {
+        if (current_stack->size < allocator->chunk_item_amount) {
             return current_stack;
         } else {
             free_stack_lock(current_stack);
@@ -73,7 +73,6 @@ SwiftNetMemoryAllocator allocator_create(const uint32_t item_size, const uint32_
 
     first_stack_pointers->data = stack_allocated_memory;
     first_stack_pointers->size = chunk_item_amount;
-    first_stack_pointers->capacity = chunk_item_amount;
     first_stack_pointers->next = NULL;
     first_stack_pointers->previous = NULL;
 
@@ -87,16 +86,15 @@ SwiftNetMemoryAllocator allocator_create(const uint32_t item_size, const uint32_
 
     first_stack_data->data = allocated_memory;
     first_stack_data->size = 0;
-    first_stack_data->capacity = chunk_item_amount;
     first_stack_data->next = NULL;
     first_stack_data->previous = NULL;
 
     SwiftNetMemoryAllocator new_allocator = (SwiftNetMemoryAllocator){
-        .free_memory_pointers = (ChunkStorageManager){
+        .free_memory_pointers = (SwiftNetChunkStorageManager){
             .first_item = first_stack_pointers,
             .last_item = first_stack_pointers,
         },
-        .data = (ChunkStorageManager){
+        .data = (SwiftNetChunkStorageManager){
             .first_item = first_stack_data,
             .last_item = first_stack_data,
         },
@@ -142,7 +140,6 @@ static void create_new_stack(volatile SwiftNetMemoryAllocator* const memory_allo
 
     stack_pointers->data = stack_allocated_memory;
     stack_pointers->size = chunk_item_amount;
-    stack_pointers->capacity = chunk_item_amount;
     stack_pointers->previous = atomic_load(&memory_allocator->free_memory_pointers.last_item);
     stack_pointers->next = NULL;
 
@@ -159,7 +156,6 @@ static void create_new_stack(volatile SwiftNetMemoryAllocator* const memory_allo
 
     stack_data->data = allocated_memory;
     stack_data->size = 0;
-    stack_data->capacity = chunk_item_amount;
     stack_data->next = NULL;
     stack_data->previous = atomic_load(&memory_allocator->data.last_item);
 
