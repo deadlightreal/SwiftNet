@@ -43,7 +43,9 @@ static inline void handle_lost_packets(
     const struct sockaddr_in* restrict const destination_address,
     const socklen_t* destination_address_len,
     const uint16_t source_port,
-    const uint16_t destination_port
+    const uint16_t destination_port,
+    volatile SwiftNetMemoryAllocator* const packets_sending_memory_allocator,
+    volatile SwiftNetVector* const packets_sending
 ) {
     const SwiftNetPortInfo port_info = {
         .source_port = source_port,
@@ -96,6 +98,14 @@ static inline void handle_lost_packets(
                 break;
             case REQUEST_LOST_PACKETS_RETURN_COMPLETED_PACKET:
                 free((void*)packet_sending->lost_chunks);
+
+                for (uint32_t i = 0; i < packets_sending->size; i++) {
+                    if (((SwiftNetPacketSending*)vector_get((SwiftNetVector*)packets_sending, i))->packet_id == packet_sending->packet_id) {
+                        vector_remove((SwiftNetVector*)packets_sending, i);
+                    }
+                }
+
+                allocator_free(packets_sending_memory_allocator, (void*)packet_sending);
                 return;
         }
     
@@ -148,8 +158,8 @@ static inline void swiftnet_send_packet(
     const uint32_t packet_length,
     const struct sockaddr_in* restrict const target_addr,
     const socklen_t* restrict const target_addr_len,
-    SwiftNetVector* restrict const packets_sending,
-    SwiftNetMemoryAllocator* restrict const packets_sending_memory_allocator,
+    volatile SwiftNetVector* const packets_sending,
+    volatile SwiftNetMemoryAllocator* const packets_sending_memory_allocator,
     const int sockfd
 ) {
     const uint16_t packet_id = rand();
@@ -179,7 +189,7 @@ static inline void swiftnet_send_packet(
             return;
         }
 
-        vector_push(packets_sending, new_packet_sending);
+        vector_push((SwiftNetVector*)packets_sending, (SwiftNetPacketSending*)new_packet_sending);
 
         const uint32_t chunk_amount = (packet_length + (mtu - PACKET_HEADER_SIZE) - 1) / (mtu - PACKET_HEADER_SIZE);
 
@@ -222,7 +232,7 @@ static inline void swiftnet_send_packet(
 
                 sendto(sockfd, buffer, bytes_to_send, 0x00, (const struct sockaddr *)target_addr, *target_addr_len);
 
-                handle_lost_packets(new_packet_sending, mtu, packet, sockfd, target_addr, target_addr_len, port_info.source_port, port_info.destination_port);
+                handle_lost_packets(new_packet_sending, mtu, packet, sockfd, target_addr, target_addr_len, port_info.source_port, port_info.destination_port, packets_sending_memory_allocator, packets_sending);
                 
                 break;
             } else {
