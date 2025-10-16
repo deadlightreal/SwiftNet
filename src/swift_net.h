@@ -17,11 +17,6 @@
 #include <stdbool.h>
 #include <stdatomic.h>
 
-#define MAX_PENDING_MESSAGES 0x0A
-#define MAX_PACKETS_SENDING 0x0A
-#define MAX_SENT_SUCCESSFULLY_COMPLETED_PACKET_SIGNAL 0x64
-#define MAX_COMPLETED_PACKETS_HISTORY_SIZE 0x64
-
 #define PACKET_TYPE_MESSAGE 0x01
 #define PACKET_TYPE_REQUEST_INFORMATION 0x02
 #define PACKET_TYPE_SEND_LOST_PACKETS_REQUEST 0x03
@@ -206,12 +201,12 @@ typedef struct {
     pthread_t handle_packets_thread;
     pthread_t process_packets_thread;
     uint32_t maximum_transmission_unit;
-    SwiftNetVector pending_messages;
-    SwiftNetMemoryAllocator pending_messages_memory_allocator;
-    SwiftNetVector packets_sending;
-    SwiftNetMemoryAllocator packets_sending_memory_allocator;
-    volatile SwiftNetPacketCompleted packets_completed_history[MAX_COMPLETED_PACKETS_HISTORY_SIZE];
-    SwiftNetSentSuccessfullyCompletedPacketSignal sent_successfully_completed_packet_signal[MAX_SENT_SUCCESSFULLY_COMPLETED_PACKET_SIGNAL];
+    volatile SwiftNetVector pending_messages;
+    volatile SwiftNetMemoryAllocator pending_messages_memory_allocator;
+    volatile SwiftNetVector packets_sending;
+    volatile SwiftNetMemoryAllocator packets_sending_memory_allocator;
+    volatile SwiftNetVector packets_completed;
+    volatile SwiftNetMemoryAllocator packets_completed_memory_allocator;
     uint8_t* current_read_pointer;
     PacketQueue packet_queue;
     PacketCallbackQueue packet_callback_queue;
@@ -223,12 +218,12 @@ typedef struct {
     _Atomic(void (*)(SwiftNetServerPacketData* restrict const)) packet_handler;
     pthread_t handle_packets_thread;
     pthread_t process_packets_thread;
-    SwiftNetVector pending_messages;
-    SwiftNetMemoryAllocator pending_messages_memory_allocator;
-    SwiftNetVector packets_sending;
-    SwiftNetMemoryAllocator packets_sending_memory_allocator;
-    volatile SwiftNetPacketCompleted packets_completed_history[MAX_COMPLETED_PACKETS_HISTORY_SIZE];
-    SwiftNetSentSuccessfullyCompletedPacketSignal sent_successfully_completed_packet_signal[MAX_SENT_SUCCESSFULLY_COMPLETED_PACKET_SIGNAL];
+    volatile SwiftNetVector pending_messages;
+    volatile SwiftNetMemoryAllocator pending_messages_memory_allocator;
+    volatile SwiftNetVector packets_sending;
+    volatile SwiftNetMemoryAllocator packets_sending_memory_allocator;
+    volatile SwiftNetVector packets_completed;
+    volatile SwiftNetMemoryAllocator packets_completed_memory_allocator;
     uint8_t* current_read_pointer;
     PacketQueue packet_queue;
     PacketCallbackQueue packet_callback_queue;
