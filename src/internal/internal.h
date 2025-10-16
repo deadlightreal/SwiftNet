@@ -120,7 +120,7 @@ SwiftNetDebug(
 
 extern SwiftNetMemoryAllocator allocator_create(const uint32_t item_size, const uint32_t chunk_item_amount);
 extern void* allocator_allocate(volatile SwiftNetMemoryAllocator* const memory_allocator);
-extern void allocator_free(SwiftNetMemoryAllocator* restrict const memory_allocator, void* const memory_location);
+extern void allocator_free(volatile SwiftNetMemoryAllocator* const memory_allocator, void* const memory_location);
 extern void allocator_destroy(volatile SwiftNetMemoryAllocator* const memory_allocator);
 
 extern SwiftNetMemoryAllocator packet_queue_node_memory_allocator;
@@ -135,7 +135,7 @@ extern SwiftNetMemoryAllocator pending_message_memory_allocator;
 void* vector_get(SwiftNetVector* vector, const uint32_t index);
 void vector_remove(SwiftNetVector* vector, const uint32_t index);
 void vector_push(SwiftNetVector* vector, void* data);
-void vector_destroy(SwiftNetVector* vector);
+void vector_destroy(volatile SwiftNetVector* const vector);
 SwiftNetVector vector_create(const uint32_t starting_amount);
 
 static struct ip construct_ip_header(struct in_addr destination_addr, const uint32_t packet_size, const uint16_t packet_id) {
