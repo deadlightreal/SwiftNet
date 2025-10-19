@@ -121,9 +121,24 @@ SwiftNetClientConnection* swiftnet_create_client(const char* const restrict ip_a
     };
 
     pthread_create(&send_request_thread, NULL, request_server_information, (void*)&thread_args);
+
+    struct timeval tv;
+    tv.tv_sec = 5;
+    tv.tv_usec = 0;
     
     while(1) {
         const int bytes_received = recvfrom(new_connection->sockfd, server_information_buffer, sizeof(server_information_buffer), 0x00, NULL, NULL);
+        if(bytes_recieved < 0){
+           SwiftNetDebug(
+               if(check_debug_flag(DEBUG_INITIALIZATION)){
+                   send_debug_message("Server did not respond within 5 second\n");
+                }
+           )
+           exit_thread = true;
+           pthread_join(send_request_thread, NULL);
+           return NULL;
+        }
+            
         if(bytes_received != PACKET_HEADER_SIZE) {
             SwiftNetDebug(
                 if (check_debug_flag(DEBUG_INITIALIZATION)) {
