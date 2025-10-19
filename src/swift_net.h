@@ -231,8 +231,8 @@ typedef struct {
 
 extern void swiftnet_server_set_message_handler(SwiftNetServer* server, void (*new_handler)(SwiftNetServerPacketData* restrict const));
 extern void swiftnet_client_set_message_handler(SwiftNetClientConnection* client, void (*new_handler)(SwiftNetClientPacketData* restrict const));
-extern void swiftnet_client_append_to_packet(SwiftNetClientConnection* const restrict client, const void* const restrict data, const uint32_t data_size, SwiftNetPacketBuffer* restrict const packet);
-extern void swiftnet_server_append_to_packet(SwiftNetServer* const restrict server, const void* const restrict data, const uint32_t data_size, SwiftNetPacketBuffer* restrict const packet);
+extern void swiftnet_client_append_to_packet(void* const restrict data, const uint32_t data_size, SwiftNetPacketBuffer* restrict const packet);
+extern void swiftnet_server_append_to_packet(void* const restrict data, const uint32_t data_size, SwiftNetPacketBuffer* restrict const packet);
 extern void swiftnet_client_cleanup(SwiftNetClientConnection* const restrict client);
 extern void swiftnet_server_cleanup(SwiftNetServer* const restrict server);
 extern void swiftnet_initialize();
