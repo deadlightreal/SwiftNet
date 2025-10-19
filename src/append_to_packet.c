@@ -18,7 +18,7 @@ static inline void append_data(uint8_t** restrict const append_pointer, const vo
     (*append_pointer) += data_size;
 }
 
-void swiftnet_client_append_to_packet(void* const restrict data, const uint32_t data_size, SwiftNetPacketBuffer* restrict const packet) {
+void swiftnet_client_append_to_packet(const void* const restrict data, const uint32_t data_size, SwiftNetPacketBuffer* restrict const packet) {
     SwiftNetErrorCheck(
         validate_args(data, data_size, __func__);
     )
@@ -26,7 +26,7 @@ void swiftnet_client_append_to_packet(void* const restrict data, const uint32_t 
     append_data(&packet->packet_append_pointer, data, data_size);
 }
 
-void swiftnet_server_append_to_packet(void* const restrict data, const uint32_t data_size, SwiftNetPacketBuffer* restrict const packet) {
+void swiftnet_server_append_to_packet(const void* const restrict data, const uint32_t data_size, SwiftNetPacketBuffer* restrict const packet) {
     SwiftNetErrorCheck(
         validate_args(data, data_size, __func__);
     )
