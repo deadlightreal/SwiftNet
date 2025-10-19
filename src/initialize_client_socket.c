@@ -128,7 +128,7 @@ SwiftNetClientConnection* swiftnet_create_client(const char* const restrict ip_a
     
     while(1) {
         const int bytes_received = recvfrom(new_connection->sockfd, server_information_buffer, sizeof(server_information_buffer), 0x00, NULL, NULL);
-        if(bytes_recieved < 0){
+        if(bytes_received < 0){
            SwiftNetDebug(
                if(check_debug_flag(DEBUG_INITIALIZATION)){
                    send_debug_message("Server did not respond within 5 second\n");
