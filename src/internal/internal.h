@@ -84,7 +84,7 @@ extern void* execute_packet_callback_server(void* void_server);
 
 extern struct in_addr private_ip_address;
 
-SwiftNetDebug(
+#ifdef SWIFT_NET_DEBUG
     extern SwiftNetDebugger debugger;
 
     static inline bool check_debug_flag(SwiftNetDebugFlags flag) {
@@ -110,7 +110,7 @@ SwiftNetDebug(
 
         va_end(args);
     }
-);
+#endif
 
 #define STACK_CREATING_LOCKED 0
 #define STACK_CREATING_UNLOCKED 1

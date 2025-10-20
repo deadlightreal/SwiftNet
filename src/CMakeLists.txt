@@ -5,7 +5,6 @@ set(CMAKE_C_STANDARD 99)
 
 set(SOURCE_FILES
     initialize_swift_net.c
-    swift_net.c
     send_packet.c
     handle_packets.c
     append_to_packet.c

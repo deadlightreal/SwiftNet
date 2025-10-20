@@ -29,19 +29,17 @@
 #define likely(x) __builtin_expect((x), 0x01)
 
 #ifndef SWIFT_NET_DISABLE_ERROR_CHECKING
-    #define SwiftNetErrorCheck(code) code
-#else
-    #define SwiftNetErrorCheck(code)
+    #define SWIFT_NET_ERROR
 #endif
 
+
 #ifndef SWIFT_NET_DISABLE_DEBUGGING
-    #define SwiftNetDebug(code) code
-#else
-    #define SwiftNetDebug(code) code
+    #define SWIFT_NET_DEBUG
 #endif
 
 extern uint32_t maximum_transmission_unit;
 
+#ifdef SWIFT_NET_DEBUG
 typedef enum {
     DEBUG_PACKETS_SENDING = 1u << 0,
     DEBUG_PACKETS_RECEIVING = 1u << 1,
@@ -52,6 +50,7 @@ typedef enum {
 typedef struct {
     uint32_t flags;
 } SwiftNetDebugger;
+#endif
 
 typedef struct {
     uint16_t destination_port;
@@ -252,9 +251,9 @@ extern void* swiftnet_server_read_packet(SwiftNetServerPacketData* restrict cons
 
 extern void swiftnet_cleanup();
 
-SwiftNetDebug(
+#ifdef SWIFT_NET_DEBUG
     extern void swiftnet_add_debug_flags(const uint32_t flags);
-)
+#endif
 
 #ifdef __cplusplus
     }

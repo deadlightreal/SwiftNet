@@ -62,7 +62,7 @@ int main() {
 
     SwiftNetPacketBuffer buffer = swiftnet_client_create_packet_buffer(DATA_TO_SEND);
 
-    swiftnet_client_append_to_packet(client, random_generated_data, DATA_TO_SEND, &buffer);
+    swiftnet_client_append_to_packet(random_generated_data, DATA_TO_SEND, &buffer);
 
     swiftnet_client_send_packet(client, &buffer);
 

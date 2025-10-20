@@ -190,7 +190,7 @@ void* allocator_allocate(volatile SwiftNetMemoryAllocator* const memory_allocato
     return item_ptr;
 }
 
-SwiftNetDebug(
+#ifdef SWIFT_NET_DEBUG
     static inline bool is_already_free(volatile SwiftNetMemoryAllocator* const memory_allocator, void* const memory_location) {
         /*for (SwiftNetMemoryAllocatorStack* restrict stack = memory_allocator->free_memory_pointers.first_item; stack != NULL; stack = stack->next) {
             for (uint32_t i = 0; i < stack->size; i++) {
@@ -202,17 +202,17 @@ SwiftNetDebug(
 
         return false;
     }
-)
+#endif
 
 void allocator_free(volatile SwiftNetMemoryAllocator* const memory_allocator, void* const memory_location) {
-    SwiftNetDebug(
+    #ifdef SWIFT_NET_DEBUG
         const bool already_free = is_already_free(memory_allocator, memory_location);
 
         if (already_free == true) {
             fprintf(stderr, "Pointer %p has already been freed\n", memory_location);
             exit(EXIT_FAILURE);
         }
-    )
+    #endif
 
     SwiftNetMemoryAllocatorStack* free_stack = find_free_pointer_stack(memory_allocator);
     if (free_stack == NULL) {

@@ -166,11 +166,11 @@ static inline void swiftnet_send_packet(
 
     const uint32_t mtu = MIN(target_maximum_transmission_unit, maximum_transmission_unit);
 
-    SwiftNetDebug(
+    #ifdef SWift_NET_DEBUG
         if (check_debug_flag(DEBUG_PACKETS_SENDING)) {
             send_debug_message("Sending packet: {\"destination_ip_address\": \"%s\", \"destination_port\": %d, \"packet_length\": %d}\n", inet_ntoa(target_addr->sin_addr), port_info.destination_port, packet_length);
         }
-    )
+    #endif
 
     if(packet_length > mtu) {
         SwiftNetPacketInfo packet_info = {
@@ -209,11 +209,11 @@ static inline void swiftnet_send_packet(
         for(uint32_t i = 0; ; i++) {
             const uint32_t current_offset = i * (mtu - PACKET_HEADER_SIZE);
 
-            SwiftNetDebug(
+            #ifdef SWIFT_NET_DEBUG
                 if (check_debug_flag(DEBUG_PACKETS_SENDING)) {
                     send_debug_message("Sent chunk: {\"chunk_index\": %d}\n", i);
                 }
-            )
+            #endif
 
             memcpy(&buffer[sizeof(struct ip) + offsetof(SwiftNetPacketInfo, chunk_index)], &i, SIZEOF_FIELD(SwiftNetPacketInfo, chunk_index));
             

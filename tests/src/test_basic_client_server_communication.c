@@ -30,7 +30,7 @@ void server_message_handler(SwiftNetServerPacketData* restrict const packet_data
     if(memcmp(data, message, packet_data->metadata.data_length) == 0) {
         SwiftNetPacketBuffer buffer = swiftnet_server_create_packet_buffer(strlen(message));
 
-        swiftnet_server_append_to_packet(server, message, strlen(message), &buffer);
+        swiftnet_server_append_to_packet(message, strlen(message), &buffer);
 
         swiftnet_server_send_packet(server, &buffer, packet_data->metadata.sender);
 
@@ -51,7 +51,7 @@ int main() {
 
     SwiftNetPacketBuffer buffer = swiftnet_client_create_packet_buffer(strlen(message));
 
-    swiftnet_client_append_to_packet(client, message, strlen(message), &buffer);
+    swiftnet_client_append_to_packet(message, strlen(message), &buffer);
 
     swiftnet_client_send_packet(client, &buffer);
 

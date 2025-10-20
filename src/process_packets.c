@@ -249,7 +249,7 @@ static inline void swiftnet_process_packets(
         uint8_t* restrict const packet_data = &packet_buffer[PACKET_HEADER_SIZE];
 
         // Check if user set a function that will execute with the packet data received as arg
-        SwiftNetErrorCheck(
+        #ifdef SWIFT_NET_ERROR
             void* packet_handler_derenfernced = atomic_load(packet_handler);
             if(unlikely(packet_handler_derenfernced == NULL)) {
                 allocator_free(&packet_queue_node_memory_allocator, (void*)node);
@@ -257,7 +257,7 @@ static inline void swiftnet_process_packets(
                 fprintf(stderr, "Message Handler not set!!\n");
                 continue;
             }
-        )
+        #endif
 
         struct ip ip_header;
         memcpy(&ip_header, packet_buffer, sizeof(ip_header));
@@ -280,11 +280,11 @@ static inline void swiftnet_process_packets(
 
         if(memcmp(&ip_header.ip_src, &ip_header.ip_dst, sizeof(struct in_addr)) != 0) {
             if(ip_header.ip_sum != 0 && packet_corrupted(checksum_received, node->data_read, packet_buffer) == true) {
-                SwiftNetDebug(
+                #ifdef SWIFT_NET_DEBUG
                     if (check_debug_flag(DEBUG_PACKETS_RECEIVING)) {
                         send_debug_message("Received corrupted packet: {\"source_ip_address\": \"%s\", \"source_port\": %d, \"packet_id\": %d}\n", inet_ntoa(ip_header.ip_src), packet_info.port_info.source_port, ip_header.ip_id);
                     }
-                )
+                #endif
 
                 allocator_free(&packet_buffer_memory_allocator, packet_buffer);
 
@@ -292,11 +292,11 @@ static inline void swiftnet_process_packets(
             }
         }
 
-        SwiftNetDebug(
+        #ifdef SWIFT_NET_DEBUG
             if (check_debug_flag(DEBUG_PACKETS_RECEIVING)) {
                 send_debug_message("Received packet: {\"source_ip_address\": \"%s\", \"source_port\": %d, \"packet_id\": %d, \"packet_type\": %d, \"packet_length\": %d, \"chunk_index\": %d}\n", inet_ntoa(ip_header.ip_src), packet_info.port_info.source_port, ip_header.ip_id, packet_info.packet_type, packet_info.packet_length, packet_info.chunk_index);
             }
-        )
+        #endif
 
         switch(packet_info.packet_type) {
             case PACKET_TYPE_REQUEST_INFORMATION:
@@ -529,7 +529,7 @@ static inline void swiftnet_process_packets(
 
                 chunk_received(pending_message->chunks_received, packet_info.chunk_index);
 
-                SwiftNetDebug(
+                #ifdef SWIFT_NET_DEBUG
                     uint32_t lost_chunks_buffer[mtu - PACKET_HEADER_SIZE];
 
                     const uint32_t lost_chunks_num = return_lost_chunk_indexes(pending_message->chunks_received, packet_info.chunk_amount, mtu - PACKET_HEADER_SIZE, (uint32_t*)lost_chunks_buffer);
@@ -541,7 +541,7 @@ static inline void swiftnet_process_packets(
                             printf("chunk index missing: %d\n", *(lost_chunks_buffer + i));  
                         }
                     }
-                )
+                #endif
 
                 packet_completed(ip_header.ip_id, packet_info.packet_length, packets_completed_history, packets_completed_history_memory_allocator);
 

@@ -37,7 +37,7 @@ void server_message_handler(SwiftNetServerPacketData* restrict const packet_data
     if (packet_data->data[0] == REQUEST_SEND_LARGE_PACKET) {
         SwiftNetPacketBuffer buffer = swiftnet_server_create_packet_buffer(DATA_TO_SEND);
 
-        swiftnet_server_append_to_packet(server, random_generated_data, DATA_TO_SEND, &buffer);
+        swiftnet_server_append_to_packet(random_generated_data, DATA_TO_SEND, &buffer);
 
         swiftnet_server_send_packet(server, &buffer, packet_data->metadata.sender);
 
@@ -70,7 +70,7 @@ int main() {
 
     SwiftNetPacketBuffer buffer = swiftnet_client_create_packet_buffer(sizeof(message));
 
-    swiftnet_client_append_to_packet(client, &message, sizeof(message), &buffer);
+    swiftnet_client_append_to_packet(&message, sizeof(message), &buffer);
 
     swiftnet_client_send_packet(client, &buffer);
 
