@@ -15,12 +15,12 @@
 SwiftNetServer* swiftnet_create_server(const uint16_t port) {
     SwiftNetServer* restrict const new_server = allocator_allocate(&server_memory_allocator);
 
-    SwiftNetErrorCheck(
+    #ifdef SWIFT_NET_ERROR
         if(unlikely(new_server == NULL)) {
             fprintf(stderr, "Failed to get an empty server\n");
             exit(EXIT_FAILURE);
         }
-    )
+    #endif
 
     new_server->server_port = port;
 
@@ -59,11 +59,11 @@ SwiftNetServer* swiftnet_create_server(const uint16_t port) {
     // Create a new thread that will handle all packets received
     pthread_create(&new_server->handle_packets_thread, NULL, swiftnet_server_handle_packets, new_server);
 
-    SwiftNetDebug(
+    #ifdef SWIFT_NET_DEBUG
         if (check_debug_flag(DEBUG_INITIALIZATION)) {
             send_debug_message("Successfully initialized server\n");
         }
-    )
+    #endif
 
     return new_server;
 }

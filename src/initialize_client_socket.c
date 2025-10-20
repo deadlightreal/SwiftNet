@@ -35,11 +35,11 @@ void* request_server_information(void* request_server_information_args_void) {
             return NULL;
         }
 
-        SwiftNetDebug(
+        #ifdef SWIFT_NET_DEBUG
             if (check_debug_flag(DEBUG_INITIALIZATION)) {
                 send_debug_message("Requested server information: {\"server_ip_address\": \"%s\"}\n", inet_ntoa(request_server_information_args->server_addr.sin_addr));
             }
-        )
+        #endif
 
         sendto(request_server_information_args->sockfd, request_server_information_args->data, request_server_information_args->size, 0, (struct sockaddr *)&request_server_information_args->server_addr, request_server_information_args->server_addr_len);
 
@@ -125,11 +125,11 @@ SwiftNetClientConnection* swiftnet_create_client(const char* const restrict ip_a
     while(1) {
         const int bytes_received = recvfrom(new_connection->sockfd, server_information_buffer, sizeof(server_information_buffer), 0x00, NULL, NULL);
         if(bytes_received != PACKET_HEADER_SIZE) {
-            SwiftNetDebug(
+            #ifdef SWIFT_NET_DEBUG
                 if (check_debug_flag(DEBUG_INITIALIZATION)) {
                     send_debug_message("Invalid packet received from server. Expected server information: {\"bytes_received\": %d, \"expected_bytes\": %d}\n", bytes_received, PACKET_HEADER_SIZE + sizeof(SwiftNetServerInformation));
                 }
-            )
+            #endif
 
             continue;
         }
@@ -139,21 +139,21 @@ SwiftNetClientConnection* swiftnet_create_client(const char* const restrict ip_a
         const SwiftNetPacketInfo* const restrict packet_info = (SwiftNetPacketInfo *)&server_information_buffer[sizeof(struct ip)];
 
         if(packet_info->port_info.destination_port != new_connection->port_info.source_port || packet_info->port_info.source_port != new_connection->port_info.destination_port) {
-            SwiftNetDebug(
+            #ifdef SWIFT_NET_DEBUG
                 if (check_debug_flag(DEBUG_INITIALIZATION)) {
                     send_debug_message("Port info does not match: {\"destination_port\": %d, \"source_port\": %d, \"source_ip_address\": \"%s\"}\n", packet_info->port_info.destination_port, packet_info->port_info.source_port, inet_ntoa(ip_header->ip_src));
                 }
-            )
+            #endif
 
             continue;
         }
 
         if(packet_info->packet_type != PACKET_TYPE_REQUEST_INFORMATION) {
-            SwiftNetDebug(
+            #ifdef SWIFT_NET_DEBUG
                 if (check_debug_flag(DEBUG_INITIALIZATION)) {
                     send_debug_message("Invalid packet type: {\"packet_type\": %d}\n", packet_info->packet_type);
                 }
-            )
+            #endif
             continue;
         }
             
@@ -181,11 +181,11 @@ SwiftNetClientConnection* swiftnet_create_client(const char* const restrict ip_a
 
     pthread_create(&new_connection->handle_packets_thread, NULL, swiftnet_client_handle_packets, new_connection);
 
-    SwiftNetDebug(
+    #ifdef SWIFT_NET_DEBUG
         if (check_debug_flag(DEBUG_INITIALIZATION)) {
             send_debug_message("Successfully initialized client\n");
         }
-    )
+    #endif
 
     return new_connection;
 }

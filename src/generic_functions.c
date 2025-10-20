@@ -6,12 +6,12 @@
 // Set the handler for incoming packets/messages on the server or client
 
 static inline void swiftnet_validate_new_handler(void* new_handler, const char* const restrict caller) {
-    SwiftNetErrorCheck(
+    #ifdef SWIFT_NET_ERROR
         if(unlikely(new_handler == NULL)) {
             fprintf(stderr, "Error: Invalid arguments given to function: %s\n", caller);
             exit(EXIT_FAILURE);
         }
-    )
+    #endif
 }
 
 void swiftnet_client_set_message_handler(SwiftNetClientConnection* client, void (*new_handler)(SwiftNetClientPacketData* restrict const)) {

@@ -8,9 +8,9 @@
 #include "internal/internal.h"
 #include <unistd.h>
 
-SwiftNetDebug(
+#ifdef SWIFT_NET_DEBUG
     SwiftNetDebugger debugger = {.flags = 0};
-)
+#endif
 
 uint32_t maximum_transmission_unit = 0x00;
 struct in_addr private_ip_address;
