@@ -80,5 +80,11 @@ void swiftnet_initialize() {
     client_connection_memory_allocator = allocator_create(sizeof(SwiftNetClientConnection), 10);
     pending_message_memory_allocator = allocator_create(sizeof(SwiftNetPendingMessage), 100);
 
+    #ifdef SWIFT_NET_REQUESTS
+        requests_sent_memory_allocator = allocator_create(sizeof(RequestSent), 100);
+
+        requests_sent = vector_create(100);
+    #endif
+
     return;
 }

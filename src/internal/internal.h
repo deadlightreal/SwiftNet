@@ -138,6 +138,33 @@ void vector_push(SwiftNetVector* vector, void* data);
 void vector_destroy(volatile SwiftNetVector* const vector);
 SwiftNetVector vector_create(const uint32_t starting_amount);
 
+#ifdef SWIFT_NET_REQUESTS
+    typedef struct {
+        uint16_t packet_id;
+        in_addr_t address;
+        void* packet_data;
+    } RequestSent;
+
+    extern SwiftNetMemoryAllocator requests_sent_memory_allocator;
+    extern SwiftNetVector requests_sent;
+#endif
+
+extern void swiftnet_send_packet(const void* restrict const connection,
+    const uint32_t target_maximum_transmission_unit,
+    const SwiftNetPortInfo port_info,
+    const volatile SwiftNetPacketBuffer* const packet,
+    const uint32_t packet_length,
+    const struct sockaddr_in* restrict const target_addr,
+    const socklen_t* restrict const target_addr_len,
+    volatile SwiftNetVector* const packets_sending,
+    volatile SwiftNetMemoryAllocator* const packets_sending_memory_allocator,
+    const int sockfd
+    #ifdef SWIFT_NET_REQUESTS
+        , volatile RequestSent* const request_sent
+        , const bool response
+    #endif
+);
+
 static struct ip construct_ip_header(struct in_addr destination_addr, const uint32_t packet_size, const uint16_t packet_id) {
     struct ip ip_header = {
         .ip_v = 4, // Version (ipv4)
