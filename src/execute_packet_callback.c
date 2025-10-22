@@ -33,7 +33,7 @@ volatile PacketCallbackQueueNode* wait_for_next_packet_callback(PacketCallbackQu
     return node_to_process;
 }
 
-void execute_packet_callback(PacketCallbackQueue* restrict const queue, void (* const _Atomic * const packet_handler) (void* const restrict), const uint8_t connection_type, volatile SwiftNetMemoryAllocator* const pending_message_memory_allocator) {
+void execute_packet_callback(PacketCallbackQueue* restrict const queue, void (* const _Atomic * const packet_handler) (void* const restrict), const uint8_t connection_type, volatile SwiftNetMemoryAllocator* const pending_message_memory_allocator, const volatile void* const connection) {
     while (1) {
         const volatile PacketCallbackQueueNode* const node = wait_for_next_packet_callback(queue);
         if(node == NULL) {
@@ -47,7 +47,43 @@ void execute_packet_callback(PacketCallbackQueue* restrict const queue, void (* 
 
         void (*const packet_handler_loaded)(void*) = atomic_load(packet_handler);
 
-        (*packet_handler_loaded)(node->packet_data);
+        #ifdef SWIFT_NET_REQUESTS
+            bool is_valid_response = false;
+
+            if (node->request_response == true) {
+                for (uint32_t i = 0; i < requests_sent.size; i++) {
+                    RequestSent* current_request_sent = vector_get(&requests_sent, i);
+                    if (current_request_sent == NULL) {
+                        continue;
+                    }
+
+                    in_addr_t sender;
+                    if (connection_type == 0) {
+                        sender = ((SwiftNetClientConnection*)connection)->server_addr.sin_addr.s_addr;
+                    } else {
+                        sender = ((SwiftNetServerPacketData*)node->packet_data)->metadata.sender.sender_address.sin_addr.s_addr;
+                    }
+
+                    if (current_request_sent->packet_id == node->packet_id && current_request_sent->address && sender == current_request_sent->address) {
+                        current_request_sent->packet_data = node->packet_data;
+
+                        is_valid_response = true;
+
+                        break;
+                    }
+                }
+
+                if (is_valid_response == true) {
+                    free(node->pending_message->chunks_received);
+
+                    return;
+                }
+            } else {
+                (*packet_handler_loaded)(node->packet_data);
+            }
+        #else
+            (*packet_handler_loaded)(node->packet_data);
+        #endif
 
         if(node->pending_message != NULL) {
             free(node->pending_message->chunks_received);

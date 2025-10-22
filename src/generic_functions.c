@@ -1,3 +1,4 @@
+#include "internal/internal.h"
 #include "swift_net.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -54,4 +55,12 @@ void* swiftnet_server_read_packet(SwiftNetServerPacketData* const restrict packe
     packet_data->current_pointer += data_size;
 
     return ptr;
+}
+
+void swiftnet_client_destory_packet_data(SwiftNetClientPacketData* packet_data) {
+    allocator_free(&client_packet_data_memory_allocator, packet_data);
+}
+
+void swiftnet_server_destory_packet_data(SwiftNetServerPacketData* packet_data) {
+    allocator_free(&server_packet_data_memory_allocator, packet_data);
 }

@@ -119,11 +119,20 @@ static inline void insert_callback_queue_node(PacketCallbackQueueNode* const res
     return;
 }
 
-static inline void pass_callback_execution(void* restrict const packet_data, PacketCallbackQueue* restrict const queue, SwiftNetPendingMessage* restrict const pending_message) {
+static inline void pass_callback_execution(void* restrict const packet_data, PacketCallbackQueue* restrict const queue, SwiftNetPendingMessage* restrict const pending_message, const uint16_t packet_id
+    #ifdef SWIFT_NET_REQUESTS
+    , const bool request_response
+    #endif
+) {
     PacketCallbackQueueNode* node = allocator_allocate(&packet_callback_queue_node_memory_allocator);
     node->packet_data = packet_data;
     node->next = NULL;
     node->pending_message = pending_message;
+    node->packet_id = packet_id;
+
+    #ifdef SWIFT_NET_REQUESTS
+        node->request_response = request_response;
+    #endif
 
     insert_callback_queue_node(node, queue);
 }
@@ -501,7 +510,11 @@ static inline void swiftnet_process_packets(
                         .data_length = packet_info.packet_length
                     };
 
-                    pass_callback_execution(packet_data, packet_callback_queue, NULL);
+                    pass_callback_execution(packet_data, packet_callback_queue, NULL, packet_info.packet_length
+                    #ifdef SWIFT_NET_REQUESTS
+                        , packet_info.request_response
+                    #endif
+                    );
                 } else {
                     uint8_t* ptr = packet_buffer + PACKET_HEADER_SIZE;
 
@@ -557,7 +570,11 @@ static inline void swiftnet_process_packets(
                         .data_length = packet_info.packet_length
                     };
 
+                    #ifdef SWIFT_NET_REQUESTS
+                    pass_callback_execution(packet_data, packet_callback_queue, (SwiftNetPendingMessage* restrict const)pending_message, packet_info.request_response);
+                    #else
                     pass_callback_execution(packet_data, packet_callback_queue, (SwiftNetPendingMessage* restrict const)pending_message);
+                    #endif
                 } else {
                     uint8_t* ptr = pending_message->packet_data_start;
 

@@ -46,6 +46,9 @@ static inline void handle_lost_packets(
     const uint16_t destination_port,
     volatile SwiftNetMemoryAllocator* const packets_sending_memory_allocator,
     volatile SwiftNetVector* const packets_sending
+    #ifdef SWIFT_NET_REQUESTS
+        , const bool response
+    #endif
 ) {
     const SwiftNetPortInfo port_info = {
         .source_port = source_port,
@@ -60,6 +63,9 @@ static inline void handle_lost_packets(
         .packet_length = 0x00,
         .maximum_transmission_unit = mtu,
         .chunk_index = 0
+        #ifdef SWIFT_NET_REQUESTS
+        , .request_response = false
+        #endif
     };
 
     uint8_t request_lost_packets_buffer[PACKET_HEADER_SIZE];
@@ -80,6 +86,9 @@ static inline void handle_lost_packets(
         .packet_length = packet_length,
         .chunk_amount = chunk_amount,
         .maximum_transmission_unit = maximum_transmission_unit
+        #ifdef SWIFT_NET_REQUESTS
+        , .request_response = response
+        #endif
     };
  
     const struct ip resend_chunk_ip_header = construct_ip_header(destination_address->sin_addr, mtu, packet_sending->packet_id);
@@ -150,7 +159,7 @@ static inline void handle_lost_packets(
     }
 }
 
-static inline void swiftnet_send_packet(
+extern inline void swiftnet_send_packet(
     const void* restrict const connection,
     const uint32_t target_maximum_transmission_unit,
     const SwiftNetPortInfo port_info,
@@ -161,14 +170,26 @@ static inline void swiftnet_send_packet(
     volatile SwiftNetVector* const packets_sending,
     volatile SwiftNetMemoryAllocator* const packets_sending_memory_allocator,
     const int sockfd
+    #ifdef SWIFT_NET_REQUESTS
+        , volatile RequestSent* const request_sent
+        , const bool response
+    #endif
 ) {
     const uint16_t packet_id = rand();
 
     const uint32_t mtu = MIN(target_maximum_transmission_unit, maximum_transmission_unit);
 
-    #ifdef SWift_NET_DEBUG
+    #ifdef SWIFT_NET_DEBUG
         if (check_debug_flag(DEBUG_PACKETS_SENDING)) {
             send_debug_message("Sending packet: {\"destination_ip_address\": \"%s\", \"destination_port\": %d, \"packet_length\": %d}\n", inet_ntoa(target_addr->sin_addr), port_info.destination_port, packet_length);
+        }
+    #endif
+
+    #ifdef SWIFT_NET_REQUESTS
+        if (request_sent != NULL) {
+            request_sent->packet_id = packet_id;
+
+            vector_push(&requests_sent, (void*)request_sent);
         }
     #endif
 
@@ -179,6 +200,9 @@ static inline void swiftnet_send_packet(
             .packet_length = packet_length,
             .maximum_transmission_unit = maximum_transmission_unit,
             .chunk_index = 0
+            #ifdef SWIFT_NET_REQUESTS
+                , .request_response = response
+            #endif
         };
 
         const struct ip ip_header = construct_ip_header(target_addr->sin_addr, mtu, packet_id);
@@ -232,7 +256,11 @@ static inline void swiftnet_send_packet(
 
                 sendto(sockfd, buffer, bytes_to_send, 0x00, (const struct sockaddr *)target_addr, *target_addr_len);
 
-                handle_lost_packets(new_packet_sending, mtu, packet, sockfd, target_addr, target_addr_len, port_info.source_port, port_info.destination_port, packets_sending_memory_allocator, packets_sending);
+                handle_lost_packets(new_packet_sending, mtu, packet, sockfd, target_addr, target_addr_len, port_info.source_port, port_info.destination_port, packets_sending_memory_allocator, packets_sending
+                #ifdef SWIFT_NET_REQUESTS
+                    , response
+                #endif
+                );
                 
                 break;
             } else {
@@ -253,7 +281,10 @@ static inline void swiftnet_send_packet(
             .port_info = port_info,
             .packet_length = packet_length,
             .maximum_transmission_unit = maximum_transmission_unit,
-            .chunk_amount = 1,
+            .chunk_amount = 1
+            #ifdef SWIFT_NET_REQUESTS
+            , .request_response = response
+            #endif
         };
 
         const struct ip ip_header = construct_ip_header(target_addr->sin_addr, final_packet_size, packet_id);
@@ -272,7 +303,11 @@ static inline void swiftnet_send_packet(
 void swiftnet_client_send_packet(SwiftNetClientConnection* restrict const client, SwiftNetPacketBuffer* restrict const packet) {
     const uint32_t packet_length = packet->packet_append_pointer - packet->packet_data_start;
 
-    swiftnet_send_packet(client, client->maximum_transmission_unit, client->port_info, packet, packet_length, &client->server_addr, &client->server_addr_len, &client->packets_sending, &client->packets_sending_memory_allocator, client->sockfd);
+    swiftnet_send_packet(client, client->maximum_transmission_unit, client->port_info, packet, packet_length, &client->server_addr, &client->server_addr_len, &client->packets_sending, &client->packets_sending_memory_allocator, client->sockfd
+    #ifdef SWIFT_NET_REQUESTS
+        , NULL, false
+    #endif
+    );
 }
 
 void swiftnet_server_send_packet(SwiftNetServer* restrict const server, SwiftNetPacketBuffer* restrict const packet, const SwiftNetClientAddrData target) {
@@ -283,5 +318,9 @@ void swiftnet_server_send_packet(SwiftNetServer* restrict const server, SwiftNet
         .source_port = server->server_port
     };
 
-    swiftnet_send_packet(server, target.maximum_transmission_unit, port_info, packet, packet_length, &target.sender_address, &target.sender_address_length, &server->packets_sending, &server->packets_sending_memory_allocator, server->sockfd);
+    swiftnet_send_packet(server, target.maximum_transmission_unit, port_info, packet, packet_length, &target.sender_address, &target.sender_address_length, &server->packets_sending, &server->packets_sending_memory_allocator, server->sockfd
+    #ifdef SWIFT_NET_REQUESTS
+        , NULL, false
+    #endif
+    );
 }

@@ -32,6 +32,9 @@
     #define SWIFT_NET_ERROR
 #endif
 
+#ifndef SWIFT_NET_DISABLE_REQUESTS
+    #define SWIFT_NET_REQUESTS
+#endif
 
 #ifndef SWIFT_NET_DISABLE_DEBUGGING
     #define SWIFT_NET_DEBUG
@@ -81,6 +84,9 @@ typedef struct {
     uint32_t chunk_amount;
     uint32_t chunk_index;
     uint32_t maximum_transmission_unit;
+    #ifdef SWIFT_NET_REQUESTS
+        bool request_response;
+    #endif
 } SwiftNetPacketInfo;
 
 typedef struct {
@@ -137,6 +143,10 @@ typedef struct PacketCallbackQueueNode PacketCallbackQueueNode;
 struct PacketCallbackQueueNode {
     void* packet_data;
     SwiftNetPendingMessage* pending_message;
+    uint16_t packet_id;
+    #ifdef SWIFT_NET_REQUESTS
+    bool request_response;
+    #endif
     PacketCallbackQueueNode* next;
 };
 
@@ -248,8 +258,15 @@ extern SwiftNetServer* swiftnet_create_server(const uint16_t port);
 extern SwiftNetClientConnection* swiftnet_create_client(const char* const restrict ip_address, const uint16_t port);
 extern void* swiftnet_client_read_packet(SwiftNetClientPacketData* restrict const packet_data, const uint32_t data_size);
 extern void* swiftnet_server_read_packet(SwiftNetServerPacketData* restrict const packet_data, const uint32_t data_size);
+extern void swiftnet_client_destory_packet_data(SwiftNetClientPacketData* packet_data);
+extern void swiftnet_server_destory_packet_data(SwiftNetServerPacketData* packet_data);
 
 extern void swiftnet_cleanup();
+
+#ifdef SWIFT_NET_REQUESTS
+    extern SwiftNetClientPacketData* swiftnet_client_make_request(SwiftNetClientConnection* restrict const client, SwiftNetPacketBuffer* restrict const packet);
+    extern SwiftNetServerPacketData* swiftnet_server_make_request(SwiftNetServer* restrict const server, SwiftNetPacketBuffer* restrict const packet, const SwiftNetClientAddrData addr_data);
+#endif
 
 #ifdef SWIFT_NET_DEBUG
     extern void swiftnet_add_debug_flags(const uint32_t flags);
