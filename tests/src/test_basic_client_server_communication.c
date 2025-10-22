@@ -62,5 +62,7 @@ int main() {
     swiftnet_server_cleanup(server);
     swiftnet_client_cleanup(client);
 
+    swiftnet_cleanup();
+
     return -1;
 }

@@ -81,6 +81,8 @@ int main() {
     swiftnet_server_cleanup(server);
     swiftnet_client_cleanup(client);
 
+    swiftnet_cleanup();
+
     free(random_generated_data);
 
     return EXIT_FAILURE;

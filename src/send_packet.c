@@ -173,10 +173,9 @@ extern inline void swiftnet_send_packet(
     #ifdef SWIFT_NET_REQUESTS
         , volatile RequestSent* const request_sent
         , const bool response
+        , const uint16_t request_packet_id
     #endif
 ) {
-    const uint16_t packet_id = rand();
-
     const uint32_t mtu = MIN(target_maximum_transmission_unit, maximum_transmission_unit);
 
     #ifdef SWIFT_NET_DEBUG
@@ -186,11 +185,20 @@ extern inline void swiftnet_send_packet(
     #endif
 
     #ifdef SWIFT_NET_REQUESTS
+        uint16_t packet_id;
+        if (response == true) {
+            packet_id = request_packet_id;
+        } else {
+            packet_id = rand();
+        }
+
         if (request_sent != NULL) {
             request_sent->packet_id = packet_id;
 
             vector_push(&requests_sent, (void*)request_sent);
         }
+    #else
+        const uint16_t packet_id = rand();
     #endif
 
     if(packet_length > mtu) {
@@ -305,7 +313,7 @@ void swiftnet_client_send_packet(SwiftNetClientConnection* restrict const client
 
     swiftnet_send_packet(client, client->maximum_transmission_unit, client->port_info, packet, packet_length, &client->server_addr, &client->server_addr_len, &client->packets_sending, &client->packets_sending_memory_allocator, client->sockfd
     #ifdef SWIFT_NET_REQUESTS
-        , NULL, false
+        , NULL, false, 0
     #endif
     );
 }
@@ -320,7 +328,7 @@ void swiftnet_server_send_packet(SwiftNetServer* restrict const server, SwiftNet
 
     swiftnet_send_packet(server, target.maximum_transmission_unit, port_info, packet, packet_length, &target.sender_address, &target.sender_address_length, &server->packets_sending, &server->packets_sending_memory_allocator, server->sockfd
     #ifdef SWIFT_NET_REQUESTS
-        , NULL, false
+        , NULL, false, 0
     #endif
     );
 }

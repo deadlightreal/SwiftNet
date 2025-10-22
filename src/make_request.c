@@ -12,7 +12,7 @@ SwiftNetClientPacketData* swiftnet_client_make_request(SwiftNetClientConnection*
 
     const uint32_t packet_length = packet->packet_append_pointer - packet->packet_data_start;
 
-    swiftnet_send_packet(client, client->maximum_transmission_unit, client->port_info, packet, packet_length, &client->server_addr, &client->server_addr_len, &client->packets_sending, &client->packets_sending_memory_allocator, client->sockfd, request_sent, false);
+    swiftnet_send_packet(client, client->maximum_transmission_unit, client->port_info, packet, packet_length, &client->server_addr, &client->server_addr_len, &client->packets_sending, &client->packets_sending_memory_allocator, client->sockfd, request_sent, false, 0);
 
     while (1) {
         if (request_sent->packet_data != NULL) {
@@ -37,7 +37,7 @@ SwiftNetServerPacketData* swiftnet_server_make_request(SwiftNetServer* restrict 
         .source_port = server->server_port
     };
 
-    swiftnet_send_packet(server, addr_data.maximum_transmission_unit, port_info, packet, packet_length, &addr_data.sender_address, &addr_data.sender_address_length, &server->packets_sending, &server->packets_sending_memory_allocator, server->sockfd, request_sent, false);
+    swiftnet_send_packet(server, addr_data.maximum_transmission_unit, port_info, packet, packet_length, &addr_data.sender_address, &addr_data.sender_address_length, &server->packets_sending, &server->packets_sending_memory_allocator, server->sockfd, request_sent, false, 0);
 
     while (1) {
         if (request_sent->packet_data != NULL) {
