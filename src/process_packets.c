@@ -507,10 +507,11 @@ static inline void swiftnet_process_packets(
                     packet_data->metadata = (SwiftNetPacketServerMetadata){
                         .port_info = packet_info.port_info,
                         .sender = sender,
-                        .data_length = packet_info.packet_length
+                        .data_length = packet_info.packet_length,
+                        .packet_id = ip_header.ip_id
                     };
 
-                    pass_callback_execution(packet_data, packet_callback_queue, NULL, packet_info.packet_length
+                    pass_callback_execution(packet_data, packet_callback_queue, NULL, ip_header.ip_id
                     #ifdef SWIFT_NET_REQUESTS
                         , packet_info.request_response
                     #endif
@@ -523,10 +524,15 @@ static inline void swiftnet_process_packets(
                     packet_data->current_pointer = ptr;
                     packet_data->metadata = (SwiftNetPacketClientMetadata){
                         .port_info = packet_info.port_info,
-                        .data_length = packet_info.packet_length
+                        .data_length = packet_info.packet_length,
+                        .packet_id = ip_header.ip_id
                     };
 
-                    pass_callback_execution(packet_data, packet_callback_queue, NULL);
+                    pass_callback_execution(packet_data, packet_callback_queue, NULL, ip_header.ip_id
+                    #ifdef SWIFT_NET_REQUESTS
+                        , packet_info.request_response
+                    #endif
+                    );
                 }
 
                 goto next_packet;
@@ -567,13 +573,14 @@ static inline void swiftnet_process_packets(
                     packet_data->metadata = (SwiftNetPacketServerMetadata){
                         .port_info = packet_info.port_info,
                         .sender = sender,
-                        .data_length = packet_info.packet_length
+                        .data_length = packet_info.packet_length,
+                        .packet_id = ip_header.ip_id
                     };
 
                     #ifdef SWIFT_NET_REQUESTS
-                    pass_callback_execution(packet_data, packet_callback_queue, (SwiftNetPendingMessage* restrict const)pending_message, packet_info.request_response);
+                    pass_callback_execution(packet_data, packet_callback_queue, (SwiftNetPendingMessage* restrict const)pending_message, ip_header.ip_id, packet_info.request_response);
                     #else
-                    pass_callback_execution(packet_data, packet_callback_queue, (SwiftNetPendingMessage* restrict const)pending_message);
+                    pass_callback_execution(packet_data, packet_callback_queue, (SwiftNetPendingMessage* restrict const)pending_message, ip_header.ip_id);
                     #endif
                 } else {
                     uint8_t* ptr = pending_message->packet_data_start;
@@ -583,10 +590,15 @@ static inline void swiftnet_process_packets(
                     packet_data->current_pointer = ptr;
                     packet_data->metadata = (SwiftNetPacketClientMetadata){
                         .port_info = packet_info.port_info,
-                        .data_length = packet_info.packet_length
+                        .data_length = packet_info.packet_length,
+                        .packet_id = ip_header.ip_id
                     };
 
-                    pass_callback_execution(packet_data, packet_callback_queue, (SwiftNetPendingMessage* restrict const)pending_message);
+                    pass_callback_execution(packet_data, packet_callback_queue, (SwiftNetPendingMessage* restrict const)pending_message, ip_header.ip_id
+                    #ifdef SWIFT_NET_REQUESTS
+                    , packet_info.request_response
+                    #endif
+                    );
                 }
 
                 allocator_free(&packet_buffer_memory_allocator, packet_buffer);

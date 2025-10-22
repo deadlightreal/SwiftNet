@@ -69,12 +69,14 @@ typedef struct {
 typedef struct {
     uint32_t data_length;
     SwiftNetPortInfo port_info;
+    uint16_t packet_id;
 } SwiftNetPacketClientMetadata;
 
 typedef struct {
     uint32_t data_length;
     SwiftNetPortInfo port_info;
     SwiftNetClientAddrData sender;
+    uint16_t packet_id;
 } SwiftNetPacketServerMetadata;
 
 typedef struct {
@@ -266,6 +268,9 @@ extern void swiftnet_cleanup();
 #ifdef SWIFT_NET_REQUESTS
     extern SwiftNetClientPacketData* swiftnet_client_make_request(SwiftNetClientConnection* restrict const client, SwiftNetPacketBuffer* restrict const packet);
     extern SwiftNetServerPacketData* swiftnet_server_make_request(SwiftNetServer* restrict const server, SwiftNetPacketBuffer* restrict const packet, const SwiftNetClientAddrData addr_data);
+
+    extern void swiftnet_client_make_response(SwiftNetClientConnection* client, SwiftNetClientPacketData* packet_data, SwiftNetPacketBuffer* buffer);
+    extern void swiftnet_server_make_response(SwiftNetServer* server, SwiftNetServerPacketData* packet_data, SwiftNetPacketBuffer* buffer);
 #endif
 
 #ifdef SWIFT_NET_DEBUG

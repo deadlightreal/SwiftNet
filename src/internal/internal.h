@@ -162,6 +162,7 @@ extern void swiftnet_send_packet(const void* restrict const connection,
     #ifdef SWIFT_NET_REQUESTS
         , volatile RequestSent* const request_sent
         , const bool response
+        , const uint16_t request_packet_id
     #endif
 );
 

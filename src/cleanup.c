@@ -8,4 +8,10 @@ void swiftnet_cleanup() {
     allocator_destroy(&client_packet_data_memory_allocator);
     allocator_destroy(&packet_buffer_memory_allocator);
     allocator_destroy(&server_memory_allocator);
+
+    #ifdef SWIFT_NET_REQUESTS
+        allocator_destroy(&requests_sent_memory_allocator);
+
+        vector_destroy(&requests_sent);
+    #endif
 }

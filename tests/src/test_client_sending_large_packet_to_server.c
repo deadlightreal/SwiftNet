@@ -75,5 +75,7 @@ int main() {
 
     free(random_generated_data);
 
+    swiftnet_cleanup();
+
     return EXIT_FAILURE;
 }

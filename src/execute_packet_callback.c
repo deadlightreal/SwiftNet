@@ -50,9 +50,12 @@ void execute_packet_callback(PacketCallbackQueue* restrict const queue, void (* 
         #ifdef SWIFT_NET_REQUESTS
             bool is_valid_response = false;
 
+            printf("request response: %d\n", node->request_response);
+
             if (node->request_response == true) {
                 for (uint32_t i = 0; i < requests_sent.size; i++) {
                     RequestSent* current_request_sent = vector_get(&requests_sent, i);
+
                     if (current_request_sent == NULL) {
                         continue;
                     }
@@ -64,7 +67,19 @@ void execute_packet_callback(PacketCallbackQueue* restrict const queue, void (* 
                         sender = ((SwiftNetServerPacketData*)node->packet_data)->metadata.sender.sender_address.sin_addr.s_addr;
                     }
 
-                    if (current_request_sent->packet_id == node->packet_id && current_request_sent->address && sender == current_request_sent->address) {
+                    printf("current response id: %d\npacket id: %d\nsender: %d\ncurrent response sender: %d\n", current_request_sent->packet_id, node->packet_id, sender, current_request_sent->address);
+                    if (current_request_sent->packet_id == node->packet_id) {
+                        const in_addr_t first_byte = (sender >> 0) & 0xFF;
+                        const in_addr_t second_byte = (sender >> 8) & 0xFF;
+
+                        printf("%d %d\n", first_byte, second_byte);
+
+                        if ((first_byte != 127) && !(first_byte == 192 && second_byte == 168)) {
+                            if (current_request_sent->address != sender) {
+                                continue;
+                            }
+                        }
+
                         current_request_sent->packet_data = node->packet_data;
 
                         is_valid_response = true;
@@ -74,7 +89,9 @@ void execute_packet_callback(PacketCallbackQueue* restrict const queue, void (* 
                 }
 
                 if (is_valid_response == true) {
-                    free(node->pending_message->chunks_received);
+                    if (node->pending_message != NULL) {
+                        free(node->pending_message->chunks_received);
+                    }
 
                     return;
                 }
@@ -111,7 +128,7 @@ void execute_packet_callback(PacketCallbackQueue* restrict const queue, void (* 
 void* execute_packet_callback_client(void* void_client) {
     SwiftNetClientConnection* client = void_client;
 
-    execute_packet_callback(&client->packet_callback_queue, (void*)&client->packet_handler, 0, &client->pending_messages_memory_allocator);
+    execute_packet_callback(&client->packet_callback_queue, (void*)&client->packet_handler, 0, &client->pending_messages_memory_allocator, void_client);
 
     return NULL;
 }
@@ -119,7 +136,7 @@ void* execute_packet_callback_client(void* void_client) {
 void* execute_packet_callback_server(void* void_server) {
     SwiftNetServer* server = void_server;
 
-    execute_packet_callback(&server->packet_callback_queue, (void*)&server->packet_handler, 1, &server->pending_messages_memory_allocator);
+    execute_packet_callback(&server->packet_callback_queue, (void*)&server->packet_handler, 1, &server->pending_messages_memory_allocator, void_server);
 
     return NULL;
 }

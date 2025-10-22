@@ -18,6 +18,8 @@ set(SOURCE_FILES
     add_debug_flags.c
     destroy_packet_buffer.c
     cleanup.c
+    make_response.c
+    make_request.c
     internal/get_mtu.c
     internal/get_default_interface.c
     internal/datatype_allocator.c
