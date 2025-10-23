@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-volatile PacketCallbackQueueNode* wait_for_next_packet_callback(PacketCallbackQueue* restrict const packet_queue) {
+volatile PacketCallbackQueueNode* wait_for_next_packet_callback(volatile PacketCallbackQueue* const packet_queue) {
     uint32_t owner_none = PACKET_CALLBACK_QUEUE_OWNER_NONE;
     while(!atomic_compare_exchange_strong(&packet_queue->owner, &owner_none, PACKET_CALLBACK_QUEUE_OWNER_EXECUTE_PACKET_CALLBACK)) {
         owner_none = PACKET_CALLBACK_QUEUE_OWNER_NONE;
@@ -14,6 +14,8 @@ volatile PacketCallbackQueueNode* wait_for_next_packet_callback(PacketCallbackQu
         atomic_store(&packet_queue->owner, PACKET_CALLBACK_QUEUE_OWNER_NONE);
         return NULL;
     }
+
+    printf("found node\n");
 
     volatile PacketCallbackQueueNode* const node_to_process = packet_queue->first_node;
 
@@ -33,12 +35,14 @@ volatile PacketCallbackQueueNode* wait_for_next_packet_callback(PacketCallbackQu
     return node_to_process;
 }
 
-void execute_packet_callback(PacketCallbackQueue* restrict const queue, void (* const _Atomic * const packet_handler) (void* const restrict), const uint8_t connection_type, volatile SwiftNetMemoryAllocator* const pending_message_memory_allocator, const volatile void* const connection) {
+void execute_packet_callback(volatile PacketCallbackQueue* const queue, void (* const _Atomic * const packet_handler) (void* const restrict), const uint8_t connection_type, volatile SwiftNetMemoryAllocator* const pending_message_memory_allocator, const volatile void* const connection) {
     while (1) {
         const volatile PacketCallbackQueueNode* const node = wait_for_next_packet_callback(queue);
         if(node == NULL) {
             continue;
         }
+
+        printf("executing callback\n");
 
         if(node->packet_data == NULL) {
             allocator_free(&packet_callback_queue_node_memory_allocator, (void*)node);

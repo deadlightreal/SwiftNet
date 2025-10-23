@@ -97,6 +97,8 @@ static inline void insert_callback_queue_node(PacketCallbackQueueNode* const res
         return;
     }
 
+    printf("not null node\n");
+
     uint32_t owner_none = PACKET_CALLBACK_QUEUE_OWNER_NONE;
     while(!atomic_compare_exchange_strong(&packet_queue->owner, &owner_none, PACKET_CALLBACK_QUEUE_OWNER_PROCESS_PACKETS)) {
         owner_none = PACKET_CALLBACK_QUEUE_OWNER_NONE;
@@ -124,11 +126,15 @@ static inline void pass_callback_execution(void* restrict const packet_data, Pac
     , const bool request_response
     #endif
 ) {
+    printf("passing callback\n");
+
     PacketCallbackQueueNode* node = allocator_allocate(&packet_callback_queue_node_memory_allocator);
     node->packet_data = packet_data;
     node->next = NULL;
     node->pending_message = pending_message;
     node->packet_id = packet_id;
+
+    printf("node p: %p\n", node);
 
     #ifdef SWIFT_NET_REQUESTS
         node->request_response = request_response;
@@ -466,6 +472,8 @@ static inline void swiftnet_process_packets(
             }
         }
 
+        printf("packet not dropped\n");
+
         node->sender_address.sin_port = packet_info.port_info.source_port;
 
         const SwiftNetClientAddrData sender = {
@@ -577,11 +585,11 @@ static inline void swiftnet_process_packets(
                         .packet_id = ip_header.ip_id
                     };
 
+                    pass_callback_execution(packet_data, packet_callback_queue, (SwiftNetPendingMessage* restrict const)pending_message, ip_header.ip_id
                     #ifdef SWIFT_NET_REQUESTS
-                    pass_callback_execution(packet_data, packet_callback_queue, (SwiftNetPendingMessage* restrict const)pending_message, ip_header.ip_id, packet_info.request_response);
-                    #else
-                    pass_callback_execution(packet_data, packet_callback_queue, (SwiftNetPendingMessage* restrict const)pending_message, ip_header.ip_id);
+                        , packet_info.request_response
                     #endif
+                    );
                 } else {
                     uint8_t* ptr = pending_message->packet_data_start;
 

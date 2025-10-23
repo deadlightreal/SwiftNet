@@ -79,6 +79,6 @@ int main() {
 
         swiftnet_cleanup();
 
-        return 0;
+        exit(EXIT_FAILURE);
     }
 }
