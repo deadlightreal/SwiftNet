@@ -24,7 +24,7 @@ SwiftNetMemoryAllocatorStack* restrict const find_free_pointer_stack(const volat
 
         atomic_thread_fence(memory_order_acquire);
 
-        if (current_stack->size < allocator->chunk_item_amount) {
+        if (atomic_load(&current_stack->size) < allocator->chunk_item_amount) {
             return current_stack;
         } else {
             free_stack_lock(current_stack);
@@ -179,9 +179,9 @@ void* allocator_allocate(volatile SwiftNetMemoryAllocator* const memory_allocato
         return res;
     }
 
-    valid_stack->size -= 1;
+    const uint32_t size = atomic_fetch_add(&valid_stack->size, -1);;
 
-    void** restrict const ptr_to_data = ((void**)valid_stack->data) + valid_stack->size;
+    void** restrict const ptr_to_data = ((void**)valid_stack->data) + size - 1;
 
     void* item_ptr = *ptr_to_data;
 
@@ -223,9 +223,9 @@ void allocator_free(volatile SwiftNetMemoryAllocator* const memory_allocator, vo
         return;
     }
 
-    ((void**)free_stack->data)[free_stack->size] = memory_location;
+    const uint32_t size = atomic_fetch_add(&free_stack->size, 1);
 
-    free_stack->size++;
+    ((void**)free_stack->data)[size] = memory_location;
 
     free_stack_lock(free_stack);
 }

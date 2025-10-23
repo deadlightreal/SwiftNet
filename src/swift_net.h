@@ -135,7 +135,7 @@ struct PacketQueueNode {
 };
 
 typedef struct {
-    atomic_uint owner;
+    _Atomic uint32_t owner;
     volatile PacketQueueNode* first_node;
     volatile PacketQueueNode* last_node;
 } PacketQueue;
@@ -165,7 +165,7 @@ typedef struct {
 } SwiftNetClientPacketData;
 
 typedef struct {
-    atomic_uint owner;
+    _Atomic uint32_t owner;
     volatile PacketCallbackQueueNode* first_node;
     volatile PacketCallbackQueueNode* last_node;
 } PacketCallbackQueue;
@@ -176,7 +176,7 @@ typedef struct {
 } SwiftNetSentSuccessfullyCompletedPacketSignal;
 
 typedef struct {
-    uint32_t size;
+    _Atomic uint32_t size;
     void* data;
     _Atomic(void*) next;
     _Atomic(void*) previous;

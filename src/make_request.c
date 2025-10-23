@@ -18,6 +18,8 @@ SwiftNetClientPacketData* swiftnet_client_make_request(SwiftNetClientConnection*
         if (request_sent->packet_data != NULL) {
             SwiftNetClientPacketData* packet_data = request_sent->packet_data;
 
+            allocator_free(&requests_sent_memory_allocator, (void*)request_sent);
+
             return packet_data;
         }
 
@@ -42,6 +44,8 @@ SwiftNetServerPacketData* swiftnet_server_make_request(SwiftNetServer* restrict 
     while (1) {
         if (request_sent->packet_data != NULL) {
             SwiftNetServerPacketData* packet_data = request_sent->packet_data;
+
+            allocator_free(&requests_sent_memory_allocator, (void*)request_sent);
 
             return packet_data;
         }
