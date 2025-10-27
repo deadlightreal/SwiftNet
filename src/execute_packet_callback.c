@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-volatile PacketCallbackQueueNode* wait_for_next_packet_callback(volatile PacketCallbackQueue* const packet_queue) {
+PacketCallbackQueueNode* wait_for_next_packet_callback(volatile PacketCallbackQueue* const packet_queue) {
     uint32_t owner_none = PACKET_CALLBACK_QUEUE_OWNER_NONE;
     while(!atomic_compare_exchange_strong(&packet_queue->owner, &owner_none, PACKET_CALLBACK_QUEUE_OWNER_EXECUTE_PACKET_CALLBACK)) {
         owner_none = PACKET_CALLBACK_QUEUE_OWNER_NONE;
@@ -17,7 +17,7 @@ volatile PacketCallbackQueueNode* wait_for_next_packet_callback(volatile PacketC
 
     printf("found node\n");
 
-    volatile PacketCallbackQueueNode* const node_to_process = packet_queue->first_node;
+    PacketCallbackQueueNode* volatile const node_to_process = packet_queue->first_node;
 
     if(node_to_process->next == NULL) {
         packet_queue->first_node = NULL;
@@ -35,9 +35,13 @@ volatile PacketCallbackQueueNode* wait_for_next_packet_callback(volatile PacketC
     return node_to_process;
 }
 
-void execute_packet_callback(volatile PacketCallbackQueue* const queue, void (* const _Atomic * const packet_handler) (void* const restrict), const uint8_t connection_type, volatile SwiftNetMemoryAllocator* const pending_message_memory_allocator, const volatile void* const connection) {
+void execute_packet_callback(PacketCallbackQueue* const queue, void (* const _Atomic * const packet_handler) (void* const), const uint8_t connection_type, SwiftNetMemoryAllocator* const pending_message_memory_allocator, _Atomic bool* closing, const volatile void* const connection) {
     while (1) {
-        const volatile PacketCallbackQueueNode* const node = wait_for_next_packet_callback(queue);
+        if (atomic_load(closing) == true) {
+            break;
+        }
+
+        const PacketCallbackQueueNode* const node = wait_for_next_packet_callback(queue);
         if(node == NULL) {
             continue;
         }
@@ -57,6 +61,8 @@ void execute_packet_callback(volatile PacketCallbackQueue* const queue, void (* 
             printf("request response: %d\n", node->request_response);
 
             if (node->request_response == true) {
+                vector_lock(&requests_sent);
+
                 for (uint32_t i = 0; i < requests_sent.size; i++) {
                     RequestSent* current_request_sent = vector_get(&requests_sent, i);
 
@@ -91,6 +97,8 @@ void execute_packet_callback(volatile PacketCallbackQueue* const queue, void (* 
                         break;
                     }
                 }
+
+                vector_unlock(&requests_sent);
 
                 if (is_valid_response == true) {
                     if (node->pending_message != NULL) {
@@ -129,18 +137,18 @@ void execute_packet_callback(volatile PacketCallbackQueue* const queue, void (* 
     }
 }
 
-void* execute_packet_callback_client(void* void_client) {
+void* execute_packet_callback_client(void* const void_client) {
     SwiftNetClientConnection* client = void_client;
 
-    execute_packet_callback(&client->packet_callback_queue, (void*)&client->packet_handler, 0, &client->pending_messages_memory_allocator, void_client);
+    execute_packet_callback(&client->packet_callback_queue, (void*)&client->packet_handler, 0, &client->pending_messages_memory_allocator, void_client, &client->closing);
 
     return NULL;
 }
 
-void* execute_packet_callback_server(void* void_server) {
+void* execute_packet_callback_server(void* const void_server) {
     SwiftNetServer* server = void_server;
 
-    execute_packet_callback(&server->packet_callback_queue, (void*)&server->packet_handler, 1, &server->pending_messages_memory_allocator, void_server);
+    execute_packet_callback(&server->packet_callback_queue, (void*)&server->packet_handler, 1, &server->pending_messages_memory_allocator, void_server, &server->closing);
 
     return NULL;
 }

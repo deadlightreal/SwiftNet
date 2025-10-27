@@ -76,11 +76,11 @@ static inline uint16_t crc16(const uint8_t *data, size_t length) {
 extern const int get_default_interface(char* restrict const interface_name, const uint32_t interface_name_length, const int sockfd);
 extern const uint32_t get_mtu(const char* restrict const interface, const int sockfd);
 
-extern void* swiftnet_server_process_packets(void* restrict const void_server);
-extern void* swiftnet_client_process_packets(void* restrict const void_client);
+extern void* swiftnet_server_process_packets(void* const void_server);
+extern void* swiftnet_client_process_packets(void* const void_client);
 
-extern void* execute_packet_callback_client(void* void_client);
-extern void* execute_packet_callback_server(void* void_server);
+extern void* execute_packet_callback_client(void* const void_client);
+extern void* execute_packet_callback_server(void* const void_server);
 
 extern struct in_addr private_ip_address;
 
@@ -119,9 +119,9 @@ extern struct in_addr private_ip_address;
 #define ALLOCATOR_STACK_FREE 0
 
 extern SwiftNetMemoryAllocator allocator_create(const uint32_t item_size, const uint32_t chunk_item_amount);
-extern void* allocator_allocate(volatile SwiftNetMemoryAllocator* const memory_allocator);
-extern void allocator_free(volatile SwiftNetMemoryAllocator* const memory_allocator, void* const memory_location);
-extern void allocator_destroy(volatile SwiftNetMemoryAllocator* const memory_allocator);
+extern void* allocator_allocate(SwiftNetMemoryAllocator* const memory_allocator);
+extern void allocator_free(SwiftNetMemoryAllocator* const memory_allocator, void* const memory_location);
+extern void allocator_destroy(SwiftNetMemoryAllocator* const memory_allocator);
 
 extern SwiftNetMemoryAllocator packet_queue_node_memory_allocator;
 extern SwiftNetMemoryAllocator packet_callback_queue_node_memory_allocator;
@@ -132,11 +132,13 @@ extern SwiftNetMemoryAllocator server_memory_allocator;
 extern SwiftNetMemoryAllocator client_connection_memory_allocator;
 extern SwiftNetMemoryAllocator pending_message_memory_allocator;
 
-void* vector_get(SwiftNetVector* vector, const uint32_t index);
-void vector_remove(SwiftNetVector* vector, const uint32_t index);
-void vector_push(SwiftNetVector* vector, void* data);
-void vector_destroy(volatile SwiftNetVector* const vector);
+void* vector_get(SwiftNetVector* const vector, const uint32_t index);
+void vector_remove(SwiftNetVector* const vector, const uint32_t index);
+void vector_push(SwiftNetVector* const vector, void* const data);
+void vector_destroy(SwiftNetVector* const vector);
 SwiftNetVector vector_create(const uint32_t starting_amount);
+void vector_lock(SwiftNetVector* const vector);
+void vector_unlock(SwiftNetVector* const vector);
 
 #ifdef SWIFT_NET_REQUESTS
     typedef struct {
@@ -149,18 +151,19 @@ SwiftNetVector vector_create(const uint32_t starting_amount);
     extern SwiftNetVector requests_sent;
 #endif
 
-extern void swiftnet_send_packet(const void* restrict const connection,
+extern void swiftnet_send_packet(
+    const void* const connection,
     const uint32_t target_maximum_transmission_unit,
     const SwiftNetPortInfo port_info,
-    const volatile SwiftNetPacketBuffer* const packet,
+    const SwiftNetPacketBuffer* const packet,
     const uint32_t packet_length,
-    const struct sockaddr_in* restrict const target_addr,
-    const socklen_t* restrict const target_addr_len,
-    volatile SwiftNetVector* const packets_sending,
-    volatile SwiftNetMemoryAllocator* const packets_sending_memory_allocator,
+    const struct sockaddr_in* const target_addr,
+    const socklen_t* const target_addr_len,
+    SwiftNetVector* const packets_sending,
+    SwiftNetMemoryAllocator* const packets_sending_memory_allocator,
     const int sockfd
     #ifdef SWIFT_NET_REQUESTS
-        , volatile RequestSent* const request_sent
+        , RequestSent* const request_sent
         , const bool response
         , const uint16_t request_packet_id
     #endif

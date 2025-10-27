@@ -13,7 +13,7 @@
 #include "swift_net.h"
 
 SwiftNetServer* swiftnet_create_server(const uint16_t port) {
-    SwiftNetServer* restrict const new_server = allocator_allocate(&server_memory_allocator);
+    SwiftNetServer* const new_server = allocator_allocate(&server_memory_allocator);
 
     #ifdef SWIFT_NET_ERROR
         if(unlikely(new_server == NULL)) {
@@ -56,8 +56,12 @@ SwiftNetServer* swiftnet_create_server(const uint16_t port) {
     new_server->packets_completed_memory_allocator = allocator_create(sizeof(SwiftNetPacketCompleted), 100);
     new_server->packets_completed = vector_create(100);
 
+    new_server->closing = false;
+
     // Create a new thread that will handle all packets received
     pthread_create(&new_server->handle_packets_thread, NULL, swiftnet_server_handle_packets, new_server);
+    pthread_create(&new_server->process_packets_thread, NULL, swiftnet_server_process_packets, new_server);
+    pthread_create(&new_server->execute_callback_thread, NULL, execute_packet_callback_server, new_server);
 
     #ifdef SWIFT_NET_DEBUG
         if (check_debug_flag(DEBUG_INITIALIZATION)) {

@@ -97,10 +97,10 @@ typedef struct {
 
 typedef struct {
     uint16_t packet_id;
-    _Atomic volatile bool updated_lost_chunks;
+    _Atomic bool updated_lost_chunks;
     volatile uint32_t* lost_chunks;
     volatile uint32_t lost_chunks_size;
-    _Atomic volatile bool successfully_received;
+    _Atomic bool successfully_received;
 } SwiftNetPacketSending;
 
 typedef struct {
@@ -136,8 +136,8 @@ struct PacketQueueNode {
 
 typedef struct {
     _Atomic uint32_t owner;
-    volatile PacketQueueNode* first_node;
-    volatile PacketQueueNode* last_node;
+    PacketQueueNode* volatile first_node;
+    PacketQueueNode* volatile last_node;
 } PacketQueue;
 
 typedef struct PacketCallbackQueueNode PacketCallbackQueueNode;
@@ -166,8 +166,8 @@ typedef struct {
 
 typedef struct {
     _Atomic uint32_t owner;
-    volatile PacketCallbackQueueNode* first_node;
-    volatile PacketCallbackQueueNode* last_node;
+    PacketCallbackQueueNode* volatile first_node;
+    PacketCallbackQueueNode* volatile last_node;
 } PacketCallbackQueue;
 
 typedef struct {
@@ -200,6 +200,7 @@ typedef struct {
     void* data;
     uint32_t size;
     uint32_t capacity;
+    _Atomic uint8_t locked;
 } SwiftNetVector;
 
 // Connection data
@@ -208,16 +209,18 @@ typedef struct {
     SwiftNetPortInfo port_info;
     struct sockaddr_in server_addr;
     socklen_t server_addr_len;
-    _Atomic(void (*)(SwiftNetClientPacketData* restrict const)) packet_handler;
+    _Atomic(void (*)(SwiftNetClientPacketData* const)) packet_handler;
+    _Atomic bool closing;
     pthread_t handle_packets_thread;
     pthread_t process_packets_thread;
+    pthread_t execute_callback_thread;
     uint32_t maximum_transmission_unit;
-    volatile SwiftNetVector pending_messages;
-    volatile SwiftNetMemoryAllocator pending_messages_memory_allocator;
-    volatile SwiftNetVector packets_sending;
-    volatile SwiftNetMemoryAllocator packets_sending_memory_allocator;
-    volatile SwiftNetVector packets_completed;
-    volatile SwiftNetMemoryAllocator packets_completed_memory_allocator;
+    SwiftNetVector pending_messages;
+    SwiftNetMemoryAllocator pending_messages_memory_allocator;
+    SwiftNetVector packets_sending;
+    SwiftNetMemoryAllocator packets_sending_memory_allocator;
+    SwiftNetVector packets_completed;
+    SwiftNetMemoryAllocator packets_completed_memory_allocator;
     uint8_t* current_read_pointer;
     PacketQueue packet_queue;
     PacketCallbackQueue packet_callback_queue;
@@ -226,51 +229,53 @@ typedef struct {
 typedef struct {
     int sockfd;
     uint16_t server_port;
-    _Atomic(void (*)(SwiftNetServerPacketData* restrict const)) packet_handler;
+    _Atomic(void (*)(SwiftNetServerPacketData* const)) packet_handler;
+    _Atomic bool closing;
     pthread_t handle_packets_thread;
     pthread_t process_packets_thread;
-    volatile SwiftNetVector pending_messages;
-    volatile SwiftNetMemoryAllocator pending_messages_memory_allocator;
-    volatile SwiftNetVector packets_sending;
-    volatile SwiftNetMemoryAllocator packets_sending_memory_allocator;
-    volatile SwiftNetVector packets_completed;
-    volatile SwiftNetMemoryAllocator packets_completed_memory_allocator;
+    pthread_t execute_callback_thread;
+    SwiftNetVector pending_messages;
+    SwiftNetMemoryAllocator pending_messages_memory_allocator;
+    SwiftNetVector packets_sending;
+    SwiftNetMemoryAllocator packets_sending_memory_allocator;
+    SwiftNetVector packets_completed;
+    SwiftNetMemoryAllocator packets_completed_memory_allocator;
     uint8_t* current_read_pointer;
     PacketQueue packet_queue;
     PacketCallbackQueue packet_callback_queue;
 } SwiftNetServer;
 
-extern void swiftnet_server_set_message_handler(SwiftNetServer* server, void (*new_handler)(SwiftNetServerPacketData* restrict const));
-extern void swiftnet_client_set_message_handler(SwiftNetClientConnection* client, void (*new_handler)(SwiftNetClientPacketData* restrict const));
-extern void swiftnet_client_append_to_packet(const void* const restrict data, const uint32_t data_size, SwiftNetPacketBuffer* restrict const packet);
-extern void swiftnet_server_append_to_packet(const void* const restrict data, const uint32_t data_size, SwiftNetPacketBuffer* restrict const packet);
-extern void swiftnet_client_cleanup(SwiftNetClientConnection* const restrict client);
-extern void swiftnet_server_cleanup(SwiftNetServer* const restrict server);
+extern void swiftnet_server_set_message_handler(SwiftNetServer* const server, void (* const new_handler)(SwiftNetServerPacketData* const));
+extern void swiftnet_client_set_message_handler(SwiftNetClientConnection* const client, void (* const new_handler)(SwiftNetClientPacketData* const));
+extern void swiftnet_client_append_to_packet(const void* const data, const uint32_t data_size, SwiftNetPacketBuffer* const packet);
+extern void swiftnet_server_append_to_packet(const void* const data, const uint32_t data_size, SwiftNetPacketBuffer* const packet);
+extern void swiftnet_client_cleanup(SwiftNetClientConnection* const client);
+extern void swiftnet_server_cleanup(SwiftNetServer* const server);
 extern void swiftnet_initialize();
-extern void* swiftnet_server_handle_packets(void* restrict const server_void);
-extern void* swiftnet_client_handle_packets(void* restrict const client_void);
-extern void swiftnet_client_send_packet (SwiftNetClientConnection* restrict const client, SwiftNetPacketBuffer* restrict const packet);
-extern void swiftnet_server_send_packet (SwiftNetServer* restrict const server, SwiftNetPacketBuffer* restrict const packet, const SwiftNetClientAddrData target);
+extern void* swiftnet_server_handle_packets(void* const server_void);
+extern void* swiftnet_client_handle_packets(void* const client_void);
+extern void swiftnet_client_send_packet (SwiftNetClientConnection* const client, SwiftNetPacketBuffer* const packet);
+extern void swiftnet_server_send_packet (SwiftNetServer* const server, SwiftNetPacketBuffer* const packet, const SwiftNetClientAddrData target);
 
 extern SwiftNetPacketBuffer swiftnet_server_create_packet_buffer(const uint32_t buffer_size);
 extern SwiftNetPacketBuffer swiftnet_client_create_packet_buffer(const uint32_t buffer_size);
-extern void swiftnet_server_destroy_packet_buffer(SwiftNetPacketBuffer* restrict const packet);
-extern void swiftnet_client_destroy_packet_buffer(SwiftNetPacketBuffer* restrict const packet);
+extern void swiftnet_server_destroy_packet_buffer(SwiftNetPacketBuffer* const packet);
+extern void swiftnet_client_destroy_packet_buffer(SwiftNetPacketBuffer* const packet);
 extern SwiftNetServer* swiftnet_create_server(const uint16_t port);
-extern SwiftNetClientConnection* swiftnet_create_client(const char* const restrict ip_address, const uint16_t port);
-extern void* swiftnet_client_read_packet(SwiftNetClientPacketData* restrict const packet_data, const uint32_t data_size);
-extern void* swiftnet_server_read_packet(SwiftNetServerPacketData* restrict const packet_data, const uint32_t data_size);
-extern void swiftnet_client_destory_packet_data(SwiftNetClientPacketData* packet_data);
-extern void swiftnet_server_destory_packet_data(SwiftNetServerPacketData* packet_data);
+extern SwiftNetClientConnection* swiftnet_create_client(const char* const ip_address, const uint16_t port);
+extern void* swiftnet_client_read_packet(SwiftNetClientPacketData* const packet_data, const uint32_t data_size);
+extern void* swiftnet_server_read_packet(SwiftNetServerPacketData* const packet_data, const uint32_t data_size);
+extern void swiftnet_client_destory_packet_data(SwiftNetClientPacketData* const packet_data);
+extern void swiftnet_server_destory_packet_data(SwiftNetServerPacketData* const packet_data);
 
 extern void swiftnet_cleanup();
 
 #ifdef SWIFT_NET_REQUESTS
-    extern SwiftNetClientPacketData* swiftnet_client_make_request(SwiftNetClientConnection* restrict const client, SwiftNetPacketBuffer* restrict const packet);
-    extern SwiftNetServerPacketData* swiftnet_server_make_request(SwiftNetServer* restrict const server, SwiftNetPacketBuffer* restrict const packet, const SwiftNetClientAddrData addr_data);
+    extern SwiftNetClientPacketData* swiftnet_client_make_request(SwiftNetClientConnection* const client, SwiftNetPacketBuffer* const packet);
+    extern SwiftNetServerPacketData* swiftnet_server_make_request(SwiftNetServer* const server, SwiftNetPacketBuffer* const packet, const SwiftNetClientAddrData addr_data);
 
-    extern void swiftnet_client_make_response(SwiftNetClientConnection* client, SwiftNetClientPacketData* packet_data, SwiftNetPacketBuffer* buffer);
-    extern void swiftnet_server_make_response(SwiftNetServer* server, SwiftNetServerPacketData* packet_data, SwiftNetPacketBuffer* buffer);
+    extern void swiftnet_client_make_response(SwiftNetClientConnection* const client, SwiftNetClientPacketData* const packet_data, SwiftNetPacketBuffer* const buffer);
+    extern void swiftnet_server_make_response(SwiftNetServer* const server, SwiftNetServerPacketData* const packet_data, SwiftNetPacketBuffer* const buffer);
 #endif
 
 #ifdef SWIFT_NET_DEBUG

@@ -18,8 +18,8 @@ SwiftNetClientConnection* second_client;
 #define FIRST_PORT 7070
 #define SECOND_PORT 8080
 
-bool first_port_response = false;
-bool second_port_response = false;
+_Atomic bool first_port_response = false;
+_Atomic bool second_port_response = false;
 
 const char* restrict const message = "hello";
 
@@ -28,9 +28,9 @@ void client_message_handler(SwiftNetClientPacketData* restrict const packet_data
 
     if(memcmp(data, message, packet_data->metadata.data_length) == 0) {
         if (packet_data->metadata.port_info.source_port == FIRST_PORT) {
-            first_port_response = true;
+            atomic_store(&first_port_response, true);
         } else if (packet_data->metadata.port_info.source_port == SECOND_PORT) {
-            second_port_response = true;
+            atomic_store(&second_port_response, true);
         }
     }
 }
@@ -91,7 +91,7 @@ int main() {
 
     uint32_t iterations = 0;
 
-    while (first_port_response == false || second_port_response == false) {
+    while (atomic_load(&first_port_response) == false || atomic_load(&second_port_response) == false) {
         iterations++;
 
         if (iterations >= MAX_ITERATIONS) {

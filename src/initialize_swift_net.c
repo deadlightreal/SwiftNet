@@ -23,12 +23,12 @@ SwiftNetMemoryAllocator packet_buffer_memory_allocator;
 SwiftNetMemoryAllocator server_memory_allocator;
 SwiftNetMemoryAllocator client_connection_memory_allocator;
 SwiftNetMemoryAllocator pending_message_memory_allocator;
-
 SwiftNetMemoryAllocator requests_sent_memory_allocator;
+
 SwiftNetVector requests_sent;
 
 void swiftnet_initialize() {
-    int temp_socket = socket(AF_INET, SOCK_DGRAM, 0);
+    const int temp_socket = socket(AF_INET, SOCK_DGRAM, 0);
     if (temp_socket < 0) {
         perror("socket");
         exit(EXIT_FAILURE);
