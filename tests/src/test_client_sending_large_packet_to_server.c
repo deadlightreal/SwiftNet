@@ -12,10 +12,10 @@ SwiftNetServer* server;
 
 uint32_t* random_generated_data = NULL;
 
-void client_message_handler(SwiftNetClientPacketData* restrict const packet_data) {
+void client_message_handler(SwiftNetClientPacketData* const packet_data) {
 }
 
-void server_message_handler(SwiftNetServerPacketData* restrict const packet_data) {
+void server_message_handler(SwiftNetServerPacketData* const packet_data) {
     for(uint32_t i = 0; i < packet_data->metadata.data_length / 4; i++) {
         const uint32_t data_received = *(uint32_t*)swiftnet_server_read_packet(packet_data, 4);
 
@@ -31,6 +31,8 @@ void server_message_handler(SwiftNetServerPacketData* restrict const packet_data
             swiftnet_cleanup();
         }
     }
+
+    printf("finished\n");
 
     swiftnet_server_cleanup(server);
     swiftnet_client_cleanup(client);

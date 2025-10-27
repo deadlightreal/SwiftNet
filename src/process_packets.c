@@ -226,6 +226,8 @@ PacketQueueNode* const wait_for_next_packet(PacketQueue* const packet_queue) {
 
     PacketQueueNode* const node_to_process = packet_queue->first_node;
 
+    printf("got node to process\n");
+
     if(node_to_process->next == NULL) {
         packet_queue->first_node = NULL;
         packet_queue->last_node = NULL;
@@ -273,13 +275,19 @@ static inline void swiftnet_process_packets(
             continue;
         }
 
+        printf("processing\n");
+
         if(node->data_read == 0) {
+            printf("data read 0\n");
+
             allocator_free(&packet_queue_node_memory_allocator, (void*)node);
             continue;
         }
 
         uint8_t* const packet_buffer = node->data;
         if(packet_buffer == NULL) {
+            printf("packet buffer null\n");
+
             goto next_packet;
         }
 
@@ -304,6 +312,8 @@ static inline void swiftnet_process_packets(
 
         // Check if the packet is meant to be for this server
         if(packet_info.port_info.destination_port != source_port) {
+            printf("invalid port info\n");
+
             allocator_free(&packet_buffer_memory_allocator, packet_buffer);
 
             goto next_packet;
@@ -334,6 +344,8 @@ static inline void swiftnet_process_packets(
                 send_debug_message("Received packet: {\"source_ip_address\": \"%s\", \"source_port\": %d, \"packet_id\": %d, \"packet_type\": %d, \"packet_length\": %d, \"chunk_index\": %d}\n", inet_ntoa(ip_header.ip_src), packet_info.port_info.source_port, ip_header.ip_id, packet_info.packet_type, packet_info.packet_length, packet_info.chunk_index);
             }
         #endif
+
+        printf("got here\n");
 
         switch(packet_info.packet_type) {
             case PACKET_TYPE_REQUEST_INFORMATION:
@@ -369,6 +381,8 @@ static inline void swiftnet_process_packets(
             case PACKET_TYPE_SEND_LOST_PACKETS_REQUEST:
             {
                 const uint32_t mtu = MIN(packet_info.maximum_transmission_unit, maximum_transmission_unit);
+
+                printf("got request\n");
 
                 SwiftNetPendingMessage* const pending_message = get_pending_message(&packet_info, pending_messages, connection_type, ip_header.ip_src.s_addr, ip_header.ip_id);
                 if(pending_message == NULL) {
@@ -481,6 +495,8 @@ static inline void swiftnet_process_packets(
             case PACKET_TYPE_SUCCESSFULLY_RECEIVED_PACKET:
             {
                 SwiftNetPacketSending* const target_packet_sending = get_packet_sending(packets_sending, ip_header.ip_id);
+
+                printf("received successfully packet\n");
 
                 if(unlikely(target_packet_sending == NULL)) {
                     allocator_free(&packet_buffer_memory_allocator, packet_buffer);
