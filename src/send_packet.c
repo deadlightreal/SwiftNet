@@ -12,7 +12,7 @@
 #include "internal/internal.h"
 #include <netinet/in.h>
 
-static inline uint8_t request_lost_packets_bitarray(const uint8_t* restrict const raw_data, const uint32_t data_size, const struct sockaddr* const destination, const int sockfd, SwiftNetPacketSending* const packet_sending) {
+static inline uint8_t request_lost_packets_bitarray(const uint8_t* const raw_data, const uint32_t data_size, const struct sockaddr* const destination, const int sockfd, SwiftNetPacketSending* const packet_sending) {
     while(1) {
         if(check_debug_flag(DEBUG_LOST_PACKETS)) {
             send_debug_message("Requested list of lost packets: {\"packet_id\": %d}\n", packet_sending->packet_id);
@@ -62,9 +62,10 @@ static inline void handle_lost_packets(
         .port_info = port_info,
         .packet_length = 0x00,
         .maximum_transmission_unit = mtu,
-        .chunk_index = 0
+        .chunk_index = 0,
+        .chunk_amount = 1
         #ifdef SWIFT_NET_REQUESTS
-        , .request_response = false
+        , .request_response = false,
         #endif
     };
 
@@ -100,7 +101,7 @@ static inline void handle_lost_packets(
     memcpy(resend_chunk_buffer + sizeof(struct ip), &resend_chunk_packet_info, sizeof(SwiftNetPacketInfo));
 
     while(1) {
-        const uint8_t request_lost_packets_bitarray_response = request_lost_packets_bitarray((uint8_t*)&request_lost_packets_buffer, PACKET_HEADER_SIZE, (const struct sockaddr*)destination_address, sockfd, packet_sending);
+        const uint8_t request_lost_packets_bitarray_response = request_lost_packets_bitarray(request_lost_packets_buffer, PACKET_HEADER_SIZE, (const struct sockaddr*)destination_address, sockfd, packet_sending);
 
         switch (request_lost_packets_bitarray_response) {
             case REQUEST_LOST_PACKETS_RETURN_UPDATED_BIT_ARRAY:
@@ -121,6 +122,7 @@ static inline void handle_lost_packets(
                 vector_unlock(packets_sending);
 
                 allocator_free(packets_sending_memory_allocator, (void*)packet_sending);
+
                 return;
         }
     
