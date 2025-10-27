@@ -5,8 +5,8 @@
 
 #ifdef SWIFT_NET_REQUESTS
 
-SwiftNetClientPacketData* swiftnet_client_make_request(SwiftNetClientConnection* restrict const client, SwiftNetPacketBuffer* restrict const packet) {
-    volatile RequestSent* const request_sent = allocator_allocate(&requests_sent_memory_allocator);
+SwiftNetClientPacketData* swiftnet_client_make_request(SwiftNetClientConnection* const client, SwiftNetPacketBuffer* const packet) {
+    RequestSent* const request_sent = allocator_allocate(&requests_sent_memory_allocator);
     request_sent->packet_data = NULL;
     request_sent->address = client->server_addr.sin_addr.s_addr;
 
@@ -16,7 +16,7 @@ SwiftNetClientPacketData* swiftnet_client_make_request(SwiftNetClientConnection*
 
     while (1) {
         if (request_sent->packet_data != NULL) {
-            SwiftNetClientPacketData* packet_data = request_sent->packet_data;
+            SwiftNetClientPacketData* const packet_data = request_sent->packet_data;
 
             allocator_free(&requests_sent_memory_allocator, (void*)request_sent);
 
@@ -27,8 +27,8 @@ SwiftNetClientPacketData* swiftnet_client_make_request(SwiftNetClientConnection*
     }
 }
 
-SwiftNetServerPacketData* swiftnet_server_make_request(SwiftNetServer* restrict const server, SwiftNetPacketBuffer* restrict const packet, const SwiftNetClientAddrData addr_data) {
-    volatile RequestSent* const request_sent = allocator_allocate(&requests_sent_memory_allocator);
+SwiftNetServerPacketData* swiftnet_server_make_request(SwiftNetServer* const server, SwiftNetPacketBuffer* const packet, const SwiftNetClientAddrData addr_data) {
+    RequestSent* const request_sent = allocator_allocate(&requests_sent_memory_allocator);
     request_sent->packet_data = NULL;
     request_sent->address = addr_data.sender_address.sin_addr.s_addr;
 
@@ -43,7 +43,7 @@ SwiftNetServerPacketData* swiftnet_server_make_request(SwiftNetServer* restrict 
 
     while (1) {
         if (request_sent->packet_data != NULL) {
-            SwiftNetServerPacketData* packet_data = request_sent->packet_data;
+            SwiftNetServerPacketData* const packet_data = request_sent->packet_data;
 
             allocator_free(&requests_sent_memory_allocator, (void*)request_sent);
 

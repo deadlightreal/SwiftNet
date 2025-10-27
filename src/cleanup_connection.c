@@ -2,7 +2,7 @@
 #include "swift_net.h"
 #include <stdlib.h>
 
-void swiftnet_client_cleanup(SwiftNetClientConnection* const restrict client) {
+void swiftnet_client_cleanup(SwiftNetClientConnection* const client) {
     allocator_destroy(&client->packets_sending_memory_allocator);
     allocator_destroy(&client->pending_messages_memory_allocator);
     allocator_destroy(&client->packets_completed_memory_allocator);
@@ -11,10 +11,18 @@ void swiftnet_client_cleanup(SwiftNetClientConnection* const restrict client) {
     vector_destroy(&client->pending_messages);
     vector_destroy(&client->packets_completed);
 
+    atomic_store(&client->closing, true);
+
+    shutdown(client->sockfd, SHUT_RD);
+
+    pthread_join(client->handle_packets_thread, NULL);
+    pthread_join(client->process_packets_thread, NULL);
+    pthread_join(client->execute_callback_thread, NULL);
+
     allocator_free(&client_connection_memory_allocator, client);
 }
 
-void swiftnet_server_cleanup(SwiftNetServer* const restrict server) {
+void swiftnet_server_cleanup(SwiftNetServer* const server) {
     allocator_destroy(&server->packets_sending_memory_allocator);
     allocator_destroy(&server->pending_messages_memory_allocator);
     allocator_destroy(&server->packets_completed_memory_allocator);
@@ -22,6 +30,14 @@ void swiftnet_server_cleanup(SwiftNetServer* const restrict server) {
     vector_destroy(&server->packets_sending);
     vector_destroy(&server->pending_messages);
     vector_destroy(&server->packets_completed);
+
+    atomic_store(&server->closing, true);
+
+    shutdown(server->sockfd, SHUT_RD);
+
+    pthread_join(server->handle_packets_thread, NULL);
+    pthread_join(server->process_packets_thread, NULL);
+    pthread_join(server->execute_callback_thread, NULL);
 
     allocator_free(&server_memory_allocator, server);
 }

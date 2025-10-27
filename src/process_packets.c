@@ -15,7 +15,7 @@
 #include <time.h>
 
 // Returns an array of 4 byte uint32_tegers, that contain indexes of lost chunks
-static inline const uint32_t return_lost_chunk_indexes(const uint8_t* const restrict chunks_received, const uint32_t chunk_amount, const uint32_t buffer_size, uint32_t* const restrict buffer) {
+static inline const uint32_t return_lost_chunk_indexes(const uint8_t* const chunks_received, const uint32_t chunk_amount, const uint32_t buffer_size, uint32_t* const buffer) {
     uint32_t byte = 0;
 
     uint32_t offset = 0;
@@ -60,44 +60,58 @@ static inline const uint32_t return_lost_chunk_indexes(const uint8_t* const rest
     return offset;
 }
 
-static inline void packet_completed(const uint16_t packet_id, const uint32_t packet_length, volatile SwiftNetVector* const packets_completed_history, volatile SwiftNetMemoryAllocator* const packets_completed_history_memory_allocator) {
-    SwiftNetPacketCompleted* restrict const new_packet_completed = allocator_allocate(packets_completed_history_memory_allocator);
+static inline void packet_completed(const uint16_t packet_id, const uint32_t packet_length, SwiftNetVector* const packets_completed_history, SwiftNetMemoryAllocator* const packets_completed_history_memory_allocator) {
+    SwiftNetPacketCompleted* const new_packet_completed = allocator_allocate(packets_completed_history_memory_allocator);
     new_packet_completed->packet_id = packet_id;
     new_packet_completed->packet_length = packet_length;
 
+    vector_lock(packets_completed_history);
+
     vector_push((SwiftNetVector*)packets_completed_history, new_packet_completed);
+
+    vector_unlock(packets_completed_history);
 
     return;
 }
 
-static inline bool check_packet_already_completed(const uint16_t packet_id, const volatile SwiftNetVector* const packets_completed_history) {
+static inline bool check_packet_already_completed(const uint16_t packet_id, SwiftNetVector* const packets_completed_history) {
+    vector_lock(packets_completed_history);
+
     for(uint32_t i = 0; i < packets_completed_history->size; i++) {
         if(((const SwiftNetPacketCompleted* restrict const)vector_get((SwiftNetVector*)packets_completed_history, i))->packet_id == packet_id) {
+            vector_unlock(packets_completed_history);
+
             return true; 
         }
     }
 
+    vector_unlock(packets_completed_history);
+
     return false;
 }
 
-static inline volatile SwiftNetPendingMessage* const get_pending_message(const SwiftNetPacketInfo* const restrict packet_info, volatile SwiftNetVector* const pending_messages_vector, const ConnectionType connection_type, const in_addr_t sender_address, const uint16_t packet_id) {
+static inline SwiftNetPendingMessage* const get_pending_message(const SwiftNetPacketInfo* const restrict packet_info, SwiftNetVector* const pending_messages_vector, const ConnectionType connection_type, const in_addr_t sender_address, const uint16_t packet_id) {
+    vector_lock((SwiftNetVector*)pending_messages_vector);
+
     for(uint32_t i = 0; i < pending_messages_vector->size; i++) {
-        volatile SwiftNetPendingMessage* const current_pending_message = vector_get((SwiftNetVector*)pending_messages_vector, i);
+        SwiftNetPendingMessage* const current_pending_message = vector_get((SwiftNetVector*)pending_messages_vector, i);
 
         if((connection_type == CONNECTION_TYPE_CLIENT && current_pending_message->packet_id == packet_id) || (connection_type == CONNECTION_TYPE_SERVER && current_pending_message->sender_address == sender_address && current_pending_message->packet_id == packet_id)) {
+            vector_unlock((SwiftNetVector*)pending_messages_vector);
+
             return current_pending_message;
         }
     }
 
+    vector_unlock((SwiftNetVector*)pending_messages_vector);
+
     return NULL;
 }
 
-static inline void insert_callback_queue_node(PacketCallbackQueueNode* const restrict new_node, PacketCallbackQueue* restrict const packet_queue) {
-    if(new_node == NULL) {
+static inline void insert_callback_queue_node(PacketCallbackQueueNode* const new_node, PacketCallbackQueue* const packet_queue) {
+    if(unlikely(new_node == NULL)) {
         return;
     }
-
-    printf("not null node\n");
 
     uint32_t owner_none = PACKET_CALLBACK_QUEUE_OWNER_NONE;
     while(!atomic_compare_exchange_strong(&packet_queue->owner, &owner_none, PACKET_CALLBACK_QUEUE_OWNER_PROCESS_PACKETS)) {
@@ -121,14 +135,14 @@ static inline void insert_callback_queue_node(PacketCallbackQueueNode* const res
     return;
 }
 
-static inline void pass_callback_execution(void* restrict const packet_data, PacketCallbackQueue* restrict const queue, SwiftNetPendingMessage* restrict const pending_message, const uint16_t packet_id
+static inline void pass_callback_execution(void* const packet_data, PacketCallbackQueue* const queue, SwiftNetPendingMessage* const pending_message, const uint16_t packet_id
     #ifdef SWIFT_NET_REQUESTS
     , const bool request_response
     #endif
 ) {
     printf("passing callback\n");
 
-    PacketCallbackQueueNode* node = allocator_allocate(&packet_callback_queue_node_memory_allocator);
+    PacketCallbackQueueNode* const node = allocator_allocate(&packet_callback_queue_node_memory_allocator);
     node->packet_data = packet_data;
     node->next = NULL;
     node->pending_message = pending_message;
@@ -144,17 +158,17 @@ static inline void pass_callback_execution(void* restrict const packet_data, Pac
 }
 
 
-static inline void chunk_received(uint8_t* const restrict chunks_received, const uint32_t index) {
+static inline void chunk_received(uint8_t* const chunks_received, const uint32_t index) {
     const uint32_t byte = index / 8;
     const uint8_t bit = index % 8;
 
     chunks_received[byte] |= 1 << bit;
 }
 
-static inline SwiftNetPendingMessage* restrict const create_new_pending_message(volatile SwiftNetVector* const pending_messages, volatile SwiftNetMemoryAllocator* const pending_messages_memory_allocator, const SwiftNetPacketInfo* const restrict packet_info, const ConnectionType connection_type, in_addr_t sender_address, const uint16_t packet_id) {
+static inline SwiftNetPendingMessage* const create_new_pending_message(SwiftNetVector* const pending_messages, SwiftNetMemoryAllocator* const pending_messages_memory_allocator, const SwiftNetPacketInfo* const restrict packet_info, const ConnectionType connection_type, const in_addr_t sender_address, const uint16_t packet_id) {
     SwiftNetPendingMessage* const new_pending_message = allocator_allocate(pending_messages_memory_allocator);
 
-    uint8_t* restrict const allocated_memory = malloc(packet_info->packet_length);
+    uint8_t* const allocated_memory = malloc(packet_info->packet_length);
 
     const uint32_t chunks_received_byte_size = (packet_info->chunk_amount + 7) / 8;
 
@@ -172,24 +186,34 @@ static inline SwiftNetPendingMessage* restrict const create_new_pending_message(
         new_pending_message->sender_address = sender_address;
     }
 
+    vector_lock(pending_messages);
+
     vector_push((SwiftNetVector*)pending_messages, new_pending_message);
+
+    vector_unlock(pending_messages);
 
     return new_pending_message;
 }
 
-static inline volatile SwiftNetPacketSending* const get_packet_sending(volatile SwiftNetVector* const packet_sending_array, const uint16_t target_id) {
+static inline SwiftNetPacketSending* const get_packet_sending(SwiftNetVector* const packet_sending_array, const uint16_t target_id) {
+    vector_lock(packet_sending_array);
+
     for(uint32_t i = 0; i < packet_sending_array->size; i++) {
-        volatile SwiftNetPacketSending* const current_packet_sending = vector_get((SwiftNetVector*)packet_sending_array, i);
+        SwiftNetPacketSending* const current_packet_sending = vector_get((SwiftNetVector*)packet_sending_array, i);
 
         if(current_packet_sending->packet_id == target_id) {
+            vector_unlock(packet_sending_array);
+
             return current_packet_sending;
         }
     }
 
+    vector_unlock(packet_sending_array);
+
     return NULL;
 }
 
-volatile PacketQueueNode* wait_for_next_packet(PacketQueue* restrict const packet_queue) {
+PacketQueueNode* const wait_for_next_packet(PacketQueue* const packet_queue) {
     uint32_t owner_none = PACKET_QUEUE_OWNER_NONE;
     while(!atomic_compare_exchange_strong(&packet_queue->owner, &owner_none, PACKET_QUEUE_OWNER_PROCESS_PACKETS)) {
         owner_none = PACKET_QUEUE_OWNER_NONE;
@@ -200,7 +224,7 @@ volatile PacketQueueNode* wait_for_next_packet(PacketQueue* restrict const packe
         return NULL;
     }
 
-    volatile PacketQueueNode* const node_to_process = packet_queue->first_node;
+    PacketQueueNode* const node_to_process = packet_queue->first_node;
 
     if(node_to_process->next == NULL) {
         packet_queue->first_node = NULL;
@@ -218,7 +242,7 @@ volatile PacketQueueNode* wait_for_next_packet(PacketQueue* restrict const packe
     return node_to_process;
 }
 
-static inline bool packet_corrupted(const uint16_t checksum, const uint32_t chunk_size, const uint8_t* restrict const buffer) {
+static inline bool packet_corrupted(const uint16_t checksum, const uint32_t chunk_size, const uint8_t* const buffer) {
     return crc16(buffer, chunk_size) != checksum;
 }
 
@@ -226,27 +250,25 @@ static inline void swiftnet_process_packets(
     void* _Atomic * packet_handler,
     const int sockfd,
     const uint16_t source_port,
-    volatile SwiftNetVector* const packets_sending,
-    volatile SwiftNetMemoryAllocator* const packets_sending_messages_memory_allocator,
-    volatile SwiftNetVector* const pending_messages,
-    volatile SwiftNetMemoryAllocator* const pending_messages_memory_allocator,
+    SwiftNetVector* const packets_sending,
+    SwiftNetMemoryAllocator* const packets_sending_messages_memory_allocator,
+    SwiftNetVector* const pending_messages,
+    SwiftNetMemoryAllocator* const pending_messages_memory_allocator,
     uint8_t* current_read_pointer,
-    volatile SwiftNetVector* const packets_completed_history,
-    volatile SwiftNetMemoryAllocator* const packets_completed_history_memory_allocator,
+    SwiftNetVector* const packets_completed_history,
+    SwiftNetMemoryAllocator* const packets_completed_history_memory_allocator,
     ConnectionType connection_type,
-    PacketQueue* restrict const packet_queue,
-    PacketCallbackQueue* restrict const packet_callback_queue,
-    void* connection
+    PacketQueue* const packet_queue,
+    PacketCallbackQueue* const packet_callback_queue,
+    void* connection,
+    _Atomic bool* closing
 ) {
-    pthread_t execute_callback_thread;
-    if(connection_type == CONNECTION_TYPE_CLIENT) {
-        pthread_create(&execute_callback_thread, NULL, execute_packet_callback_client, connection);
-    } else {
-        pthread_create(&execute_callback_thread, NULL, execute_packet_callback_server, connection);
-    }
-
     while(1) {
-        volatile PacketQueueNode* const node = wait_for_next_packet(packet_queue);
+        if (atomic_load(closing) == true) {
+            break;
+        }
+
+        PacketQueueNode* const node = wait_for_next_packet(packet_queue);
         if(node == NULL) {
             continue;
         }
@@ -256,16 +278,16 @@ static inline void swiftnet_process_packets(
             continue;
         }
 
-        uint8_t* restrict const packet_buffer = node->data;
+        uint8_t* const packet_buffer = node->data;
         if(packet_buffer == NULL) {
             goto next_packet;
         }
 
-        uint8_t* restrict const packet_data = &packet_buffer[PACKET_HEADER_SIZE];
+        uint8_t* const packet_data = &packet_buffer[PACKET_HEADER_SIZE];
 
         // Check if user set a function that will execute with the packet data received as arg
         #ifdef SWIFT_NET_ERROR
-            void* packet_handler_derenfernced = atomic_load(packet_handler);
+            const void* const packet_handler_derenfernced = atomic_load(packet_handler);
             if(unlikely(packet_handler_derenfernced == NULL)) {
                 allocator_free(&packet_queue_node_memory_allocator, (void*)node);
                 allocator_free(&packet_buffer_memory_allocator, packet_buffer);
@@ -348,7 +370,7 @@ static inline void swiftnet_process_packets(
             {
                 const uint32_t mtu = MIN(packet_info.maximum_transmission_unit, maximum_transmission_unit);
 
-                volatile SwiftNetPendingMessage* const pending_message = get_pending_message(&packet_info, pending_messages, connection_type, ip_header.ip_src.s_addr, ip_header.ip_id);
+                SwiftNetPendingMessage* const pending_message = get_pending_message(&packet_info, pending_messages, connection_type, ip_header.ip_src.s_addr, ip_header.ip_id);
                 if(pending_message == NULL) {
                     printf("null pending message\n");
                     const bool packet_already_completed = check_packet_already_completed(ip_header.ip_id, packets_completed_history);
@@ -430,7 +452,9 @@ static inline void swiftnet_process_packets(
             }
             case PACKET_TYPE_SEND_LOST_PACKETS_RESPONSE:
             {
-                volatile SwiftNetPacketSending* const target_packet_sending = get_packet_sending(packets_sending, ip_header.ip_id);
+                printf("got response\n");
+
+                SwiftNetPacketSending* const target_packet_sending = get_packet_sending(packets_sending, ip_header.ip_id);
 
                 if(unlikely(target_packet_sending == NULL)) {
                     allocator_free(&packet_buffer_memory_allocator, packet_buffer);
@@ -456,7 +480,7 @@ static inline void swiftnet_process_packets(
             }
             case PACKET_TYPE_SUCCESSFULLY_RECEIVED_PACKET:
             {
-                volatile SwiftNetPacketSending* const target_packet_sending = get_packet_sending(packets_sending, ip_header.ip_id);
+                SwiftNetPacketSending* const target_packet_sending = get_packet_sending(packets_sending, ip_header.ip_id);
 
                 if(unlikely(target_packet_sending == NULL)) {
                     allocator_free(&packet_buffer_memory_allocator, packet_buffer);
@@ -485,12 +509,12 @@ static inline void swiftnet_process_packets(
         const uint32_t mtu = MIN(packet_info.maximum_transmission_unit, maximum_transmission_unit);
         const uint32_t chunk_data_size = mtu - PACKET_HEADER_SIZE;
 
-        volatile SwiftNetPendingMessage* const pending_message = get_pending_message(&packet_info, pending_messages, connection_type, node->sender_address.sin_addr.s_addr, ip_header.ip_id);
+        SwiftNetPendingMessage* const pending_message = get_pending_message(&packet_info, pending_messages, connection_type, node->sender_address.sin_addr.s_addr, ip_header.ip_id);
 
         if(pending_message == NULL) {
             if(packet_info.packet_length + PACKET_HEADER_SIZE > mtu) {
                 // Split packet into chunks
-                SwiftNetPendingMessage* restrict const new_pending_message = create_new_pending_message(pending_messages, pending_messages_memory_allocator, &packet_info, connection_type, node->sender_address.sin_addr.s_addr, ip_header.ip_id);
+                SwiftNetPendingMessage* const new_pending_message = create_new_pending_message(pending_messages, pending_messages_memory_allocator, &packet_info, connection_type, node->sender_address.sin_addr.s_addr, ip_header.ip_id);
 
                 new_pending_message->chunks_received_number++;
 
@@ -507,9 +531,9 @@ static inline void swiftnet_process_packets(
                 packet_completed(ip_header.ip_id, packet_info.packet_length, packets_completed_history, packets_completed_history_memory_allocator);
 
                 if(connection_type == CONNECTION_TYPE_SERVER) {
-                    uint8_t* ptr = packet_buffer + PACKET_HEADER_SIZE;
+                    uint8_t* const ptr = packet_buffer + PACKET_HEADER_SIZE;
 
-                    SwiftNetServerPacketData* packet_data = allocator_allocate(&server_packet_data_memory_allocator) ;
+                    SwiftNetServerPacketData* const packet_data = allocator_allocate(&server_packet_data_memory_allocator) ;
                     packet_data->data = ptr;
                     packet_data->current_pointer = ptr;
                     packet_data->metadata = (SwiftNetPacketServerMetadata){
@@ -525,9 +549,9 @@ static inline void swiftnet_process_packets(
                     #endif
                     );
                 } else {
-                    uint8_t* ptr = packet_buffer + PACKET_HEADER_SIZE;
+                    uint8_t* const ptr = packet_buffer + PACKET_HEADER_SIZE;
 
-                    SwiftNetClientPacketData* packet_data = allocator_allocate(&client_packet_data_memory_allocator) ;
+                    SwiftNetClientPacketData* const packet_data = allocator_allocate(&client_packet_data_memory_allocator) ;
                     packet_data->data = ptr;
                     packet_data->current_pointer = ptr;
                     packet_data->metadata = (SwiftNetPacketClientMetadata){
@@ -573,9 +597,9 @@ static inline void swiftnet_process_packets(
                 packet_completed(ip_header.ip_id, packet_info.packet_length, packets_completed_history, packets_completed_history_memory_allocator);
 
                 if(connection_type == CONNECTION_TYPE_SERVER) {
-                    uint8_t* ptr = pending_message->packet_data_start;
+                    uint8_t* const ptr = pending_message->packet_data_start;
 
-                    SwiftNetServerPacketData* packet_data = allocator_allocate(&server_packet_data_memory_allocator);
+                    SwiftNetServerPacketData* const packet_data = allocator_allocate(&server_packet_data_memory_allocator);
                     packet_data->data = ptr;
                     packet_data->current_pointer = ptr;
                     packet_data->metadata = (SwiftNetPacketServerMetadata){
@@ -585,15 +609,15 @@ static inline void swiftnet_process_packets(
                         .packet_id = ip_header.ip_id
                     };
 
-                    pass_callback_execution(packet_data, packet_callback_queue, (SwiftNetPendingMessage* restrict const)pending_message, ip_header.ip_id
+                    pass_callback_execution(packet_data, packet_callback_queue, (SwiftNetPendingMessage* const)pending_message, ip_header.ip_id
                     #ifdef SWIFT_NET_REQUESTS
                         , packet_info.request_response
                     #endif
                     );
                 } else {
-                    uint8_t* ptr = pending_message->packet_data_start;
+                    uint8_t* const ptr = pending_message->packet_data_start;
 
-                    SwiftNetClientPacketData* packet_data = allocator_allocate(&client_packet_data_memory_allocator) ;
+                    SwiftNetClientPacketData* const packet_data = allocator_allocate(&client_packet_data_memory_allocator) ;
                     packet_data->data = ptr;
                     packet_data->current_pointer = ptr;
                     packet_data->metadata = (SwiftNetPacketClientMetadata){
@@ -602,7 +626,7 @@ static inline void swiftnet_process_packets(
                         .packet_id = ip_header.ip_id
                     };
 
-                    pass_callback_execution(packet_data, packet_callback_queue, (SwiftNetPendingMessage* restrict const)pending_message, ip_header.ip_id
+                    pass_callback_execution(packet_data, packet_callback_queue, (SwiftNetPendingMessage* const)pending_message, ip_header.ip_id
                     #ifdef SWIFT_NET_REQUESTS
                     , packet_info.request_response
                     #endif
@@ -634,18 +658,18 @@ static inline void swiftnet_process_packets(
     }
 }
 
-void* swiftnet_server_process_packets(void* restrict const void_server) {
-    SwiftNetServer* restrict const server = (SwiftNetServer*)void_server;
+void* swiftnet_server_process_packets(void* const void_server) {
+    SwiftNetServer* const server = (SwiftNetServer*)void_server;
 
-    swiftnet_process_packets((void*)&server->packet_handler, server->sockfd, server->server_port, &server->packets_sending, &server->packets_sending_memory_allocator, &server->pending_messages, &server->pending_messages_memory_allocator, server->current_read_pointer, &server->packets_completed, &server->packets_completed_memory_allocator, CONNECTION_TYPE_SERVER, &server->packet_queue, &server->packet_callback_queue, server);
+    swiftnet_process_packets((void*)&server->packet_handler, server->sockfd, server->server_port, &server->packets_sending, &server->packets_sending_memory_allocator, &server->pending_messages, &server->pending_messages_memory_allocator, server->current_read_pointer, &server->packets_completed, &server->packets_completed_memory_allocator, CONNECTION_TYPE_SERVER, &server->packet_queue, &server->packet_callback_queue, server, &server->closing);
 
     return NULL;
 }
 
-void* swiftnet_client_process_packets(void* restrict const void_client) {
-    SwiftNetClientConnection* restrict const client = (SwiftNetClientConnection*)void_client;
+void* swiftnet_client_process_packets(void* const void_client) {
+    SwiftNetClientConnection* const client = (SwiftNetClientConnection*)void_client;
 
-    swiftnet_process_packets((void*)&client->packet_handler, client->sockfd, client->port_info.source_port, &client->packets_sending, &client->packets_sending_memory_allocator, &client->pending_messages, &client->pending_messages_memory_allocator, client->current_read_pointer, &client->packets_completed, &client->packets_completed_memory_allocator, CONNECTION_TYPE_CLIENT, &client->packet_queue, &client->packet_callback_queue, client);
+    swiftnet_process_packets((void*)&client->packet_handler, client->sockfd, client->port_info.source_port, &client->packets_sending, &client->packets_sending_memory_allocator, &client->pending_messages, &client->pending_messages_memory_allocator, client->current_read_pointer, &client->packets_completed, &client->packets_completed_memory_allocator, CONNECTION_TYPE_CLIENT, &client->packet_queue, &client->packet_callback_queue, client, &client->closing);
 
     return NULL;
 }

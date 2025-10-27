@@ -9,7 +9,7 @@
 #include "internal/internal.h"
 #include <stddef.h>
 
-static inline void insert_queue_node(PacketQueueNode* const restrict new_node, PacketQueue* restrict const packet_queue, const ConnectionType contype) {
+static inline void insert_queue_node(PacketQueueNode* const new_node, PacketQueue* const packet_queue, const ConnectionType contype) {
     if(new_node == NULL) {
         return;
     }
@@ -36,22 +36,20 @@ static inline void insert_queue_node(PacketQueueNode* const restrict new_node, P
     return;
 }
 
-static inline void swiftnet_handle_packets(const int sockfd, const uint16_t source_port, pthread_t* restrict const process_packets_thread, void* connection, const ConnectionType connection_type, PacketQueue* restrict const packet_queue) {
-    if(connection_type == CONNECTION_TYPE_CLIENT) {
-        pthread_create(process_packets_thread, NULL, swiftnet_client_process_packets, connection);
-    } else {
-        pthread_create(process_packets_thread, NULL, swiftnet_server_process_packets, connection);
-    }
-
+static inline void swiftnet_handle_packets(const int sockfd, const uint16_t source_port, pthread_t* const process_packets_thread, void* connection, const ConnectionType connection_type, PacketQueue* const packet_queue, const _Atomic bool* closing) {
     while(1) {
-        PacketQueueNode* const restrict node = allocator_allocate(&packet_queue_node_memory_allocator);
+        if (atomic_load(closing) == true) {
+            break;
+        }
+
+        PacketQueueNode* const node = allocator_allocate(&packet_queue_node_memory_allocator);
         if(unlikely(node == NULL)) {
             continue;
         }
 
         node->server_address_length = sizeof(node->sender_address);
 
-        uint8_t* const restrict packet_buffer = allocator_allocate(&packet_buffer_memory_allocator);
+        uint8_t* const packet_buffer = allocator_allocate(&packet_buffer_memory_allocator);
         if(unlikely(packet_buffer == NULL)) {
             allocator_free(&packet_queue_node_memory_allocator, node);
             continue;
@@ -77,18 +75,18 @@ static inline void swiftnet_handle_packets(const int sockfd, const uint16_t sour
     }
 }
 
-void* swiftnet_client_handle_packets(void* restrict const client_void) {
-    SwiftNetClientConnection* restrict const client = (SwiftNetClientConnection*)client_void;
+void* swiftnet_client_handle_packets(void* const client_void) {
+    SwiftNetClientConnection* const client = (SwiftNetClientConnection*)client_void;
 
-    swiftnet_handle_packets(client->sockfd, client->port_info.source_port, &client->process_packets_thread, client, CONNECTION_TYPE_CLIENT, &client->packet_queue);
+    swiftnet_handle_packets(client->sockfd, client->port_info.source_port, &client->process_packets_thread, client, CONNECTION_TYPE_CLIENT, &client->packet_queue, &client->closing);
 
     return NULL;
 }
 
-void* swiftnet_server_handle_packets(void* restrict const server_void) {
-    SwiftNetServer* restrict const server = (SwiftNetServer*)server_void;
+void* swiftnet_server_handle_packets(void* const server_void) {
+    SwiftNetServer* const server = (SwiftNetServer*)server_void;
 
-    swiftnet_handle_packets(server->sockfd, server->server_port, &server->process_packets_thread, server, CONNECTION_TYPE_SERVER, &server->packet_queue);
+    swiftnet_handle_packets(server->sockfd, server->server_port, &server->process_packets_thread, server, CONNECTION_TYPE_SERVER, &server->packet_queue, &server->closing);
 
     return NULL;
 }
