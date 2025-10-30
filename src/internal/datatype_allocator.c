@@ -8,7 +8,7 @@ static inline void free_stack_lock(SwiftNetMemoryAllocatorStack* const stack) {
     atomic_store_explicit(&stack->owner, ALLOCATOR_STACK_FREE, memory_order_release);
 }
 
-SwiftNetMemoryAllocatorStack* const find_free_pointer_stack(const SwiftNetMemoryAllocator* const allocator) {
+SwiftNetMemoryAllocatorStack* const find_free_pointer_stack(volatile const SwiftNetMemoryAllocator* const allocator) {
     for (SwiftNetMemoryAllocatorStack* current_stack = atomic_load(&allocator->free_memory_pointers.first_item); current_stack != NULL; current_stack = atomic_load_explicit(&current_stack->next, memory_order_acquire)) {
         uint8_t thread_none = ALLOCATOR_STACK_FREE;
 
@@ -111,7 +111,7 @@ SwiftNetMemoryAllocator allocator_create(const uint32_t item_size, const uint32_
     return new_allocator;
 }
 
-static void create_new_stack(SwiftNetMemoryAllocator* const memory_allocator) {
+static void create_new_stack(volatile SwiftNetMemoryAllocator* const memory_allocator) {
     uint8_t creating_unlocked = STACK_CREATING_UNLOCKED;
 
     while (!atomic_compare_exchange_strong(&memory_allocator->creating_stack, &creating_unlocked, STACK_CREATING_LOCKED)) {
@@ -191,7 +191,7 @@ void* allocator_allocate(SwiftNetMemoryAllocator* const memory_allocator) {
 }
 
 #ifdef SWIFT_NET_DEBUG
-    static inline bool is_already_free(SwiftNetMemoryAllocator* const memory_allocator, void* const memory_location) {
+    static inline bool is_already_free(volatile SwiftNetMemoryAllocator* const memory_allocator, volatile void* const memory_location) {
         /*for (SwiftNetMemoryAllocatorStack* restrict stack = memory_allocator->free_memory_pointers.first_item; stack != NULL; stack = stack->next) {
             for (uint32_t i = 0; i < stack->size; i++) {
                 if (*(((void**)stack->data) + i) == memory_location) {
@@ -204,7 +204,7 @@ void* allocator_allocate(SwiftNetMemoryAllocator* const memory_allocator) {
     }
 #endif
 
-void allocator_free(SwiftNetMemoryAllocator* const memory_allocator, void* const memory_location) {
+void allocator_free(volatile SwiftNetMemoryAllocator* const memory_allocator, volatile void* const memory_location) {
     #ifdef SWIFT_NET_DEBUG
         const bool already_free = is_already_free(memory_allocator, memory_location);
 
@@ -225,12 +225,12 @@ void allocator_free(SwiftNetMemoryAllocator* const memory_allocator, void* const
 
     const uint32_t size = atomic_fetch_add(&free_stack->size, 1);
 
-    ((void**)free_stack->data)[size] = memory_location;
+    ((volatile void**)free_stack->data)[size] = memory_location;
 
     free_stack_lock(free_stack);
 }
 
-void allocator_destroy(SwiftNetMemoryAllocator* const memory_allocator) {
+void allocator_destroy(volatile SwiftNetMemoryAllocator* const memory_allocator) {
     for (SwiftNetMemoryAllocatorStack* current_stack_pointers = atomic_load(&memory_allocator->free_memory_pointers.first_item); ; ) {
         free(current_stack_pointers->data);
 

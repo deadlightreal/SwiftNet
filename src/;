@@ -95,18 +95,12 @@ typedef struct {
     uint32_t maximum_transmission_unit;
 } SwiftNetServerInformation;
 
-typedef enum {
-    NO_UPDATE,
-    UPDATED_LOST_CHUNKS,
-    SUCCESSFULLY_RECEIVED
-} PacketSendingUpdated;
-
 typedef struct {
     uint16_t packet_id;
-    uint32_t* lost_chunks;
-    uint32_t lost_chunks_size;
-    _Atomic PacketSendingUpdated updated;
-    _Atomic bool locked;
+    _Atomic bool updated_lost_chunks;
+    uint32_t* volatile lost_chunks;
+    volatile uint32_t lost_chunks_size;
+    _Atomic bool successfully_received;
 } SwiftNetPacketSending;
 
 typedef struct {
@@ -264,8 +258,8 @@ extern void swiftnet_server_send_packet (SwiftNetServer* const server, SwiftNetP
 
 extern SwiftNetPacketBuffer swiftnet_server_create_packet_buffer(const uint32_t buffer_size);
 extern SwiftNetPacketBuffer swiftnet_client_create_packet_buffer(const uint32_t buffer_size);
-extern void swiftnet_server_destroy_packet_buffer(const SwiftNetPacketBuffer* const packet);
-extern void swiftnet_client_destroy_packet_buffer(const SwiftNetPacketBuffer* const packet);
+extern void swiftnet_server_destroy_packet_buffer(SwiftNetPacketBuffer* const packet);
+extern void swiftnet_client_destroy_packet_buffer(SwiftNetPacketBuffer* const packet);
 extern SwiftNetServer* swiftnet_create_server(const uint16_t port);
 extern SwiftNetClientConnection* swiftnet_create_client(const char* const ip_address, const uint16_t port);
 extern void* swiftnet_client_read_packet(SwiftNetClientPacketData* const packet_data, const uint32_t data_size);

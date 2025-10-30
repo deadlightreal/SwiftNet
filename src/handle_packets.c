@@ -9,7 +9,7 @@
 #include "internal/internal.h"
 #include <stddef.h>
 
-static inline void insert_queue_node(PacketQueueNode* const new_node, PacketQueue* const packet_queue, const ConnectionType contype) {
+static inline void insert_queue_node(PacketQueueNode* const new_node, volatile PacketQueue* const packet_queue, const ConnectionType contype) {
     if(new_node == NULL) {
         printf("null node\n");
 
@@ -46,7 +46,7 @@ static inline void swiftnet_handle_packets(const int sockfd, const uint16_t sour
             break;
         }
 
-        PacketQueueNode* const node = allocator_allocate(&packet_queue_node_memory_allocator);
+        volatile PacketQueueNode* const node = allocator_allocate(&packet_queue_node_memory_allocator);
         if(unlikely(node == NULL)) {
             continue;
         }

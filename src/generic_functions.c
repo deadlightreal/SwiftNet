@@ -15,13 +15,13 @@ static inline void swiftnet_validate_new_handler(const void* const new_handler, 
     #endif
 }
 
-void swiftnet_client_set_message_handler(SwiftNetClientConnection* const client, void (* const new_handler)(SwiftNetClientPacketData* restrict const)) {
+void swiftnet_client_set_message_handler(volatile SwiftNetClientConnection* const client, void (* const new_handler)(SwiftNetClientPacketData* const)) {
     swiftnet_validate_new_handler(new_handler, __func__);
 
     atomic_store(&client->packet_handler, new_handler);
 }
 
-void swiftnet_server_set_message_handler(SwiftNetServer* const server, void (* const new_handler)(SwiftNetServerPacketData* const)) {
+void swiftnet_server_set_message_handler(volatile SwiftNetServer* const server, void (* const new_handler)(SwiftNetServerPacketData* const)) {
     swiftnet_validate_new_handler(new_handler, __func__);
 
     atomic_store(&server->packet_handler, new_handler);
