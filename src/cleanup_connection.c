@@ -2,7 +2,7 @@
 #include "swift_net.h"
 #include <stdlib.h>
 
-void swiftnet_client_cleanup(volatile SwiftNetClientConnection* const client) {
+void swiftnet_client_cleanup(SwiftNetClientConnection* const client) {
     allocator_destroy(&client->packets_sending_memory_allocator);
     allocator_destroy(&client->pending_messages_memory_allocator);
     allocator_destroy(&client->packets_completed_memory_allocator);
@@ -22,7 +22,7 @@ void swiftnet_client_cleanup(volatile SwiftNetClientConnection* const client) {
     allocator_free(&client_connection_memory_allocator, client);
 }
 
-void swiftnet_server_cleanup(volatile SwiftNetServer* const server) {
+void swiftnet_server_cleanup(SwiftNetServer* const server) {
     allocator_destroy(&server->packets_sending_memory_allocator);
     allocator_destroy(&server->pending_messages_memory_allocator);
     allocator_destroy(&server->packets_completed_memory_allocator);

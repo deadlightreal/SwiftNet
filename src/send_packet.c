@@ -15,7 +15,7 @@
 
 static inline void lock_packet_sending(SwiftNetPacketSending* const packet_sending) {
     bool locked = false;
-    while(!atomic_compare_exchange_strong(&packet_sending->locked, &locked, true)) {
+    while(!atomic_compare_exchange_strong_explicit(&packet_sending->locked, &locked, true, memory_order_acquire, memory_order_relaxed)) {
         locked = false;
     }
 }
@@ -118,6 +118,8 @@ static inline void handle_lost_packets(
 
     while(1) {
         const uint8_t request_lost_packets_bitarray_response = request_lost_packets_bitarray(request_lost_packets_buffer, PACKET_HEADER_SIZE, (const struct sockaddr*)destination_address, sockfd, packet_sending);
+
+        printf("GOT UPDATED STATUS :D\n");
 
         lock_packet_sending(packet_sending);
 

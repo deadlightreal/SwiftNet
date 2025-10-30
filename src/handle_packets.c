@@ -16,10 +16,8 @@ static inline void insert_queue_node(PacketQueueNode* const new_node, volatile P
         return;
     }
 
-    printf("inserted\n");
-
     uint32_t owner_none = PACKET_QUEUE_OWNER_NONE;
-    while(!atomic_compare_exchange_strong(&packet_queue->owner, &owner_none, PACKET_QUEUE_OWNER_HANDLE_PACKETS)) {
+    while(!atomic_compare_exchange_strong_explicit(&packet_queue->owner, &owner_none, PACKET_QUEUE_OWNER_HANDLE_PACKETS, memory_order_acquire, memory_order_relaxed)) {
         owner_none = PACKET_QUEUE_OWNER_NONE;
     }
 
@@ -35,7 +33,7 @@ static inline void insert_queue_node(PacketQueueNode* const new_node, volatile P
         packet_queue->first_node = new_node;
     }
 
-    atomic_store(&packet_queue->owner, PACKET_QUEUE_OWNER_NONE);
+    atomic_store_explicit(&packet_queue->owner, PACKET_QUEUE_OWNER_NONE, memory_order_release);
 
     return;
 }
@@ -46,7 +44,7 @@ static inline void swiftnet_handle_packets(const int sockfd, const uint16_t sour
             break;
         }
 
-        volatile PacketQueueNode* const node = allocator_allocate(&packet_queue_node_memory_allocator);
+        PacketQueueNode* const node = allocator_allocate(&packet_queue_node_memory_allocator);
         if(unlikely(node == NULL)) {
             continue;
         }
@@ -78,6 +76,8 @@ static inline void swiftnet_handle_packets(const int sockfd, const uint16_t sour
         node->data = packet_buffer;
         node->sender_address.sin_addr = sender_addr;
         node->next = NULL;
+
+        atomic_thread_fence(memory_order_release);
 
         insert_queue_node(node, packet_queue, connection_type);
     }

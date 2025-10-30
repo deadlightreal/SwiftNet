@@ -3,13 +3,13 @@
 
 void vector_lock(SwiftNetVector* const vector) {
     uint8_t owner_none = 0;
-    while(!atomic_compare_exchange_strong(&vector->locked, &owner_none, UINT8_MAX)) {
+    while(!atomic_compare_exchange_strong_explicit(&vector->locked, &owner_none, UINT8_MAX, memory_order_acquire, memory_order_relaxed)) {
         owner_none = 0;
     }
 }
 
 void vector_unlock(SwiftNetVector* const vector) {
-    atomic_store(&vector->locked, 0);
+    atomic_store_explicit(&vector->locked, 0, memory_order_release);
 }
 
 SwiftNetVector vector_create(const uint32_t starting_amount) {
@@ -29,7 +29,7 @@ SwiftNetVector vector_create(const uint32_t starting_amount) {
     return new_vector;
 }
 
-void vector_destroy(volatile SwiftNetVector* const vector) {
+void vector_destroy(SwiftNetVector* const vector) {
     free(vector->data);
 }
 
@@ -42,7 +42,7 @@ void vector_push(SwiftNetVector* const vector, void* const data) {
 
         vector->capacity = new_capacity;
 
-        void** restrict const new_data_ptr = realloc(vector->data, sizeof(void*) * new_capacity);
+        void** const new_data_ptr = realloc(vector->data, sizeof(void*) * new_capacity);
         if (unlikely(new_data_ptr == NULL)) {
             fprintf(stderr, "Failed to malloc\n");
             exit(EXIT_FAILURE);
