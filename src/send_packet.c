@@ -1,4 +1,5 @@
 #include "swift_net.h"
+#include <stdatomic.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <string.h>
@@ -12,6 +13,17 @@
 #include "internal/internal.h"
 #include <netinet/in.h>
 
+static inline void lock_packet_sending(SwiftNetPacketSending* const packet_sending) {
+    bool locked = false;
+    while(!atomic_compare_exchange_strong(&packet_sending->locked, &locked, true)) {
+        locked = false;
+    }
+}
+
+static inline void unlock_packet_sending(SwiftNetPacketSending* const packet_sending) {
+    atomic_store_explicit(&packet_sending->locked, false, memory_order_release);
+}
+
 static inline uint8_t request_lost_packets_bitarray(const uint8_t* const raw_data, const uint32_t data_size, const struct sockaddr* const destination, const int sockfd, SwiftNetPacketSending* const packet_sending) {
     while(1) {
         if(check_debug_flag(DEBUG_LOST_PACKETS)) {
@@ -21,16 +33,20 @@ static inline uint8_t request_lost_packets_bitarray(const uint8_t* const raw_dat
         sendto(sockfd, raw_data, data_size, 0, destination, sizeof(*destination));
 
         for(uint8_t times_checked = 0; times_checked < 0xFF; times_checked++) {
-            if(atomic_load(&packet_sending->updated_lost_chunks) == true) {
-                atomic_store(&packet_sending->updated_lost_chunks, false);
-                return REQUEST_LOST_PACKETS_RETURN_UPDATED_BIT_ARRAY;
+            const PacketSendingUpdated status = atomic_load(&packet_sending->updated);
+
+            switch (status) {
+                case NO_UPDATE:
+                    break;
+                case UPDATED_LOST_CHUNKS:
+                    atomic_store(&packet_sending->updated, NO_UPDATE);
+                    return REQUEST_LOST_PACKETS_RETURN_UPDATED_BIT_ARRAY;
+                case SUCCESSFULLY_RECEIVED:
+                    atomic_store(&packet_sending->updated, NO_UPDATE);
+                    return REQUEST_LOST_PACKETS_RETURN_UPDATED_BIT_ARRAY;
             }
 
-            if(atomic_load(&packet_sending->successfully_received) == true) {
-                return REQUEST_LOST_PACKETS_RETURN_COMPLETED_PACKET;
-            }
-
-            usleep(10000);
+            usleep(1000);
         }
     }
 }
@@ -103,6 +119,8 @@ static inline void handle_lost_packets(
     while(1) {
         const uint8_t request_lost_packets_bitarray_response = request_lost_packets_bitarray(request_lost_packets_buffer, PACKET_HEADER_SIZE, (const struct sockaddr*)destination_address, sockfd, packet_sending);
 
+        lock_packet_sending(packet_sending);
+
         switch (request_lost_packets_bitarray_response) {
             case REQUEST_LOST_PACKETS_RETURN_UPDATED_BIT_ARRAY:
                 break;
@@ -112,8 +130,8 @@ static inline void handle_lost_packets(
                 vector_lock(packets_sending);
 
                 for (uint32_t i = 0; i < packets_sending->size; i++) {
-                    if (((SwiftNetPacketSending*)vector_get((SwiftNetVector*)packets_sending, i))->packet_id == packet_sending->packet_id) {
-                        vector_remove((SwiftNetVector*)packets_sending, i);
+                    if (((SwiftNetPacketSending*)vector_get(packets_sending, i))->packet_id == packet_sending->packet_id) {
+                        vector_remove(packets_sending, i);
 
                         break;
                     }
@@ -121,7 +139,9 @@ static inline void handle_lost_packets(
 
                 vector_unlock(packets_sending);
 
-                allocator_free(packets_sending_memory_allocator, (void*)packet_sending);
+                unlock_packet_sending(packet_sending);
+
+                allocator_free(packets_sending_memory_allocator, packet_sending);
 
                 return;
         }
@@ -164,6 +184,8 @@ static inline void handle_lost_packets(
                 sendto(sockfd, resend_chunk_buffer, sizeof(resend_chunk_buffer), 0, (const struct sockaddr*)destination_address, *destination_address_len);
             }
         }
+
+        unlock_packet_sending(packet_sending);
     }
 }
 
@@ -205,7 +227,7 @@ inline void swiftnet_send_packet(
 
             vector_lock(&requests_sent);
 
-            vector_push(&requests_sent, (void*)request_sent);
+            vector_push(&requests_sent, request_sent);
 
             vector_unlock(&requests_sent);
         }
@@ -242,9 +264,9 @@ inline void swiftnet_send_packet(
         const uint32_t chunk_amount = (packet_length + (mtu - PACKET_HEADER_SIZE) - 1) / (mtu - PACKET_HEADER_SIZE);
 
         new_packet_sending->lost_chunks = NULL;
-        new_packet_sending->updated_lost_chunks = false;
-        new_packet_sending->successfully_received = false;
-
+        new_packet_sending->locked = false;
+        new_packet_sending->lost_chunks = NULL;
+        new_packet_sending->lost_chunks_size = 0;
         new_packet_sending->packet_id = packet_id;
 
         packet_info.chunk_amount = chunk_amount;

@@ -256,7 +256,6 @@ static inline void swiftnet_process_packets(
     SwiftNetMemoryAllocator* const packets_sending_messages_memory_allocator,
     SwiftNetVector* const pending_messages,
     SwiftNetMemoryAllocator* const pending_messages_memory_allocator,
-    uint8_t* current_read_pointer,
     SwiftNetVector* const packets_completed_history,
     SwiftNetMemoryAllocator* const packets_completed_history_memory_allocator,
     ConnectionType connection_type,
@@ -470,6 +469,8 @@ static inline void swiftnet_process_packets(
 
                 SwiftNetPacketSending* const target_packet_sending = get_packet_sending(packets_sending, ip_header.ip_id);
 
+                printf("got response\n");
+
                 if(unlikely(target_packet_sending == NULL)) {
                     allocator_free(&packet_buffer_memory_allocator, packet_buffer);
 
@@ -487,6 +488,8 @@ static inline void swiftnet_process_packets(
                 target_packet_sending->lost_chunks_size = packet_info.packet_length / 4;
 
                 atomic_store(&target_packet_sending->updated_lost_chunks, true);
+
+                printf("updated\n");
 
                 allocator_free(&packet_buffer_memory_allocator, packet_buffer);
 
@@ -542,8 +545,6 @@ static inline void swiftnet_process_packets(
 
                 goto next_packet;
             } else {
-                current_read_pointer = packet_buffer + PACKET_HEADER_SIZE;
-
                 packet_completed(ip_header.ip_id, packet_info.packet_length, packets_completed_history, packets_completed_history_memory_allocator);
 
                 if(connection_type == CONNECTION_TYPE_SERVER) {
@@ -591,8 +592,6 @@ static inline void swiftnet_process_packets(
             if(pending_message->chunks_received_number + 1 >= packet_info.chunk_amount) {
                 // Completed the packet
                 memcpy(pending_message->packet_data_start + (chunk_data_size * packet_info.chunk_index), &packet_buffer[PACKET_HEADER_SIZE], bytes_to_write);
-
-                current_read_pointer = pending_message->packet_data_start;
 
                 chunk_received(pending_message->chunks_received, packet_info.chunk_index);
 
@@ -677,7 +676,7 @@ static inline void swiftnet_process_packets(
 void* swiftnet_server_process_packets(void* const void_server) {
     SwiftNetServer* const server = (SwiftNetServer*)void_server;
 
-    swiftnet_process_packets((void*)&server->packet_handler, server->sockfd, server->server_port, &server->packets_sending, &server->packets_sending_memory_allocator, &server->pending_messages, &server->pending_messages_memory_allocator, server->current_read_pointer, &server->packets_completed, &server->packets_completed_memory_allocator, CONNECTION_TYPE_SERVER, &server->packet_queue, &server->packet_callback_queue, server, &server->closing);
+    swiftnet_process_packets((void*)&server->packet_handler, server->sockfd, server->server_port, &server->packets_sending, &server->packets_sending_memory_allocator, &server->pending_messages, &server->pending_messages_memory_allocator, &server->packets_completed, &server->packets_completed_memory_allocator, CONNECTION_TYPE_SERVER, &server->packet_queue, &server->packet_callback_queue, server, &server->closing);
 
     return NULL;
 }
@@ -685,7 +684,7 @@ void* swiftnet_server_process_packets(void* const void_server) {
 void* swiftnet_client_process_packets(void* const void_client) {
     SwiftNetClientConnection* const client = (SwiftNetClientConnection*)void_client;
 
-    swiftnet_process_packets((void*)&client->packet_handler, client->sockfd, client->port_info.source_port, &client->packets_sending, &client->packets_sending_memory_allocator, &client->pending_messages, &client->pending_messages_memory_allocator, client->current_read_pointer, &client->packets_completed, &client->packets_completed_memory_allocator, CONNECTION_TYPE_CLIENT, &client->packet_queue, &client->packet_callback_queue, client, &client->closing);
+    swiftnet_process_packets((void*)&client->packet_handler, client->sockfd, client->port_info.source_port, &client->packets_sending, &client->packets_sending_memory_allocator, &client->pending_messages, &client->pending_messages_memory_allocator, &client->packets_completed, &client->packets_completed_memory_allocator, CONNECTION_TYPE_CLIENT, &client->packet_queue, &client->packet_callback_queue, client, &client->closing);
 
     return NULL;
 }

@@ -29,7 +29,7 @@ SwiftNetVector vector_create(const uint32_t starting_amount) {
     return new_vector;
 }
 
-void vector_destroy(SwiftNetVector* const vector) {
+void vector_destroy(volatile SwiftNetVector* const vector) {
     free(vector->data);
 }
 

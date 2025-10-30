@@ -7,6 +7,7 @@
 #include <pthread.h>
 #include <unistd.h>
 #include <arpa/inet.h>
+#include <sys/types.h>
 #include <netinet/ip.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
@@ -15,7 +16,7 @@
 #include <fcntl.h>
 #include <stddef.h>
 
-bool exit_thread = false;
+static _Atomic bool exit_thread = false;
 
 typedef struct {
     const int sockfd;
@@ -25,12 +26,12 @@ typedef struct {
     const socklen_t server_addr_len;
 } RequestServerInformationArgs;
 
-void* request_server_information(void* request_server_information_args_void) {
+void* request_server_information(void* const request_server_information_args_void) {
     const RequestServerInformationArgs* const request_server_information_args = (RequestServerInformationArgs*)request_server_information_args_void;
 
     while (1) {
-        if(exit_thread == true) {
-            exit_thread = false;
+        if(atomic_load(&exit_thread) == true) {
+            atomic_store(&exit_thread, false);
 
             return NULL;
         }
@@ -79,12 +80,15 @@ SwiftNetClientConnection* swiftnet_create_client(const char* const ip_address, c
     new_connection->port_info.destination_port = port;
     new_connection->port_info.source_port = clientPort;
 
-    atomic_store(&new_connection->packet_handler, NULL);
+    new_connection->packet_handler = NULL;
 
-    memset(&new_connection->server_addr, 0, sizeof(struct sockaddr_in));
-    new_connection->server_addr.sin_family = AF_INET;
-    new_connection->server_addr.sin_port = htons(port);
-    new_connection->server_addr.sin_addr.s_addr = inet_addr(ip_address);
+    new_connection->server_addr = (struct sockaddr_in){
+        .sin_family = AF_INET,
+        .sin_port = htons(port),
+        .sin_addr = {.s_addr = inet_addr(ip_address)},
+        .sin_zero = 0,
+        .sin_len = 0
+    };
 
     // Request the server information, and proccess it
     const SwiftNetPacketInfo request_server_information_packet_info = {
@@ -135,9 +139,9 @@ SwiftNetClientConnection* swiftnet_create_client(const char* const ip_address, c
             continue;
         }
 
-        const struct ip* const restrict ip_header = (struct ip*)&server_information_buffer;
+        const struct ip* const ip_header = (struct ip*)&server_information_buffer;
 
-        const SwiftNetPacketInfo* const restrict packet_info = (SwiftNetPacketInfo *)&server_information_buffer[sizeof(struct ip)];
+        const SwiftNetPacketInfo* const packet_info = (SwiftNetPacketInfo *)&server_information_buffer[sizeof(struct ip)];
 
         if(packet_info->port_info.destination_port != new_connection->port_info.source_port || packet_info->port_info.source_port != new_connection->port_info.destination_port) {
             #ifdef SWIFT_NET_DEBUG
@@ -163,13 +167,13 @@ SwiftNetClientConnection* swiftnet_create_client(const char* const ip_address, c
         }
     }
 
-    exit_thread = true;
+    atomic_store(&exit_thread, true);
 
     pthread_join(send_request_thread, NULL);
 
-    const SwiftNetPacketInfo* const restrict packet_info = (SwiftNetPacketInfo*)&server_information_buffer[sizeof(struct ip)];
+    const SwiftNetPacketInfo* const packet_info = (SwiftNetPacketInfo*)&server_information_buffer[sizeof(struct ip)];
 
-    const SwiftNetServerInformation* const restrict server_information = (SwiftNetServerInformation*)&server_information_buffer[PACKET_HEADER_SIZE];
+    const SwiftNetServerInformation* const server_information = (SwiftNetServerInformation*)&server_information_buffer[PACKET_HEADER_SIZE];
 
     new_connection->maximum_transmission_unit = packet_info->maximum_transmission_unit;
 
