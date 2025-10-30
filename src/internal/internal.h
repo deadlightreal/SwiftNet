@@ -120,8 +120,8 @@ extern struct in_addr private_ip_address;
 
 extern SwiftNetMemoryAllocator allocator_create(const uint32_t item_size, const uint32_t chunk_item_amount);
 extern void* allocator_allocate(SwiftNetMemoryAllocator* const memory_allocator);
-extern void allocator_free(volatile SwiftNetMemoryAllocator* const memory_allocator, volatile void* const memory_location);
-extern void allocator_destroy(volatile SwiftNetMemoryAllocator* const memory_allocator);
+extern void allocator_free(SwiftNetMemoryAllocator* const memory_allocator, void* const memory_location);
+extern void allocator_destroy(SwiftNetMemoryAllocator* const memory_allocator);
 
 extern SwiftNetMemoryAllocator packet_queue_node_memory_allocator;
 extern SwiftNetMemoryAllocator packet_callback_queue_node_memory_allocator;
@@ -135,7 +135,7 @@ extern SwiftNetMemoryAllocator pending_message_memory_allocator;
 void* vector_get(SwiftNetVector* const vector, const uint32_t index);
 void vector_remove(SwiftNetVector* const vector, const uint32_t index);
 void vector_push(SwiftNetVector* const vector, void* const data);
-void vector_destroy(volatile SwiftNetVector* const vector);
+void vector_destroy(SwiftNetVector* const vector);
 SwiftNetVector vector_create(const uint32_t starting_amount);
 void vector_lock(SwiftNetVector* const vector);
 void vector_unlock(SwiftNetVector* const vector);

@@ -1,5 +1,6 @@
 #include "internal/internal.h"
 #include "swift_net.h"
+#include <stdatomic.h>
 #include <stdlib.h>
 #include <unistd.h>
 

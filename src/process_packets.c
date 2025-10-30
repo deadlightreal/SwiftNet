@@ -14,6 +14,17 @@
 #include <stdio.h>
 #include <time.h>
 
+static inline void lock_packet_sending(SwiftNetPacketSending* const packet_sending) {
+    bool locked = false;
+    while(!atomic_compare_exchange_strong_explicit(&packet_sending->locked, &locked, true, memory_order_acquire, memory_order_relaxed)) {
+        locked = false;
+    }
+}
+
+static inline void unlock_packet_sending(SwiftNetPacketSending* const packet_sending) {
+    atomic_store_explicit(&packet_sending->locked, false, memory_order_release);
+}
+
 // Returns an array of 4 byte uint32_tegers, that contain indexes of lost chunks
 static inline const uint32_t return_lost_chunk_indexes(const uint8_t* const chunks_received, const uint32_t chunk_amount, const uint32_t buffer_size, uint32_t* const buffer) {
     uint32_t byte = 0;
@@ -91,7 +102,7 @@ static inline bool check_packet_already_completed(const uint16_t packet_id, Swif
 }
 
 static inline SwiftNetPendingMessage* const get_pending_message(const SwiftNetPacketInfo* const restrict packet_info, SwiftNetVector* const pending_messages_vector, const ConnectionType connection_type, const in_addr_t sender_address, const uint16_t packet_id) {
-    vector_lock((SwiftNetVector*)pending_messages_vector);
+    vector_lock(pending_messages_vector);
 
     for(uint32_t i = 0; i < pending_messages_vector->size; i++) {
         SwiftNetPendingMessage* const current_pending_message = vector_get((SwiftNetVector*)pending_messages_vector, i);
@@ -114,7 +125,7 @@ static inline void insert_callback_queue_node(PacketCallbackQueueNode* const new
     }
 
     uint32_t owner_none = PACKET_CALLBACK_QUEUE_OWNER_NONE;
-    while(!atomic_compare_exchange_strong(&packet_queue->owner, &owner_none, PACKET_CALLBACK_QUEUE_OWNER_PROCESS_PACKETS)) {
+    while(!atomic_compare_exchange_strong_explicit(&packet_queue->owner, &owner_none, PACKET_CALLBACK_QUEUE_OWNER_PROCESS_PACKETS, memory_order_acquire, memory_order_relaxed)) {
         owner_none = PACKET_CALLBACK_QUEUE_OWNER_NONE;
     }
 
@@ -130,7 +141,7 @@ static inline void insert_callback_queue_node(PacketCallbackQueueNode* const new
         packet_queue->first_node = new_node;
     }
 
-    atomic_store(&packet_queue->owner, PACKET_CALLBACK_QUEUE_OWNER_NONE);
+    atomic_store_explicit(&packet_queue->owner, PACKET_CALLBACK_QUEUE_OWNER_NONE, memory_order_release);
 
     return;
 }
@@ -140,19 +151,17 @@ static inline void pass_callback_execution(void* const packet_data, PacketCallba
     , const bool request_response
     #endif
 ) {
-    printf("passing callback\n");
-
     PacketCallbackQueueNode* const node = allocator_allocate(&packet_callback_queue_node_memory_allocator);
     node->packet_data = packet_data;
     node->next = NULL;
     node->pending_message = pending_message;
     node->packet_id = packet_id;
 
-    printf("node p: %p\n", node);
-
     #ifdef SWIFT_NET_REQUESTS
         node->request_response = request_response;
     #endif
+
+    atomic_thread_fence(memory_order_release);
 
     insert_callback_queue_node(node, queue);
 }
@@ -215,7 +224,7 @@ static inline SwiftNetPacketSending* const get_packet_sending(SwiftNetVector* co
 
 PacketQueueNode* const wait_for_next_packet(PacketQueue* const packet_queue) {
     uint32_t owner_none = PACKET_QUEUE_OWNER_NONE;
-    while(!atomic_compare_exchange_strong(&packet_queue->owner, &owner_none, PACKET_QUEUE_OWNER_PROCESS_PACKETS)) {
+    while(!atomic_compare_exchange_strong_explicit(&packet_queue->owner, &owner_none, PACKET_QUEUE_OWNER_PROCESS_PACKETS, memory_order_acquire, memory_order_relaxed)) {
         owner_none = PACKET_QUEUE_OWNER_NONE;
     }
 
@@ -225,8 +234,6 @@ PacketQueueNode* const wait_for_next_packet(PacketQueue* const packet_queue) {
     }
 
     PacketQueueNode* const node_to_process = packet_queue->first_node;
-
-    printf("got node to process\n");
 
     if(node_to_process->next == NULL) {
         packet_queue->first_node = NULL;
@@ -239,7 +246,7 @@ PacketQueueNode* const wait_for_next_packet(PacketQueue* const packet_queue) {
 
     packet_queue->first_node = node_to_process->next;
 
-    atomic_store(&packet_queue->owner, PACKET_QUEUE_OWNER_NONE);
+    atomic_store_explicit(&packet_queue->owner, PACKET_QUEUE_OWNER_NONE, memory_order_release);
 
     return node_to_process;
 }
@@ -261,7 +268,7 @@ static inline void swiftnet_process_packets(
     ConnectionType connection_type,
     PacketQueue* const packet_queue,
     PacketCallbackQueue* const packet_callback_queue,
-    void* connection,
+    void* const connection,
     _Atomic bool* closing
 ) {
     while(1) {
@@ -274,19 +281,15 @@ static inline void swiftnet_process_packets(
             continue;
         }
 
-        printf("processing\n");
+        atomic_thread_fence(memory_order_acquire);
 
         if(node->data_read == 0) {
-            printf("data read 0\n");
-
             allocator_free(&packet_queue_node_memory_allocator, (void*)node);
             continue;
         }
 
         uint8_t* const packet_buffer = node->data;
         if(packet_buffer == NULL) {
-            printf("packet buffer null\n");
-
             goto next_packet;
         }
 
@@ -311,8 +314,6 @@ static inline void swiftnet_process_packets(
 
         // Check if the packet is meant to be for this server
         if(packet_info.port_info.destination_port != source_port) {
-            printf("invalid port info\n");
-
             allocator_free(&packet_buffer_memory_allocator, packet_buffer);
 
             goto next_packet;
@@ -343,8 +344,6 @@ static inline void swiftnet_process_packets(
                 send_debug_message("Received packet: {\"source_ip_address\": \"%s\", \"source_port\": %d, \"packet_id\": %d, \"packet_type\": %d, \"packet_length\": %d, \"chunk_index\": %d}\n", inet_ntoa(ip_header.ip_src), packet_info.port_info.source_port, ip_header.ip_id, packet_info.packet_type, packet_info.packet_length, packet_info.chunk_index);
             }
         #endif
-
-        printf("got here\n");
 
         switch(packet_info.packet_type) {
             case PACKET_TYPE_REQUEST_INFORMATION:
@@ -469,13 +468,13 @@ static inline void swiftnet_process_packets(
 
                 SwiftNetPacketSending* const target_packet_sending = get_packet_sending(packets_sending, ip_header.ip_id);
 
-                printf("got response\n");
-
                 if(unlikely(target_packet_sending == NULL)) {
                     allocator_free(&packet_buffer_memory_allocator, packet_buffer);
 
                     goto next_packet;
                 }
+
+                lock_packet_sending(target_packet_sending);
 
                 if(unlikely(target_packet_sending->lost_chunks == NULL)) {
                     target_packet_sending->lost_chunks = malloc(maximum_transmission_unit - PACKET_HEADER_SIZE);
@@ -487,11 +486,13 @@ static inline void swiftnet_process_packets(
 
                 target_packet_sending->lost_chunks_size = packet_info.packet_length / 4;
 
-                atomic_store(&target_packet_sending->updated_lost_chunks, true);
+                atomic_store(&target_packet_sending->updated, UPDATED_LOST_CHUNKS);
 
                 printf("updated\n");
 
                 allocator_free(&packet_buffer_memory_allocator, packet_buffer);
+
+                unlock_packet_sending(target_packet_sending);
 
                 goto next_packet;
             }
@@ -507,7 +508,7 @@ static inline void swiftnet_process_packets(
                     goto next_packet;
                 }
 
-                atomic_store(&target_packet_sending->successfully_received, true);
+                atomic_store(&target_packet_sending->updated, SUCCESSFULLY_RECEIVED);
 
                 allocator_free(&packet_buffer_memory_allocator, packet_buffer);
 
@@ -657,6 +658,8 @@ static inline void swiftnet_process_packets(
                 chunk_received(pending_message->chunks_received, packet_info.chunk_index);
 
                 pending_message->chunks_received_number++;
+
+                atomic_thread_fence(memory_order_release);
 
                 allocator_free(&packet_buffer_memory_allocator, packet_buffer);
 

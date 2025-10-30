@@ -48,6 +48,8 @@ void execute_packet_callback(PacketCallbackQueue* const queue, void (* const _At
             continue;
         }
 
+        atomic_thread_fence(memory_order_acquire);
+
         if(node->packet_data == NULL) {
             allocator_free(&packet_callback_queue_node_memory_allocator, (void*)node);
             continue;

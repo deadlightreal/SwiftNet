@@ -254,8 +254,8 @@ extern void swiftnet_server_set_message_handler(volatile SwiftNetServer* const s
 extern void swiftnet_client_set_message_handler(volatile SwiftNetClientConnection* const client, void (* const new_handler)(SwiftNetClientPacketData* const));
 extern void swiftnet_client_append_to_packet(const void* const data, const uint32_t data_size, SwiftNetPacketBuffer* const packet);
 extern void swiftnet_server_append_to_packet(const void* const data, const uint32_t data_size, SwiftNetPacketBuffer* const packet);
-extern void swiftnet_client_cleanup(volatile SwiftNetClientConnection* const client);
-extern void swiftnet_server_cleanup(volatile SwiftNetServer* const server);
+extern void swiftnet_client_cleanup(SwiftNetClientConnection* const client);
+extern void swiftnet_server_cleanup(SwiftNetServer* const server);
 extern void swiftnet_initialize();
 extern void* swiftnet_server_handle_packets(void* const server_void);
 extern void* swiftnet_client_handle_packets(void* const client_void);
