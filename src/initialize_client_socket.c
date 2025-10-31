@@ -184,7 +184,7 @@ SwiftNetClientConnection* swiftnet_create_client(const char* const ip_address, c
     new_connection->packets_completed_memory_allocator = allocator_create(sizeof(SwiftNetPacketCompleted), 100);
     new_connection->packets_completed = vector_create(100);
 
-    new_connection->closing = false;
+    atomic_store_explicit(&new_connection->closing, false, memory_order_release);
 
     pthread_create(&new_connection->handle_packets_thread, NULL, swiftnet_client_handle_packets, new_connection);
     pthread_create(&new_connection->process_packets_thread, NULL, swiftnet_client_process_packets, new_connection);

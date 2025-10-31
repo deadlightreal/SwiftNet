@@ -1,3 +1,4 @@
+#include <stdatomic.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -56,7 +57,7 @@ SwiftNetServer* swiftnet_create_server(const uint16_t port) {
     new_server->packets_completed_memory_allocator = allocator_create(sizeof(SwiftNetPacketCompleted), 100);
     new_server->packets_completed = vector_create(100);
 
-    new_server->closing = false;
+    atomic_store_explicit(&new_server->closing, false, memory_order_release);
 
     // Create a new thread that will handle all packets received
     pthread_create(&new_server->handle_packets_thread, NULL, swiftnet_server_handle_packets, new_server);

@@ -8,7 +8,7 @@
 
 static PacketCallbackQueueNode* const wait_for_next_packet_callback(PacketCallbackQueue* const packet_queue) {
     uint32_t owner_none = PACKET_CALLBACK_QUEUE_OWNER_NONE;
-    while(!atomic_compare_exchange_strong(&packet_queue->owner, &owner_none, PACKET_CALLBACK_QUEUE_OWNER_EXECUTE_PACKET_CALLBACK)) {
+    while(!atomic_compare_exchange_strong_explicit(&packet_queue->owner, &owner_none, PACKET_CALLBACK_QUEUE_OWNER_EXECUTE_PACKET_CALLBACK, memory_order_acquire, memory_order_relaxed)) {
         owner_none = PACKET_CALLBACK_QUEUE_OWNER_NONE;
     }
 
@@ -39,7 +39,7 @@ static PacketCallbackQueueNode* const wait_for_next_packet_callback(PacketCallba
 
 void execute_packet_callback(PacketCallbackQueue* const queue, void (* const _Atomic * const packet_handler) (void* const), const uint8_t connection_type, SwiftNetMemoryAllocator* const pending_message_memory_allocator, _Atomic bool* closing, const void* const connection) {
     while (1) {
-        if (atomic_load(closing) == true) {
+        if (atomic_load_explicit(closing, memory_order_acquire) == true) {
             break;
         }
 
@@ -92,7 +92,7 @@ void execute_packet_callback(PacketCallbackQueue* const queue, void (* const _At
                             }
                         }
 
-                        current_request_sent->packet_data = node->packet_data;
+                        atomic_store_explicit(&current_request_sent->packet_data, node->packet_data, memory_order_release);
 
                         is_valid_response = true;
 
@@ -142,7 +142,7 @@ void execute_packet_callback(PacketCallbackQueue* const queue, void (* const _At
 void* execute_packet_callback_client(void* const void_client) {
     SwiftNetClientConnection* const client = void_client;
 
-    execute_packet_callback(&client->packet_callback_queue, (void*)&client->packet_handler, 0, &client->pending_messages_memory_allocator, void_client, &client->closing);
+    execute_packet_callback(&client->packet_callback_queue, (void*)&client->packet_handler, 0, &client->pending_messages_memory_allocator, &client->closing, void_client);
 
     return NULL;
 }
@@ -150,7 +150,7 @@ void* execute_packet_callback_client(void* const void_client) {
 void* execute_packet_callback_server(void* const void_server) {
     SwiftNetServer* const server = void_server;
 
-    execute_packet_callback(&server->packet_callback_queue, (void*)&server->packet_handler, 1, &server->pending_messages_memory_allocator, void_server, &server->closing);
+    execute_packet_callback(&server->packet_callback_queue, (void*)&server->packet_handler, 1, &server->pending_messages_memory_allocator, &server->closing, void_server);
 
     return NULL;
 }

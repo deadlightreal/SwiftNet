@@ -40,7 +40,7 @@ static inline void insert_queue_node(PacketQueueNode* const new_node, volatile P
 
 static inline void swiftnet_handle_packets(const int sockfd, const uint16_t source_port, pthread_t* const process_packets_thread, void* connection, const ConnectionType connection_type, PacketQueue* const packet_queue, const _Atomic bool* closing) {
     while(1) {
-        if (atomic_load(closing) == true) {
+        if (atomic_load_explicit(closing, memory_order_acquire) == true) {
             break;
         }
 

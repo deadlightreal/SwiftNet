@@ -33,16 +33,16 @@ static inline uint8_t request_lost_packets_bitarray(const uint8_t* const raw_dat
         sendto(sockfd, raw_data, data_size, 0, destination, sizeof(*destination));
 
         for(uint8_t times_checked = 0; times_checked < 0xFF; times_checked++) {
-            const PacketSendingUpdated status = atomic_load(&packet_sending->updated);
+            const PacketSendingUpdated status = atomic_load_explicit(&packet_sending->updated, memory_order_acquire);
 
             switch (status) {
                 case NO_UPDATE:
                     break;
                 case UPDATED_LOST_CHUNKS:
-                    atomic_store(&packet_sending->updated, NO_UPDATE);
+                    atomic_store_explicit(&packet_sending->updated, NO_UPDATE, memory_order_release);
                     return REQUEST_LOST_PACKETS_RETURN_UPDATED_BIT_ARRAY;
                 case SUCCESSFULLY_RECEIVED:
-                    atomic_store(&packet_sending->updated, NO_UPDATE);
+                    atomic_store_explicit(&packet_sending->updated, NO_UPDATE, memory_order_release);
                     return REQUEST_LOST_PACKETS_RETURN_UPDATED_BIT_ARRAY;
             }
 

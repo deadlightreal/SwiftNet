@@ -591,6 +591,8 @@ static inline void swiftnet_process_packets(
             const uint32_t bytes_to_write = (packet_info.chunk_index + 1) >= packet_info.chunk_amount ? packet_info.packet_length % chunk_data_size : chunk_data_size;
 
             if(pending_message->chunks_received_number + 1 >= packet_info.chunk_amount) {
+                printf("chunks received: %d\nchunk amount: %d\n", pending_message->chunks_received_number, packet_info.chunk_amount);
+
                 // Completed the packet
                 memcpy(pending_message->packet_data_start + (chunk_data_size * packet_info.chunk_index), &packet_buffer[PACKET_HEADER_SIZE], bytes_to_write);
 
