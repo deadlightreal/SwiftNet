@@ -1,7 +1,6 @@
 #include "internal/internal.h"
 #include "swift_net.h"
 #include <stdatomic.h>
-#include <stdlib.h>
 #include <unistd.h>
 
 void swiftnet_client_cleanup(SwiftNetClientConnection* const client) {
@@ -19,9 +18,9 @@ void swiftnet_client_cleanup(SwiftNetClientConnection* const client) {
 
     close(client->sockfd);
 
-    pthread_join(client->handle_packets_thread, NULL);
-    pthread_join(client->process_packets_thread, NULL);
-    pthread_join(client->execute_callback_thread, NULL);
+    pthread_detach(client->handle_packets_thread);
+    pthread_detach(client->process_packets_thread);
+    pthread_detach(client->execute_callback_thread);
 
     allocator_free(&client_connection_memory_allocator, client);
 }
@@ -39,9 +38,9 @@ void swiftnet_server_cleanup(SwiftNetServer* const server) {
 
     close(server->sockfd);
 
-    pthread_join(server->handle_packets_thread, NULL);
-    pthread_join(server->process_packets_thread, NULL);
-    pthread_join(server->execute_callback_thread, NULL);
+    pthread_detach(server->handle_packets_thread);
+    pthread_detach(server->process_packets_thread);
+    pthread_detach(server->execute_callback_thread);
 
     allocator_free(&server_memory_allocator, server);
 }

@@ -11,8 +11,6 @@
 
 static inline void insert_queue_node(PacketQueueNode* const new_node, volatile PacketQueue* const packet_queue, const ConnectionType contype) {
     if(new_node == NULL) {
-        printf("null node\n");
-
         return;
     }
 
@@ -58,12 +56,8 @@ static inline void swiftnet_handle_packets(const int sockfd, const uint16_t sour
         }
 
         const int received_sucessfully = recvfrom(sockfd, packet_buffer, maximum_transmission_unit, 0, (struct sockaddr *)&node->sender_address, &node->server_address_length);
-
-        printf("got packet\n");
         
         if(received_sucessfully < 0) {
-            printf("receiving failed\n");
-
             allocator_free(&packet_queue_node_memory_allocator, node);
             allocator_free(&packet_buffer_memory_allocator, packet_buffer);
             continue;
@@ -86,8 +80,6 @@ static inline void swiftnet_handle_packets(const int sockfd, const uint16_t sour
 void* swiftnet_client_handle_packets(void* const client_void) {
     SwiftNetClientConnection* const client = (SwiftNetClientConnection*)client_void;
 
-    printf("creating handle packets thread\n");
-
     swiftnet_handle_packets(client->sockfd, client->port_info.source_port, &client->process_packets_thread, client, CONNECTION_TYPE_CLIENT, &client->packet_queue, &client->closing);
 
     return NULL;
@@ -95,8 +87,6 @@ void* swiftnet_client_handle_packets(void* const client_void) {
 
 void* swiftnet_server_handle_packets(void* const server_void) {
     SwiftNetServer* const server = (SwiftNetServer*)server_void;
-
-    printf("creating handle packets thread\n");
 
     swiftnet_handle_packets(server->sockfd, server->server_port, &server->process_packets_thread, server, CONNECTION_TYPE_SERVER, &server->packet_queue, &server->closing);
 

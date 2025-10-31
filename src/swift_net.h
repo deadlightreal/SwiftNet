@@ -152,9 +152,6 @@ struct PacketCallbackQueueNode {
     void* packet_data;
     SwiftNetPendingMessage* pending_message;
     uint16_t packet_id;
-    #ifdef SWIFT_NET_REQUESTS
-    bool request_response;
-    #endif
     PacketCallbackQueueNode* next;
 };
 
