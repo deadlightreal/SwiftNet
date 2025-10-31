@@ -16,7 +16,7 @@ SwiftNetClientPacketData* swiftnet_client_make_request(SwiftNetClientConnection*
     swiftnet_send_packet(client, client->maximum_transmission_unit, client->port_info, packet, packet_length, &client->server_addr, &client->server_addr_len, &client->packets_sending, &client->packets_sending_memory_allocator, client->sockfd, request_sent, false, 0);
 
     while (1) {
-        if (request_sent->packet_data != NULL) {
+        if (atomic_load_explicit(&request_sent->packet_data, memory_order_acquire) != NULL) {
             SwiftNetClientPacketData* const packet_data = request_sent->packet_data;
 
             allocator_free(&requests_sent_memory_allocator, (void*)request_sent);

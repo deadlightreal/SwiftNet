@@ -144,7 +144,7 @@ void vector_unlock(SwiftNetVector* const vector);
     typedef struct {
         uint16_t packet_id;
         in_addr_t address;
-        void* packet_data;
+        _Atomic(void*) packet_data;
     } RequestSent;
 
     extern SwiftNetMemoryAllocator requests_sent_memory_allocator;
