@@ -1,11 +1,5 @@
 #pragma once
 
-#ifdef __cplusplus
-    extern "C" {
-
-    #define restrict __restrict__
-#endif
-
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <stdint.h>
@@ -16,6 +10,12 @@
 #include <netinet/ip.h>
 #include <stdbool.h>
 #include <stdatomic.h>
+
+#ifdef __cplusplus
+    extern "C" {
+
+    #define restrict __restrict__
+#endif
 
 #define PACKET_TYPE_MESSAGE 0x01
 #define PACKET_TYPE_REQUEST_INFORMATION 0x02
