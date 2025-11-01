@@ -43,7 +43,7 @@ static inline uint8_t request_lost_packets_bitarray(const uint8_t* const raw_dat
                     return REQUEST_LOST_PACKETS_RETURN_UPDATED_BIT_ARRAY;
                 case SUCCESSFULLY_RECEIVED:
                     atomic_store_explicit(&packet_sending->updated, NO_UPDATE, memory_order_release);
-                    return REQUEST_LOST_PACKETS_RETURN_UPDATED_BIT_ARRAY;
+                    return REQUEST_LOST_PACKETS_RETURN_COMPLETED_PACKET;
             }
 
             usleep(1000);

@@ -9,12 +9,10 @@
 SwiftNetServer* server;
 SwiftNetClientConnection* client;
 
-const char* restrict const message = "hello";
+const char* const message = "hello";
 
-void client_message_handler(SwiftNetClientPacketData* restrict const packet_data) {
+void client_message_handler(SwiftNetClientPacketData* const packet_data) {
     uint8_t* data = swiftnet_client_read_packet(packet_data, packet_data->metadata.data_length);
-
-    printf("received packet\n");
 
     if(memcmp(data, message, packet_data->metadata.data_length) == 0) {
         SwiftNetPacketBuffer buffer = swiftnet_client_create_packet_buffer(strlen(message));
@@ -27,14 +25,12 @@ void client_message_handler(SwiftNetClientPacketData* restrict const packet_data
     };
 }
 
-void server_message_handler(SwiftNetServerPacketData* restrict const packet_data) {
+void server_message_handler(SwiftNetServerPacketData* const packet_data) {
     SwiftNetPacketBuffer buffer = swiftnet_server_create_packet_buffer(strlen(message));
 
     swiftnet_server_append_to_packet(message, strlen(message), &buffer);
 
-    printf("making request\n");
     SwiftNetServerPacketData* response = swiftnet_server_make_request(server, &buffer, packet_data->metadata.sender);
-    printf("got response\n");
 
     swiftnet_server_destroy_packet_buffer(&buffer);
 

@@ -9,9 +9,9 @@
 SwiftNetServer* server;
 SwiftNetClientConnection* client;
 
-const char* restrict const message = "hello";
+const char* const message = "hello";
 
-void client_message_handler(SwiftNetClientPacketData* restrict const packet_data) {
+void client_message_handler(SwiftNetClientPacketData* const packet_data) {
     uint8_t* data = swiftnet_client_read_packet(packet_data, packet_data->metadata.data_length);
 
     if(memcmp(data, message, packet_data->metadata.data_length) == 0) {
@@ -24,7 +24,7 @@ void client_message_handler(SwiftNetClientPacketData* restrict const packet_data
     }
 }
 
-void server_message_handler(SwiftNetServerPacketData* restrict const packet_data) {
+void server_message_handler(SwiftNetServerPacketData* const packet_data) {
     uint8_t* data = swiftnet_server_read_packet(packet_data, packet_data->metadata.data_length);
 
     if(memcmp(data, message, packet_data->metadata.data_length) == 0) {

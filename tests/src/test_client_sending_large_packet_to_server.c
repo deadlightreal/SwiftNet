@@ -1,5 +1,6 @@
 #include "../../src/swift_net.h"
 
+#include <stdatomic.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -10,18 +11,23 @@
 SwiftNetClientConnection* client;
 SwiftNetServer* server;
 
+_Atomic bool finished_sending = false;
+
 uint32_t* random_generated_data = NULL;
 
 void client_message_handler(SwiftNetClientPacketData* const packet_data) {
 }
 
 void server_message_handler(SwiftNetServerPacketData* const packet_data) {
+    while (atomic_load(&finished_sending) == false) {
+        usleep(1000);
+    }
+
     for(uint32_t i = 0; i < packet_data->metadata.data_length / 4; i++) {
         const uint32_t data_received = *(uint32_t*)swiftnet_server_read_packet(packet_data, 4);
 
         if(random_generated_data[i] != data_received) {
             fprintf(stderr, "invalid byte at index: %d\ndata received: %d\ndata sent: %d\n", i, packet_data->data[i], random_generated_data[i]);
-            printf("next bytes: %d %d %d before bytes: %d %d %d\n", packet_data->data[i+1], packet_data->data[i+2], packet_data->data[i+3], packet_data->data[i-1], packet_data->data[i-2], packet_data->data[i-3]);
             fflush(stdout);
             fflush(stderr);
             abort();
@@ -31,8 +37,6 @@ void server_message_handler(SwiftNetServerPacketData* const packet_data) {
             swiftnet_cleanup();
         }
     }
-
-    printf("finished\n");
 
     swiftnet_server_cleanup(server);
     swiftnet_client_cleanup(client);
@@ -69,6 +73,8 @@ int main() {
     swiftnet_client_send_packet(client, &buffer);
 
     swiftnet_client_destroy_packet_buffer(&buffer);
+
+    atomic_store(&finished_sending, true);
 
     usleep(10000000);
 

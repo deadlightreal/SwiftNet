@@ -78,7 +78,7 @@ static inline void packet_completed(const uint16_t packet_id, const uint32_t pac
 
     vector_lock(packets_completed_history);
 
-    vector_push((SwiftNetVector*)packets_completed_history, new_packet_completed);
+    vector_push(packets_completed_history, new_packet_completed);
 
     vector_unlock(packets_completed_history);
 
@@ -148,7 +148,7 @@ static inline void insert_callback_queue_node(PacketCallbackQueueNode* const new
 
 #ifdef SWIFT_NET_REQUESTS
 
-static inline void handle_request_response(const uint16_t packet_id, const in_addr_t sender, SwiftNetPendingMessage* const pending_message, void* const packet_data) {
+static inline void handle_request_response(const uint16_t packet_id, const in_addr_t sender, SwiftNetPendingMessage* const pending_message, void* const packet_data, SwiftNetVector* const pending_messages, const ConnectionType connection_type) {
     bool is_valid_response = false;
 
     vector_lock(&requests_sent);
@@ -172,6 +172,8 @@ static inline void handle_request_response(const uint16_t packet_id, const in_ad
 
             atomic_store_explicit(&current_request_sent->packet_data, packet_data, memory_order_release);
 
+            is_valid_response = true;
+
             break;
         }
     }
@@ -181,6 +183,19 @@ static inline void handle_request_response(const uint16_t packet_id, const in_ad
     if (is_valid_response == true) {
         if (pending_message != NULL) {
             free(pending_message->chunks_received);
+            
+            allocator_free(&pending_message_memory_allocator, pending_message);
+
+            vector_lock(pending_messages);
+
+            for (uint32_t i = 0; i < pending_messages->size; i++) {
+                const SwiftNetPendingMessage* const pending_message = vector_get(pending_messages, i);
+                if ((connection_type == CONNECTION_TYPE_CLIENT && pending_message->packet_id == packet_id) || (connection_type == CONNECTION_TYPE_SERVER && pending_message->sender_address == sender && pending_message->packet_id == packet_id)) {
+                    vector_remove(pending_messages, i);
+                }
+            }
+
+            vector_unlock(pending_messages);
         }
 
         return;
@@ -505,7 +520,7 @@ static inline void swiftnet_process_packets(
 
                 lock_packet_sending(target_packet_sending);
 
-                if(unlikely(target_packet_sending->lost_chunks == NULL)) {
+                if(target_packet_sending->lost_chunks == NULL) {
                     target_packet_sending->lost_chunks = malloc(maximum_transmission_unit - PACKET_HEADER_SIZE);
                 }
 
@@ -515,7 +530,7 @@ static inline void swiftnet_process_packets(
 
                 target_packet_sending->lost_chunks_size = packet_info.packet_length / 4;
 
-                atomic_store(&target_packet_sending->updated, UPDATED_LOST_CHUNKS);
+                atomic_store_explicit(&target_packet_sending->updated, UPDATED_LOST_CHUNKS, memory_order_release);
 
                 allocator_free(&packet_buffer_memory_allocator, packet_buffer);
 
@@ -533,7 +548,7 @@ static inline void swiftnet_process_packets(
                     goto next_packet;
                 }
 
-                atomic_store(&target_packet_sending->updated, SUCCESSFULLY_RECEIVED);
+                atomic_store_explicit(&target_packet_sending->updated, SUCCESSFULLY_RECEIVED, memory_order_release);
 
                 allocator_free(&packet_buffer_memory_allocator, packet_buffer);
 
@@ -586,7 +601,7 @@ static inline void swiftnet_process_packets(
 
                     #ifdef SWIFT_NET_REQUESTS
                     if (packet_info.request_response == true) {
-                        handle_request_response(ip_header.ip_id, sender.sender_address.sin_addr.s_addr, NULL, packet_data);
+                        handle_request_response(ip_header.ip_id, sender.sender_address.sin_addr.s_addr, NULL, packet_data, pending_messages, connection_type);
                     } else {
                         pass_callback_execution(packet_data, packet_callback_queue, NULL, ip_header.ip_id);
                     }
@@ -607,7 +622,7 @@ static inline void swiftnet_process_packets(
 
                     #ifdef SWIFT_NET_REQUESTS
                     if (packet_info.request_response == true) {
-                        handle_request_response(ip_header.ip_id, ((SwiftNetClientConnection*)connection)->server_addr.sin_addr.s_addr, NULL, packet_data);
+                        handle_request_response(ip_header.ip_id, ((SwiftNetClientConnection*)connection)->server_addr.sin_addr.s_addr, NULL, packet_data, pending_messages, connection_type);
                     } else {
                         pass_callback_execution(packet_data, packet_callback_queue, NULL, ip_header.ip_id);
                     }
@@ -658,12 +673,12 @@ static inline void swiftnet_process_packets(
 
                     #ifdef SWIFT_NET_REQUESTS
                     if (packet_info.request_response == true) {
-                        handle_request_response(ip_header.ip_id, sender.sender_address.sin_addr.s_addr, pending_message, packet_data);
+                        handle_request_response(ip_header.ip_id, sender.sender_address.sin_addr.s_addr, pending_message, packet_data, pending_messages, connection_type);
                     } else {
-                        pass_callback_execution(packet_data, packet_callback_queue, NULL, ip_header.ip_id);
+                        pass_callback_execution(packet_data, packet_callback_queue, pending_message, ip_header.ip_id);
                     }
                     #else
-                        pass_callback_execution(packet_data, packet_callback_queue, NULL, ip_header.ip_id);
+                        pass_callback_execution(packet_data, packet_callback_queue, pending_message, ip_header.ip_id);
                     #endif
                 } else {
                     uint8_t* const ptr = pending_message->packet_data_start;
@@ -679,12 +694,12 @@ static inline void swiftnet_process_packets(
 
                     #ifdef SWIFT_NET_REQUESTS
                     if (packet_info.request_response == true) {
-                        handle_request_response(ip_header.ip_id, ((SwiftNetClientConnection*)connection)->server_addr.sin_addr.s_addr, pending_message, packet_data);
+                        handle_request_response(ip_header.ip_id, ((SwiftNetClientConnection*)connection)->server_addr.sin_addr.s_addr, pending_message, packet_data, pending_messages, connection_type);
                     } else {
-                        pass_callback_execution(packet_data, packet_callback_queue, NULL, ip_header.ip_id);
+                        pass_callback_execution(packet_data, packet_callback_queue, pending_message, ip_header.ip_id);
                     }
                     #else
-                        pass_callback_execution(packet_data, packet_callback_queue, NULL, ip_header.ip_id);
+                        pass_callback_execution(packet_data, packet_callback_queue, pending_message, ip_header.ip_id);
                     #endif
                 }
 
