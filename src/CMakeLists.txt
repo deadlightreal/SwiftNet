@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.10)
 project(SwiftNet C)
 
+include(GNUInstallDirs)
+
 set(CMAKE_C_STANDARD 99)
 
 set(SOURCE_FILES
@@ -42,18 +44,13 @@ else()
     message(STATUS "No sanitizer enabled")
 endif()
 
-set(OBJ_DIR ${CMAKE_SOURCE_DIR}/../build)
-
 add_library(swift_net STATIC ${SOURCE_FILES})
 target_compile_options(swift_net PRIVATE -g -O0)
 target_link_options(swift_net PRIVATE -g -O0)
 
 set_target_properties(swift_net PROPERTIES
-    ARCHIVE_OUTPUT_DIRECTORY ${OBJ_DIR}/output
-    LIBRARY_OUTPUT_DIRECTORY ${OBJ_DIR}/output
-    RUNTIME_OUTPUT_DIRECTORY ${OBJ_DIR}/output
     OUTPUT_NAME "swift_net"
-    PUBLIC_HEADER "${CMAKE_SOURCE_DIR}/swift_net.h"
+    PUBLIC_HEADER "${CMAKE_CURRENT_SOURCE_DIR}/swift_net.h"
 )
 
 add_custom_target(clean_objects
