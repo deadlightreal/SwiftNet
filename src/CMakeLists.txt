@@ -70,7 +70,7 @@ install(TARGETS swiftnet
 install(EXPORT swiftnetTargets
     FILE swiftnetTargets.cmake
     NAMESPACE swiftnet::
-    DESTINATION lib/cmake/swiftnet
+    DESTINATION share/swiftnet
 )
 
 include(CMakePackageConfigHelpers)
@@ -80,7 +80,7 @@ file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/cmake)
 configure_package_config_file(
     ${CMAKE_CURRENT_SOURCE_DIR}/cmake/swiftnetConfig.cmake.in
     ${CMAKE_CURRENT_BINARY_DIR}/cmake/swiftnetConfig.cmake
-    INSTALL_DESTINATION lib/cmake/swiftnet
+    INSTALL_DESTINATION share/swiftnet
 )
 
 write_basic_package_version_file(
@@ -92,5 +92,5 @@ write_basic_package_version_file(
 install(FILES
     ${CMAKE_CURRENT_BINARY_DIR}/cmake/swiftnetConfig.cmake
     ${CMAKE_CURRENT_BINARY_DIR}/cmake/swiftnetConfigVersion.cmake
-    DESTINATION lib/cmake/swiftnet
+    DESTINATION share/swiftnet
 )
