@@ -34,7 +34,7 @@ make
 ```
 5. To use SwiftNet in your project:
 - Include the SwiftNet.h header from the `src` directory in your main source file (e.g., `main.c`).
-- Link against the static library `libswift_net.a` using your compiler.
+- Link against the static library `libswiftnet.a` using your compiler.
 
 ## Contributing
 ### Contributions are very welcome! If you'd like to improve the library or fix any issues, feel free to fork the repository and submit a pull request.
