@@ -44,12 +44,13 @@ else()
     message(STATUS "No sanitizer enabled")
 endif()
 
-add_library(swift_net STATIC ${SOURCE_FILES})
-target_compile_options(swift_net PRIVATE -g -O0)
-target_link_options(swift_net PRIVATE -g -O0)
+add_library(swiftnet STATIC ${SOURCE_FILES})
+target_compile_options(swiftnet PRIVATE -g -O0)
+target_link_options(swiftnet PRIVATE -g -O0)
 
-set_target_properties(swift_net PROPERTIES
-    OUTPUT_NAME "swift_net"
+set_target_properties(swiftnet PROPERTIES
+    OUTPUT_NAME "swiftnet"
+    ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/output"
     PUBLIC_HEADER "${CMAKE_CURRENT_SOURCE_DIR}/swift_net.h"
 )
 
@@ -58,7 +59,7 @@ add_custom_target(clean_objects
     COMMENT "Cleaning up object files"
 )
 
-install(TARGETS swift_net
+install(TARGETS swiftnet
     EXPORT swiftnetTargets
     ARCHIVE DESTINATION lib
     LIBRARY DESTINATION lib
