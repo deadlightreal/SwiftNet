@@ -65,12 +65,14 @@ install(TARGETS swiftnet
     LIBRARY DESTINATION lib
     RUNTIME DESTINATION bin
     PUBLIC_HEADER DESTINATION include
+    CONFIGURATIONS Release RelWithDebInfo MinSizeRel
 )
 
 install(EXPORT swiftnetTargets
     FILE swiftnetTargets.cmake
     NAMESPACE swiftnet::
     DESTINATION share/swiftnet
+    CONFIGURATIONS Release RelWithDebInfo MinSizeRel
 )
 
 include(CMakePackageConfigHelpers)
@@ -93,4 +95,5 @@ install(FILES
     ${CMAKE_CURRENT_BINARY_DIR}/cmake/swiftnetConfig.cmake
     ${CMAKE_CURRENT_BINARY_DIR}/cmake/swiftnetConfigVersion.cmake
     DESTINATION share/swiftnet
+    CONFIGURATIONS Release RelWithDebInfo MinSizeRel
 )
