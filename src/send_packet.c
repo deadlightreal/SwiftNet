@@ -237,13 +237,15 @@ inline void swiftnet_send_packet(
 
     if(packet_length > mtu) {
         SwiftNetPacketInfo packet_info = {
-            .packet_type = PACKET_TYPE_MESSAGE,
             .port_info = port_info,
             .packet_length = packet_length,
             .maximum_transmission_unit = maximum_transmission_unit,
             .chunk_index = 0
             #ifdef SWIFT_NET_REQUESTS
                 , .request_response = response
+                , .packet_type = request_sent == NULL ? PACKET_TYPE_MESSAGE : PACKET_TYPE_REQUEST
+            #else
+                , .paclet_type = PACKET_TYPE_MESSAGE
             #endif
         };
 

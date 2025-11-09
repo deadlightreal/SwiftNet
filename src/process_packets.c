@@ -556,6 +556,8 @@ static inline void swiftnet_process_packets(
 
                 goto next_packet;
             }
+            default:
+                break;
         }
 
         node->sender_address.sin_port = packet_info.port_info.source_port;
@@ -599,6 +601,9 @@ static inline void swiftnet_process_packets(
                         .sender = sender,
                         .data_length = packet_info.packet_length,
                         .packet_id = ip_header.ip_id
+                        #ifdef SWIFT_NET_REQUESTS
+                            , .expecting_response = packet_info.packet_type == PACKET_TYPE_REQUEST
+                        #endif
                     };
 
                     #ifdef SWIFT_NET_REQUESTS
@@ -620,6 +625,9 @@ static inline void swiftnet_process_packets(
                         .port_info = packet_info.port_info,
                         .data_length = packet_info.packet_length,
                         .packet_id = ip_header.ip_id
+                        #ifdef SWIFT_NET_REQUESTS
+                            , .expecting_response = packet_info.packet_type == PACKET_TYPE_REQUEST
+                        #endif
                     };
 
                     #ifdef SWIFT_NET_REQUESTS
@@ -671,6 +679,9 @@ static inline void swiftnet_process_packets(
                         .sender = sender,
                         .data_length = packet_info.packet_length,
                         .packet_id = ip_header.ip_id
+                        #ifdef SWIFT_NET_REQUESTS
+                            , .expecting_response = packet_info.packet_type == PACKET_TYPE_REQUEST
+                        #endif
                     };
 
                     #ifdef SWIFT_NET_REQUESTS
@@ -692,6 +703,9 @@ static inline void swiftnet_process_packets(
                         .port_info = packet_info.port_info,
                         .data_length = packet_info.packet_length,
                         .packet_id = ip_header.ip_id
+                        #ifdef SWIFT_NET_REQUESTS
+                            , .expecting_response = packet_info.packet_type == PACKET_TYPE_REQUEST
+                        #endif
                     };
 
                     #ifdef SWIFT_NET_REQUESTS
