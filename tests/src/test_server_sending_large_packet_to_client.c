@@ -72,7 +72,7 @@ int main() {
     server = swiftnet_create_server(8080);
     swiftnet_server_set_message_handler(server, server_message_handler);
 
-    client = swiftnet_create_client(IP_ADDRESS, 8080);
+    client = swiftnet_create_client(IP_ADDRESS, 8080, 2000);
     swiftnet_client_set_message_handler(client, client_message_handler);
 
     const uint8_t message = REQUEST_SEND_LARGE_PACKET;

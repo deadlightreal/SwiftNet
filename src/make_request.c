@@ -3,10 +3,11 @@
 #include <stdatomic.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <sys/time.h>
 
 #ifdef SWIFT_NET_REQUESTS
 
-SwiftNetClientPacketData* swiftnet_client_make_request(SwiftNetClientConnection* const client, SwiftNetPacketBuffer* const packet) {
+SwiftNetClientPacketData* swiftnet_client_make_request(SwiftNetClientConnection* const client, SwiftNetPacketBuffer* const packet, const uint32_t timeout_ms) {
     RequestSent* const request_sent = allocator_allocate(&requests_sent_memory_allocator);
     request_sent->packet_data = NULL;
     request_sent->address = client->server_addr.sin_addr.s_addr;
@@ -15,11 +16,35 @@ SwiftNetClientPacketData* swiftnet_client_make_request(SwiftNetClientConnection*
 
     swiftnet_send_packet(client, client->maximum_transmission_unit, client->port_info, packet, packet_length, &client->server_addr, &client->server_addr_len, &client->packets_sending, &client->packets_sending_memory_allocator, client->sockfd, request_sent, false, 0);
 
+    struct timeval tv;
+    gettimeofday(&tv, NULL);
+    uint32_t start = (uint32_t)tv.tv_sec * 1000 + tv.tv_usec / 1000;
+
     while (1) {
+        struct timeval tv;
+        gettimeofday(&tv, NULL);
+        uint32_t end = (uint32_t)tv.tv_sec * 1000 + tv.tv_usec / 1000;
+
+        if (start + timeout_ms < end) {
+            vector_lock(&requests_sent);
+
+            for (uint32_t i = 0; i < requests_sent.size; i++) {
+                if (vector_get(&requests_sent, i) == request_sent) {
+                    vector_remove(&requests_sent, i);
+                }
+            }
+
+            vector_unlock(&requests_sent);
+
+            allocator_free(&requests_sent_memory_allocator, request_sent);
+
+            return NULL;
+        }
+
         if (atomic_load_explicit(&request_sent->packet_data, memory_order_acquire) != NULL) {
             SwiftNetClientPacketData* const packet_data = request_sent->packet_data;
 
-            allocator_free(&requests_sent_memory_allocator, (void*)request_sent);
+            allocator_free(&requests_sent_memory_allocator, request_sent);
 
             return packet_data;
         }
@@ -28,7 +53,7 @@ SwiftNetClientPacketData* swiftnet_client_make_request(SwiftNetClientConnection*
     }
 }
 
-SwiftNetServerPacketData* swiftnet_server_make_request(SwiftNetServer* const server, SwiftNetPacketBuffer* const packet, const SwiftNetClientAddrData addr_data) {
+SwiftNetServerPacketData* swiftnet_server_make_request(SwiftNetServer* const server, SwiftNetPacketBuffer* const packet, const SwiftNetClientAddrData addr_data, const uint32_t timeout_ms) {
     RequestSent* const request_sent = allocator_allocate(&requests_sent_memory_allocator);
     request_sent->packet_data = NULL;
     request_sent->address = addr_data.sender_address.sin_addr.s_addr;
