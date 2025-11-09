@@ -22,6 +22,7 @@
 #define PACKET_TYPE_SEND_LOST_PACKETS_REQUEST 0x03
 #define PACKET_TYPE_SEND_LOST_PACKETS_RESPONSE 0x04
 #define PACKET_TYPE_SUCCESSFULLY_RECEIVED_PACKET 0x05
+#define PACKET_TYPE_REQUEST 0x06
 
 #define PACKET_INFO_ID_NONE 0xFFFF
 
@@ -70,6 +71,9 @@ typedef struct {
     uint32_t data_length;
     SwiftNetPortInfo port_info;
     uint16_t packet_id;
+    #ifdef SWIFT_NET_REQUESTS
+        bool expecting_response;
+    #endif
 } SwiftNetPacketClientMetadata;
 
 typedef struct {
@@ -77,6 +81,9 @@ typedef struct {
     SwiftNetPortInfo port_info;
     SwiftNetClientAddrData sender;
     uint16_t packet_id;
+    #ifdef SWIFT_NET_REQUESTS
+        bool expecting_response;
+    #endif
 } SwiftNetPacketServerMetadata;
 
 typedef struct {
