@@ -30,7 +30,15 @@ void server_message_handler(SwiftNetServerPacketData* const packet_data) {
 
     swiftnet_server_append_to_packet(message, strlen(message), &buffer);
 
-    SwiftNetServerPacketData* response = swiftnet_server_make_request(server, &buffer, packet_data->metadata.sender);
+    SwiftNetServerPacketData* response = swiftnet_server_make_request(server, &buffer, packet_data->metadata.sender, 5000);
+    if (response == NULL) {
+        swiftnet_server_cleanup(server);
+        swiftnet_client_cleanup(client);
+
+        swiftnet_cleanup();
+
+        exit(EXIT_FAILURE);
+    }
 
     swiftnet_server_destroy_packet_buffer(&buffer);
 
@@ -70,7 +78,7 @@ int main() {
     server = swiftnet_create_server(8080);
     swiftnet_server_set_message_handler(server, server_message_handler);
 
-    client = swiftnet_create_client(IP_ADDRESS, 8080);
+    client = swiftnet_create_client(IP_ADDRESS, 8080, 2000);
     swiftnet_client_set_message_handler(client, client_message_handler);
 
     SwiftNetPacketBuffer buffer = swiftnet_client_create_packet_buffer(strlen(message));

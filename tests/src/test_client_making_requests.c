@@ -42,14 +42,22 @@ int main() {
     server = swiftnet_create_server(8080);
     swiftnet_server_set_message_handler(server, server_message_handler);
 
-    client = swiftnet_create_client(IP_ADDRESS, 8080);
+    client = swiftnet_create_client(IP_ADDRESS, 8080, 2000);
     swiftnet_client_set_message_handler(client, client_message_handler);
 
     SwiftNetPacketBuffer buffer = swiftnet_client_create_packet_buffer(strlen(message));
 
     swiftnet_client_append_to_packet(message, strlen(message), &buffer);
 
-    SwiftNetClientPacketData* packet_data = swiftnet_client_make_request(client, &buffer);
+    SwiftNetClientPacketData* packet_data = swiftnet_client_make_request(client, &buffer, 5000);
+    if (packet_data == NULL) {
+        swiftnet_server_cleanup(server);
+        swiftnet_client_cleanup(client);
+
+        swiftnet_cleanup();
+
+        exit(EXIT_FAILURE);
+    }
 
     swiftnet_client_destroy_packet_buffer(&buffer);
 

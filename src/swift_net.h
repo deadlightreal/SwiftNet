@@ -264,7 +264,7 @@ extern SwiftNetPacketBuffer swiftnet_client_create_packet_buffer(const uint32_t 
 extern void swiftnet_server_destroy_packet_buffer(const SwiftNetPacketBuffer* const packet);
 extern void swiftnet_client_destroy_packet_buffer(const SwiftNetPacketBuffer* const packet);
 extern SwiftNetServer* swiftnet_create_server(const uint16_t port);
-extern SwiftNetClientConnection* swiftnet_create_client(const char* const ip_address, const uint16_t port);
+extern SwiftNetClientConnection* swiftnet_create_client(const char* const ip_address, const uint16_t port, const uint32_t timeout_ms);
 extern void* swiftnet_client_read_packet(SwiftNetClientPacketData* const packet_data, const uint32_t data_size);
 extern void* swiftnet_server_read_packet(SwiftNetServerPacketData* const packet_data, const uint32_t data_size);
 extern void swiftnet_client_destory_packet_data(SwiftNetClientPacketData* const packet_data);
@@ -273,8 +273,8 @@ extern void swiftnet_server_destory_packet_data(SwiftNetServerPacketData* const 
 extern void swiftnet_cleanup();
 
 #ifdef SWIFT_NET_REQUESTS
-    extern SwiftNetClientPacketData* swiftnet_client_make_request(SwiftNetClientConnection* const client, SwiftNetPacketBuffer* const packet);
-    extern SwiftNetServerPacketData* swiftnet_server_make_request(SwiftNetServer* const server, SwiftNetPacketBuffer* const packet, const SwiftNetClientAddrData addr_data);
+    extern SwiftNetClientPacketData* swiftnet_client_make_request(SwiftNetClientConnection* const client, SwiftNetPacketBuffer* const packet, const uint32_t timeout_ms);
+    extern SwiftNetServerPacketData* swiftnet_server_make_request(SwiftNetServer* const server, SwiftNetPacketBuffer* const packet, const SwiftNetClientAddrData addr_data, const uint32_t timeout_ms);
 
     extern void swiftnet_client_make_response(SwiftNetClientConnection* const client, SwiftNetClientPacketData* const packet_data, SwiftNetPacketBuffer* const buffer);
     extern void swiftnet_server_make_response(SwiftNetServer* const server, SwiftNetServerPacketData* const packet_data, SwiftNetPacketBuffer* const buffer);

@@ -172,6 +172,8 @@ static inline void handle_request_response(const uint16_t packet_id, const in_ad
 
             atomic_store_explicit(&current_request_sent->packet_data, packet_data, memory_order_release);
 
+            vector_remove(&requests_sent, i);
+
             is_valid_response = true;
 
             break;

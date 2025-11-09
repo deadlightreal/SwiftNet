@@ -15,8 +15,10 @@
 #include "swift_net.h"
 #include <fcntl.h>
 #include <stddef.h>
+#include <sys/time.h>
 
 static _Atomic bool exit_thread = false;
+static _Atomic bool timeout_reached = false;
 
 typedef struct {
     const int sockfd;
@@ -24,12 +26,29 @@ typedef struct {
     const uint32_t size;
     const struct sockaddr_in server_addr;
     const socklen_t server_addr_len;
+    const uint32_t timeout_ms;
 } RequestServerInformationArgs;
 
 void* request_server_information(void* const request_server_information_args_void) {
+    struct timeval tv;
+    gettimeofday(&tv, NULL);
+
+    uint32_t start = (uint32_t)tv.tv_sec * 1000 + tv.tv_usec / 1000;
+
     const RequestServerInformationArgs* const request_server_information_args = (RequestServerInformationArgs*)request_server_information_args_void;
 
     while (1) {
+        struct timeval tv;
+        gettimeofday(&tv, NULL);
+
+        uint32_t end = (uint32_t)tv.tv_sec * 1000 + tv.tv_usec / 1000;
+
+        if (end > start + request_server_information_args->timeout_ms) {
+            atomic_store_explicit(&timeout_reached, true, memory_order_release);
+
+            break;
+        }
+
         if(atomic_load(&exit_thread) == true) {
             atomic_store(&exit_thread, false);
 
@@ -44,14 +63,13 @@ void* request_server_information(void* const request_server_information_args_voi
 
         sendto(request_server_information_args->sockfd, request_server_information_args->data, request_server_information_args->size, 0, (struct sockaddr *)&request_server_information_args->server_addr, request_server_information_args->server_addr_len);
 
-        usleep(1000000);
+        usleep(100000);
     }
 
     return NULL;
 }
 
-// Create the socket, and set client and server info
-SwiftNetClientConnection* swiftnet_create_client(const char* const ip_address, const uint16_t port) {
+SwiftNetClientConnection* swiftnet_create_client(const char* const ip_address, const uint16_t port, const uint32_t timeout_ms) {
     SwiftNetClientConnection* const new_connection = allocator_allocate(&client_connection_memory_allocator);
 
     new_connection->sockfd = socket(AF_INET, SOCK_RAW, PROTOCOL_NUMBER);
@@ -122,7 +140,8 @@ SwiftNetClientConnection* swiftnet_create_client(const char* const ip_address, c
         .data = request_server_info_buffer,
         .size = sizeof(request_server_info_buffer),
         .server_addr = new_connection->server_addr,
-        .server_addr_len = sizeof(new_connection->server_addr)
+        .server_addr_len = sizeof(new_connection->server_addr),
+        .timeout_ms = timeout_ms
     };
 
     pthread_create(&send_request_thread, NULL, request_server_information, (void*)&thread_args);
@@ -130,6 +149,12 @@ SwiftNetClientConnection* swiftnet_create_client(const char* const ip_address, c
     while(1) {
         const int bytes_received = recvfrom(new_connection->sockfd, server_information_buffer, sizeof(server_information_buffer), 0x00, NULL, NULL);
         if(bytes_received != PACKET_HEADER_SIZE) {
+            if (atomic_load_explicit(&timeout_reached, memory_order_acquire) == true) {
+                pthread_join(send_request_thread, NULL);
+
+                return NULL;
+            }
+
             #ifdef SWIFT_NET_DEBUG
                 if (check_debug_flag(DEBUG_INITIALIZATION)) {
                     send_debug_message("Invalid packet received from server. Expected server information: {\"bytes_received\": %d, \"expected_bytes\": %d}\n", bytes_received, PACKET_HEADER_SIZE + sizeof(SwiftNetServerInformation));
