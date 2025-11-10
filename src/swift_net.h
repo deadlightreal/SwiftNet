@@ -17,6 +17,10 @@
     #define restrict __restrict__
 #endif
 
+#ifdef __APPLE__
+    #define MACOS
+#endif
+
 #define PACKET_TYPE_MESSAGE 0x01
 #define PACKET_TYPE_REQUEST_INFORMATION 0x02
 #define PACKET_TYPE_SEND_LOST_PACKETS_REQUEST 0x03

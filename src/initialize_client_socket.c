@@ -104,8 +104,10 @@ SwiftNetClientConnection* swiftnet_create_client(const char* const ip_address, c
         .sin_family = AF_INET,
         .sin_port = htons(port),
         .sin_addr = {.s_addr = inet_addr(ip_address)},
-        .sin_zero = 0,
-        .sin_len = 0
+        .sin_zero = 0
+	#ifdef MACOS
+	    , .sin_len = 0
+	#endif
     };
 
     // Request the server information, and proccess it
