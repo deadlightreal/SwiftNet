@@ -109,12 +109,13 @@ SwiftNetClientConnection* swiftnet_create_client(const char* const ip_address, c
     };
 
     // Request the server information, and proccess it
-    const SwiftNetPacketInfo request_server_information_packet_info = {
-        .port_info = new_connection->port_info,
-        .packet_length = 0x00,
-        .packet_type = PACKET_TYPE_REQUEST_INFORMATION,
-        .maximum_transmission_unit = maximum_transmission_unit
-    };
+    const SwiftNetPacketInfo request_server_information_packet_info = construct_packet_info(
+        0x00,
+        PACKET_TYPE_REQUEST_INFORMATION,
+        1,
+        0,
+        new_connection->port_info
+    );
 
     const struct ip request_server_info_ip_header = construct_ip_header(new_connection->server_addr.sin_addr, PACKET_HEADER_SIZE, rand());
 
