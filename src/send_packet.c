@@ -247,8 +247,8 @@ inline void swiftnet_send_packet(
             #else
             PACKET_TYPE_MESSAGE,
             #endif
-            1,
             chunk_amount,
+            0,
             port_info
         );
 
