@@ -607,7 +607,7 @@ static inline void swiftnet_process_packets(
                     };
 
                     #ifdef SWIFT_NET_REQUESTS
-                    if (packet_info.request_response == true) {
+                    if (packet_info.packet_type == PACKET_TYPE_RESPONSE) {
                         handle_request_response(ip_header.ip_id, sender.sender_address.sin_addr.s_addr, NULL, packet_data, pending_messages, connection_type);
                     } else {
                         pass_callback_execution(packet_data, packet_callback_queue, NULL, ip_header.ip_id);
@@ -631,7 +631,7 @@ static inline void swiftnet_process_packets(
                     };
 
                     #ifdef SWIFT_NET_REQUESTS
-                    if (packet_info.request_response == true) {
+                    if (packet_info.packet_type == PACKET_TYPE_RESPONSE) {
                         handle_request_response(ip_header.ip_id, ((SwiftNetClientConnection*)connection)->server_addr.sin_addr.s_addr, NULL, packet_data, pending_messages, connection_type);
                     } else {
                         pass_callback_execution(packet_data, packet_callback_queue, NULL, ip_header.ip_id);
@@ -685,7 +685,7 @@ static inline void swiftnet_process_packets(
                     };
 
                     #ifdef SWIFT_NET_REQUESTS
-                    if (packet_info.request_response == true) {
+                    if (packet_info.packet_type == PACKET_TYPE_RESPONSE) {
                         handle_request_response(ip_header.ip_id, sender.sender_address.sin_addr.s_addr, pending_message, packet_data, pending_messages, connection_type);
                     } else {
                         pass_callback_execution(packet_data, packet_callback_queue, pending_message, ip_header.ip_id);
@@ -709,7 +709,7 @@ static inline void swiftnet_process_packets(
                     };
 
                     #ifdef SWIFT_NET_REQUESTS
-                    if (packet_info.request_response == true) {
+                    if (packet_info.packet_type == PACKET_TYPE_RESPONSE) {
                         handle_request_response(ip_header.ip_id, ((SwiftNetClientConnection*)connection)->server_addr.sin_addr.s_addr, pending_message, packet_data, pending_messages, connection_type);
                     } else {
                         pass_callback_execution(packet_data, packet_callback_queue, pending_message, ip_header.ip_id);

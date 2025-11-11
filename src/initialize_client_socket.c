@@ -113,8 +113,7 @@ SwiftNetClientConnection* swiftnet_create_client(const char* const ip_address, c
         .port_info = new_connection->port_info,
         .packet_length = 0x00,
         .packet_type = PACKET_TYPE_REQUEST_INFORMATION,
-        .maximum_transmission_unit = maximum_transmission_unit,
-        .request_response = false
+        .maximum_transmission_unit = maximum_transmission_unit
     };
 
     const struct ip request_server_info_ip_header = construct_ip_header(new_connection->server_addr.sin_addr, PACKET_HEADER_SIZE, rand());

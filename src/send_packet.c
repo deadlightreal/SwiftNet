@@ -64,6 +64,7 @@ static inline void handle_lost_packets(
     SwiftNetVector* const packets_sending
     #ifdef SWIFT_NET_REQUESTS
         , const bool response
+        , const uint8_t packet_type
     #endif
 ) {
     const SwiftNetPortInfo port_info = {
@@ -80,9 +81,6 @@ static inline void handle_lost_packets(
         .maximum_transmission_unit = mtu,
         .chunk_index = 0,
         .chunk_amount = 1
-        #ifdef SWIFT_NET_REQUESTS
-        , .request_response = false,
-        #endif
     };
 
     uint8_t request_lost_packets_buffer[PACKET_HEADER_SIZE];
@@ -98,14 +96,15 @@ static inline void handle_lost_packets(
     const uint32_t chunk_amount = (packet_length + (mtu - PACKET_HEADER_SIZE) - 1) / (mtu - PACKET_HEADER_SIZE);
 
     const SwiftNetPacketInfo resend_chunk_packet_info = {
+        #ifdef SWIFT_NET_REQUESTS
+        .packet_type = packet_type,
+        #else
         .packet_type = PACKET_TYPE_MESSAGE,
+        #endif
         .port_info = port_info,
         .packet_length = packet_length,
         .chunk_amount = chunk_amount,
         .maximum_transmission_unit = maximum_transmission_unit
-        #ifdef SWIFT_NET_REQUESTS
-        , .request_response = response
-        #endif
     };
  
     const struct ip resend_chunk_ip_header = construct_ip_header(destination_address->sin_addr, mtu, packet_sending->packet_id);
@@ -235,6 +234,10 @@ inline void swiftnet_send_packet(
         const uint16_t packet_id = rand();
     #endif
 
+    #ifdef SWIFT_NET_REQUESTS
+    const uint8_t packet_type = response ? PACKET_TYPE_RESPONSE : request_sent == NULL ? PACKET_TYPE_MESSAGE : PACKET_TYPE_REQUEST;
+    #endif
+
     if(packet_length > mtu) {
         SwiftNetPacketInfo packet_info = {
             .port_info = port_info,
@@ -242,10 +245,9 @@ inline void swiftnet_send_packet(
             .maximum_transmission_unit = maximum_transmission_unit,
             .chunk_index = 0
             #ifdef SWIFT_NET_REQUESTS
-                , .request_response = response
-                , .packet_type = request_sent == NULL ? PACKET_TYPE_MESSAGE : PACKET_TYPE_REQUEST
+                , .packet_type = packet_type
             #else
-                , .paclet_type = PACKET_TYPE_MESSAGE
+                , .packet_type = PACKET_TYPE_MESSAGE
             #endif
         };
 
@@ -307,6 +309,7 @@ inline void swiftnet_send_packet(
                 handle_lost_packets(new_packet_sending, mtu, packet, sockfd, target_addr, target_addr_len, port_info.source_port, port_info.destination_port, packets_sending_memory_allocator, packets_sending
                 #ifdef SWIFT_NET_REQUESTS
                     , response
+                    , packet_type
                 #endif
                 );
                 
@@ -325,13 +328,14 @@ inline void swiftnet_send_packet(
         const uint32_t final_packet_size = PACKET_HEADER_SIZE + packet_length;
 
         const SwiftNetPacketInfo packet_info = {
-            .packet_type = PACKET_TYPE_MESSAGE,
             .port_info = port_info,
             .packet_length = packet_length,
             .maximum_transmission_unit = maximum_transmission_unit,
-            .chunk_amount = 1
+            .chunk_amount = 1,
             #ifdef SWIFT_NET_REQUESTS
-            , .request_response = response
+            .packet_type = packet_type
+            #else
+            .packet_type = PACKET_TYPE_MESSAGE
             #endif
         };
 
