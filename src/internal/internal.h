@@ -169,6 +169,17 @@ extern void swiftnet_send_packet(
     #endif
 );
 
+static inline SwiftNetPacketInfo construct_packet_info(const uint32_t packet_length, const uint8_t packet_type, const uint32_t chunk_amount, const uint32_t chunk_index, const SwiftNetPortInfo port_info) {
+    return (SwiftNetPacketInfo){
+        .packet_length = packet_length,
+        .packet_type = packet_type,
+        .chunk_amount = chunk_amount,
+        .chunk_index = chunk_index,
+        .maximum_transmission_unit = maximum_transmission_unit,
+        .port_info = port_info
+    };
+}
+
 static struct ip construct_ip_header(struct in_addr destination_addr, const uint32_t packet_size, const uint16_t packet_id) {
     struct ip ip_header = {
         .ip_v = 4, // Version (ipv4)

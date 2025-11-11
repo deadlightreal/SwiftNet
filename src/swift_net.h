@@ -17,22 +17,6 @@
     #define restrict __restrict__
 #endif
 
-#ifdef __APPLE__
-    #define MACOS
-#endif
-
-#define PACKET_TYPE_MESSAGE 0x01
-#define PACKET_TYPE_REQUEST_INFORMATION 0x02
-#define PACKET_TYPE_SEND_LOST_PACKETS_REQUEST 0x03
-#define PACKET_TYPE_SEND_LOST_PACKETS_RESPONSE 0x04
-#define PACKET_TYPE_SUCCESSFULLY_RECEIVED_PACKET 0x05
-#define PACKET_TYPE_REQUEST 0x06
-
-#define PACKET_INFO_ID_NONE 0xFFFF
-
-#define unlikely(x) __builtin_expect((x), 0x00)
-#define likely(x) __builtin_expect((x), 0x01)
-
 #ifndef SWIFT_NET_DISABLE_ERROR_CHECKING
     #define SWIFT_NET_ERROR
 #endif
@@ -44,6 +28,21 @@
 #ifndef SWIFT_NET_DISABLE_DEBUGGING
     #define SWIFT_NET_DEBUG
 #endif
+
+#define PACKET_TYPE_MESSAGE 0x01
+#define PACKET_TYPE_REQUEST_INFORMATION 0x02
+#define PACKET_TYPE_SEND_LOST_PACKETS_REQUEST 0x03
+#define PACKET_TYPE_SEND_LOST_PACKETS_RESPONSE 0x04
+#define PACKET_TYPE_SUCCESSFULLY_RECEIVED_PACKET 0x05
+#define PACKET_TYPE_REQUEST 0x06
+#ifdef SWIFT_NET_REQUESTS
+#define PACKET_TYPE_RESPONSE 0x07
+#endif
+
+#define PACKET_INFO_ID_NONE 0xFFFF
+
+#define unlikely(x) __builtin_expect((x), 0x00)
+#define likely(x) __builtin_expect((x), 0x01)
 
 extern uint32_t maximum_transmission_unit;
 
@@ -97,9 +96,6 @@ typedef struct {
     uint32_t chunk_amount;
     uint32_t chunk_index;
     uint32_t maximum_transmission_unit;
-    #ifdef SWIFT_NET_REQUESTS
-        bool request_response;
-    #endif
 } SwiftNetPacketInfo;
 
 typedef struct {

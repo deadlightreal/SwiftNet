@@ -403,16 +403,16 @@ static inline void swiftnet_process_packets(
             {
                     const struct ip send_server_info_ip_header = construct_ip_header(node->sender_address.sin_addr, PACKET_HEADER_SIZE, rand());
 
-                    const SwiftNetPacketInfo packet_info_new = {
-                        .port_info = (SwiftNetPortInfo){
+                    const SwiftNetPacketInfo packet_info_new = construct_packet_info(
+                        sizeof(SwiftNetServerInformation),
+                        PACKET_TYPE_REQUEST_INFORMATION,
+                        1,
+                        0,
+                        (SwiftNetPortInfo){
                             .source_port = source_port,
                             .destination_port = packet_info.port_info.source_port
-                        },
-                        .packet_type = PACKET_TYPE_REQUEST_INFORMATION,
-                        .packet_length = sizeof(SwiftNetServerInformation),
-                        .chunk_amount = 1,
-                        .maximum_transmission_unit = maximum_transmission_unit
-                    };
+                        }
+                    );
 
                     uint8_t send_buffer[PACKET_HEADER_SIZE];
         
@@ -439,17 +439,16 @@ static inline void swiftnet_process_packets(
                     if(likely(packet_already_completed == true)) {
                         const struct ip send_packet_ip_header = construct_ip_header(node->sender_address.sin_addr, PACKET_HEADER_SIZE, ip_header.ip_id);
 
-                        SwiftNetPacketInfo send_packet_info = {
-                            .packet_length = 0x00,
-                            .chunk_amount = 1,
-                            .packet_type = PACKET_TYPE_SUCCESSFULLY_RECEIVED_PACKET,
-                            .port_info = (SwiftNetPortInfo){
+                        SwiftNetPacketInfo send_packet_info = construct_packet_info(
+                            0x00,
+                            PACKET_TYPE_SUCCESSFULLY_RECEIVED_PACKET,
+                            1,
+                            0,
+                            (SwiftNetPortInfo){
                                 .destination_port = packet_info.port_info.source_port,
                                 .source_port = packet_info.port_info.destination_port
-                            },
-                            .maximum_transmission_unit = maximum_transmission_unit,
-                            .chunk_index = 0
-                        };
+                            }
+                        );
 
                         uint8_t send_buffer[PACKET_HEADER_SIZE];
 
@@ -474,16 +473,16 @@ static inline void swiftnet_process_packets(
 
                 struct ip send_lost_packets_ip_header = construct_ip_header(node->sender_address.sin_addr, 0, ip_header.ip_id);
 
-                SwiftNetPacketInfo packet_info_new = {
-                    .port_info = (SwiftNetPortInfo){
+                SwiftNetPacketInfo packet_info_new = construct_packet_info(
+                    0,
+                    PACKET_TYPE_SEND_LOST_PACKETS_RESPONSE,
+                    1,
+                    0,
+                    (SwiftNetPortInfo){
                         .destination_port = packet_info.port_info.source_port,
                         .source_port = packet_info.port_info.destination_port
-                    },
-                    .packet_type = PACKET_TYPE_SEND_LOST_PACKETS_RESPONSE,
-                    .chunk_amount = 1,
-                    .chunk_index = 0,
-                    .maximum_transmission_unit = maximum_transmission_unit
-                };
+                    }
+                );
 
                 uint8_t send_buffer[mtu];
                 memset(send_buffer, 0, mtu);
@@ -607,7 +606,7 @@ static inline void swiftnet_process_packets(
                     };
 
                     #ifdef SWIFT_NET_REQUESTS
-                    if (packet_info.request_response == true) {
+                    if (packet_info.packet_type == PACKET_TYPE_RESPONSE) {
                         handle_request_response(ip_header.ip_id, sender.sender_address.sin_addr.s_addr, NULL, packet_data, pending_messages, connection_type);
                     } else {
                         pass_callback_execution(packet_data, packet_callback_queue, NULL, ip_header.ip_id);
@@ -631,7 +630,7 @@ static inline void swiftnet_process_packets(
                     };
 
                     #ifdef SWIFT_NET_REQUESTS
-                    if (packet_info.request_response == true) {
+                    if (packet_info.packet_type == PACKET_TYPE_RESPONSE) {
                         handle_request_response(ip_header.ip_id, ((SwiftNetClientConnection*)connection)->server_addr.sin_addr.s_addr, NULL, packet_data, pending_messages, connection_type);
                     } else {
                         pass_callback_execution(packet_data, packet_callback_queue, NULL, ip_header.ip_id);
@@ -685,7 +684,7 @@ static inline void swiftnet_process_packets(
                     };
 
                     #ifdef SWIFT_NET_REQUESTS
-                    if (packet_info.request_response == true) {
+                    if (packet_info.packet_type == PACKET_TYPE_RESPONSE) {
                         handle_request_response(ip_header.ip_id, sender.sender_address.sin_addr.s_addr, pending_message, packet_data, pending_messages, connection_type);
                     } else {
                         pass_callback_execution(packet_data, packet_callback_queue, pending_message, ip_header.ip_id);
@@ -709,7 +708,7 @@ static inline void swiftnet_process_packets(
                     };
 
                     #ifdef SWIFT_NET_REQUESTS
-                    if (packet_info.request_response == true) {
+                    if (packet_info.packet_type == PACKET_TYPE_RESPONSE) {
                         handle_request_response(ip_header.ip_id, ((SwiftNetClientConnection*)connection)->server_addr.sin_addr.s_addr, pending_message, packet_data, pending_messages, connection_type);
                     } else {
                         pass_callback_execution(packet_data, packet_callback_queue, pending_message, ip_header.ip_id);

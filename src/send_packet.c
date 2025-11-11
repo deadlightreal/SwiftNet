@@ -64,6 +64,7 @@ static inline void handle_lost_packets(
     SwiftNetVector* const packets_sending
     #ifdef SWIFT_NET_REQUESTS
         , const bool response
+        , const uint8_t packet_type
     #endif
 ) {
     const SwiftNetPortInfo port_info = {
@@ -73,17 +74,13 @@ static inline void handle_lost_packets(
 
     const struct ip request_lost_packets_ip_header = construct_ip_header(destination_address->sin_addr, PACKET_HEADER_SIZE, packet_sending->packet_id);
 
-    SwiftNetPacketInfo request_lost_packets_bit_array = {
-        .packet_type = PACKET_TYPE_SEND_LOST_PACKETS_REQUEST,
-        .port_info = port_info,
-        .packet_length = 0x00,
-        .maximum_transmission_unit = mtu,
-        .chunk_index = 0,
-        .chunk_amount = 1
-        #ifdef SWIFT_NET_REQUESTS
-        , .request_response = false,
-        #endif
-    };
+    SwiftNetPacketInfo request_lost_packets_bit_array = construct_packet_info(
+        0x00,
+        PACKET_TYPE_SEND_LOST_PACKETS_REQUEST,
+        1,
+        0,
+        port_info
+    );
 
     uint8_t request_lost_packets_buffer[PACKET_HEADER_SIZE];
 
@@ -97,16 +94,17 @@ static inline void handle_lost_packets(
     const uint32_t packet_length = packet->packet_append_pointer - packet->packet_data_start;
     const uint32_t chunk_amount = (packet_length + (mtu - PACKET_HEADER_SIZE) - 1) / (mtu - PACKET_HEADER_SIZE);
 
-    const SwiftNetPacketInfo resend_chunk_packet_info = {
-        .packet_type = PACKET_TYPE_MESSAGE,
-        .port_info = port_info,
-        .packet_length = packet_length,
-        .chunk_amount = chunk_amount,
-        .maximum_transmission_unit = maximum_transmission_unit
+    const SwiftNetPacketInfo resend_chunk_packet_info = construct_packet_info(
+        packet_length,
         #ifdef SWIFT_NET_REQUESTS
-        , .request_response = response
+        packet_type,
+        #else
+        PACKET_TYPE_MESSAGE,
         #endif
-    };
+        chunk_amount,
+        0,
+        port_info
+    );
  
     const struct ip resend_chunk_ip_header = construct_ip_header(destination_address->sin_addr, mtu, packet_sending->packet_id);
 
@@ -235,19 +233,24 @@ inline void swiftnet_send_packet(
         const uint16_t packet_id = rand();
     #endif
 
+    #ifdef SWIFT_NET_REQUESTS
+    const uint8_t packet_type = response ? PACKET_TYPE_RESPONSE : request_sent == NULL ? PACKET_TYPE_MESSAGE : PACKET_TYPE_REQUEST;
+    #endif
+
+    const uint32_t chunk_amount = (packet_length + (mtu - PACKET_HEADER_SIZE) - 1) / (mtu - PACKET_HEADER_SIZE);
+
     if(packet_length > mtu) {
-        SwiftNetPacketInfo packet_info = {
-            .port_info = port_info,
-            .packet_length = packet_length,
-            .maximum_transmission_unit = maximum_transmission_unit,
-            .chunk_index = 0
+        SwiftNetPacketInfo packet_info = construct_packet_info(
+            packet_length,
             #ifdef SWIFT_NET_REQUESTS
-                , .request_response = response
-                , .packet_type = request_sent == NULL ? PACKET_TYPE_MESSAGE : PACKET_TYPE_REQUEST
+            packet_type,
             #else
-                , .paclet_type = PACKET_TYPE_MESSAGE
+            PACKET_TYPE_MESSAGE,
             #endif
-        };
+            1,
+            chunk_amount,
+            port_info
+        );
 
         const struct ip ip_header = construct_ip_header(target_addr->sin_addr, mtu, packet_id);
 
@@ -263,15 +266,11 @@ inline void swiftnet_send_packet(
 
         vector_unlock(packets_sending);
 
-        const uint32_t chunk_amount = (packet_length + (mtu - PACKET_HEADER_SIZE) - 1) / (mtu - PACKET_HEADER_SIZE);
-
         new_packet_sending->lost_chunks = NULL;
         new_packet_sending->locked = false;
         new_packet_sending->lost_chunks = NULL;
         new_packet_sending->lost_chunks_size = 0;
         new_packet_sending->packet_id = packet_id;
-
-        packet_info.chunk_amount = chunk_amount;
 
         uint8_t buffer[mtu];
 
@@ -307,6 +306,7 @@ inline void swiftnet_send_packet(
                 handle_lost_packets(new_packet_sending, mtu, packet, sockfd, target_addr, target_addr_len, port_info.source_port, port_info.destination_port, packets_sending_memory_allocator, packets_sending
                 #ifdef SWIFT_NET_REQUESTS
                     , response
+                    , packet_type
                 #endif
                 );
                 
@@ -324,16 +324,17 @@ inline void swiftnet_send_packet(
     } else {
         const uint32_t final_packet_size = PACKET_HEADER_SIZE + packet_length;
 
-        const SwiftNetPacketInfo packet_info = {
-            .packet_type = PACKET_TYPE_MESSAGE,
-            .port_info = port_info,
-            .packet_length = packet_length,
-            .maximum_transmission_unit = maximum_transmission_unit,
-            .chunk_amount = 1
+        const SwiftNetPacketInfo packet_info = construct_packet_info(
+            packet_length,
             #ifdef SWIFT_NET_REQUESTS
-            , .request_response = response
+            packet_type,
+            #else
+            PACKET_TYPE_MESSAGE,
             #endif
-        };
+            1,
+            0,
+            port_info
+        );
 
         const struct ip ip_header = construct_ip_header(target_addr->sin_addr, final_packet_size, packet_id);
 
