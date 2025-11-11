@@ -1,17 +1,24 @@
 # SwiftNet - High-Performance Networking Library
 
-## ❗ NO WINDOWS SUPPORT (FOR NOW)
-
 ### SwiftNet is a simple and easy-to-use networking library built using raw sockets. It is designed for developers who value simplicity, readability, and good performance.
+
+## This library focuses on functionality over speed for now. If you need high performance for a release, consider waiting. We plan to optimize performance once the library is stable and feature-complete.
+
+## Supported Platforms
+- **Apple Silicon (macOS arm64)**
+- **Apple Intel (macOS x64)**
+- **Linux x64**
+
+- Apple Silicon (macOS arm64)
+Apple Intel (macOS x64)
+Linux x64
 
 ## Features
 - **💡 Ease of Use**: Simple API designed to get up and running quickly, without needing to deal directly with raw sockets.
-- **🚀 High Performance**: Optimized for speed while maintaining readability.
 - **📂 Lightweight**: Minimal dependencies and a small footprint.
 
 ## Why Use SwiftNet?
 - **Straightforward API:** Get up and running with minimal setup.
-- **Solid Performance:** Efficient handling of networking tasks.
 - **Open Source and Collaborative:** Contributions are welcome to make it even better.
 
 ## Installation
