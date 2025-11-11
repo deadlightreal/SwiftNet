@@ -15,7 +15,7 @@ Linux x64
 
 ## Features
 - **💡 Ease of Use**: Simple API designed to get up and running quickly, without needing to deal directly with raw sockets.
-- **📂 Lightweight**: Minimal dependencies and a small footprint.
+- **📂 Lightweight**: No dependencies and a small footprint.
 
 ## Why Use SwiftNet?
 - **Straightforward API:** Get up and running with minimal setup.
