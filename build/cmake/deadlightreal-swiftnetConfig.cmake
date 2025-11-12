@@ -24,5 +24,5 @@ endmacro()
 
 ####################################################################################
 
-include("${CMAKE_CURRENT_LIST_DIR}/deadlightreal-swiftnetTargets.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/swiftnetTargets.cmake")
 set(SWIFTNET_LIBRARIES swiftnet::swiftnet)
