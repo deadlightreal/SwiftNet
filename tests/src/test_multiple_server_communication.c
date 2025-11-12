@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <stdio.h>
+#include <stdatomic.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include "../config.h"
