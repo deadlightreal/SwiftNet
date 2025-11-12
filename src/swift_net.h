@@ -1,21 +1,17 @@
 #pragma once
 
-#include <arpa/inet.h>
-#include <netinet/in.h>
-#include <stdint.h>
-#include <sys/socket.h>
-#include <time.h>
-#include <pthread.h>
-#include <string.h>
-#include <netinet/ip.h>
-#include <stdbool.h>
-#include <stdatomic.h>
-
 #ifdef __cplusplus
     extern "C" {
 
     #define restrict __restrict__
 #endif
+
+#include <arpa/inet.h>
+#include <netinet/in.h>
+#include <sys/socket.h>
+#include <pthread.h>
+#include <netinet/ip.h>
+#include <stdbool.h>
 
 #ifndef SWIFT_NET_DISABLE_ERROR_CHECKING
     #define SWIFT_NET_ERROR
