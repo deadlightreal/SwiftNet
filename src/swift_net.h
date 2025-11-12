@@ -274,8 +274,8 @@ extern SwiftNetServer* swiftnet_create_server(const uint16_t port);
 extern SwiftNetClientConnection* swiftnet_create_client(const char* const ip_address, const uint16_t port, const uint32_t timeout_ms);
 extern void* swiftnet_client_read_packet(SwiftNetClientPacketData* const packet_data, const uint32_t data_size);
 extern void* swiftnet_server_read_packet(SwiftNetServerPacketData* const packet_data, const uint32_t data_size);
-extern void swiftnet_client_destory_packet_data(SwiftNetClientPacketData* const packet_data);
-extern void swiftnet_server_destory_packet_data(SwiftNetServerPacketData* const packet_data);
+extern void swiftnet_client_destroy_packet_data(SwiftNetClientPacketData* const packet_data);
+extern void swiftnet_server_destroy_packet_data(SwiftNetServerPacketData* const packet_data);
 
 extern void swiftnet_cleanup();
 
