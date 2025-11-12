@@ -57,10 +57,10 @@ void* swiftnet_server_read_packet(SwiftNetServerPacketData* const packet_data, c
     return ptr;
 }
 
-void swiftnet_client_destory_packet_data(SwiftNetClientPacketData* const packet_data) {
+void swiftnet_client_destroy_packet_data(SwiftNetClientPacketData* const packet_data) {
     allocator_free(&client_packet_data_memory_allocator, packet_data);
 }
 
-void swiftnet_server_destory_packet_data(SwiftNetServerPacketData* const packet_data) {
+void swiftnet_server_destroy_packet_data(SwiftNetServerPacketData* const packet_data) {
     allocator_free(&server_packet_data_memory_allocator, packet_data);
 }
