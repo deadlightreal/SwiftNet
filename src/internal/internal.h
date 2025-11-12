@@ -66,10 +66,19 @@ static const uint16_t crc16_table[256] = {
 
 static inline uint16_t crc16(const uint8_t *data, size_t length) {
     uint16_t crc = 0xFFFF;
+    
+    printf("data: ");
+
     for (size_t i = 0; i < length; i++) {
         uint8_t byte = data[i];
+
+        printf(" %d", data[i]);
+
         crc = (crc >> 8) ^ crc16_table[(crc ^ byte) & 0xFF];
     }
+
+    printf("\n");
+
     return crc ^ 0xFFFF;
 }
 
