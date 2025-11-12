@@ -71,7 +71,7 @@ install(TARGETS swiftnet
 install(EXPORT swiftnetTargets
     FILE swiftnetTargets.cmake
     NAMESPACE swiftnet::
-    DESTINATION share/swiftnet
+    DESTINATION share/deadlightreal-swiftnet
     CONFIGURATIONS Release RelWithDebInfo MinSizeRel
 )
 
@@ -80,20 +80,20 @@ include(CMakePackageConfigHelpers)
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/cmake)
 
 configure_package_config_file(
-    ${CMAKE_CURRENT_SOURCE_DIR}/cmake/swiftnetConfig.cmake.in
-    ${CMAKE_CURRENT_BINARY_DIR}/cmake/swiftnetConfig.cmake
-    INSTALL_DESTINATION share/swiftnet
+    ${CMAKE_CURRENT_SOURCE_DIR}/cmake/deadlightreal-swiftnetConfig.cmake.in
+    ${CMAKE_CURRENT_BINARY_DIR}/cmake/deadlightreal-swiftnetConfig.cmake
+    INSTALL_DESTINATION share/deadlightreal-swiftnet
 )
 
 write_basic_package_version_file(
-    ${CMAKE_CURRENT_BINARY_DIR}/cmake/swiftnetConfigVersion.cmake
+    ${CMAKE_CURRENT_BINARY_DIR}/cmake/deadlightreal-swiftnetConfigVersion.cmake
     VERSION 1.0.0
     COMPATIBILITY AnyNewerVersion
 )
 
 install(FILES
-    ${CMAKE_CURRENT_BINARY_DIR}/cmake/swiftnetConfig.cmake
-    ${CMAKE_CURRENT_BINARY_DIR}/cmake/swiftnetConfigVersion.cmake
-    DESTINATION share/swiftnet
+    ${CMAKE_CURRENT_BINARY_DIR}/cmake/deadlightreal-swiftnetConfig.cmake
+    ${CMAKE_CURRENT_BINARY_DIR}/cmake/deadlightreal-swiftnetConfigVersion.cmake
+    DESTINATION share/deadlightreal-swiftnet
     CONFIGURATIONS Release RelWithDebInfo MinSizeRel
 )
