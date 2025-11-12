@@ -1,5 +1,6 @@
 #include "internal.h"
 #include <stdatomic.h>
+#include <stdint.h>
 
 void vector_lock(SwiftNetVector* const vector) {
     uint8_t owner_none = 0;

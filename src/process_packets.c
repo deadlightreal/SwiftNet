@@ -382,7 +382,7 @@ static inline void swiftnet_process_packets(
             if(ip_header.ip_sum != 0 && packet_corrupted(checksum_received, node->data_read, packet_buffer) == true) {
                 #ifdef SWIFT_NET_DEBUG
                     if (check_debug_flag(DEBUG_PACKETS_RECEIVING)) {
-                        send_debug_message("Received corrupted packet: {\"source_ip_address\": \"%s\", \"source_port\": %d, \"packet_id\": %d}\n", inet_ntoa(ip_header.ip_src), packet_info.port_info.source_port, ip_header.ip_id);
+                        send_debug_message("Received corrupted packet: {\"source_ip_address\": \"%s\", \"source_port\": %d, \"packet_id\": %d, \"received_checsum\": %d, \"real_checksum\": %d}\n", inet_ntoa(ip_header.ip_src), packet_info.port_info.source_port, ip_header.ip_id, checksum_received, crc16(packet_buffer, node->data_read));
                     }
                 #endif
 
