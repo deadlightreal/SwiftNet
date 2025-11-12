@@ -138,11 +138,7 @@ static void create_new_stack(SwiftNetMemoryAllocator* const memory_allocator) {
     stack_pointers->size = chunk_item_amount;
     stack_pointers->previous = atomic_load(&memory_allocator->free_memory_pointers.last_item);
     stack_pointers->next = NULL;
-
-    atomic_store(&((SwiftNetMemoryAllocatorStack*)atomic_load(&memory_allocator->free_memory_pointers.last_item))->next, stack_pointers);
-    atomic_store(&memory_allocator->free_memory_pointers.last_item, stack_pointers);
-
-    atomic_store(&stack_pointers->owner, ALLOCATOR_STACK_FREE);
+    stack_pointers->owner = ALLOCATOR_STACK_FREE;
 
     SwiftNetMemoryAllocatorStack* const stack_data = malloc(sizeof(SwiftNetMemoryAllocatorStack));
     if (unlikely(stack_data == NULL)) {
@@ -155,12 +151,15 @@ static void create_new_stack(SwiftNetMemoryAllocator* const memory_allocator) {
     stack_data->next = NULL;
     stack_data->previous = atomic_load(&memory_allocator->data.last_item);
 
-    atomic_store(&((SwiftNetMemoryAllocatorStack*)atomic_load(&memory_allocator->data.last_item))->next, stack_data);
-    atomic_store(&memory_allocator->data.last_item, stack_data);
-
     for (uint32_t i = 0; i < chunk_item_amount; i++) {
         ((void **)stack_allocated_memory)[i] = (uint8_t*)allocated_memory + (i * item_size);
     }
+
+    atomic_store(&((SwiftNetMemoryAllocatorStack*)atomic_load(&memory_allocator->data.last_item))->next, stack_data);
+    atomic_store(&memory_allocator->data.last_item, stack_data);
+
+    atomic_store(&((SwiftNetMemoryAllocatorStack*)atomic_load(&memory_allocator->free_memory_pointers.last_item))->next, stack_pointers);
+    atomic_store(&memory_allocator->free_memory_pointers.last_item, stack_pointers);
 
     atomic_store(&memory_allocator->creating_stack, STACK_CREATING_UNLOCKED);
 }
