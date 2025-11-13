@@ -9,11 +9,7 @@ on:
 jobs:
   build:
 
-    runs-on: ubuntu-latest
-
-    strategy:
-      matrix:
-        arch: [x64, arm64]
+    runs-on: [self_hosted]
 
     steps:
     - uses: actions/checkout@v4
