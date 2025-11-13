@@ -14,6 +14,16 @@
 #include <stdio.h>
 #include <time.h>
 
+static inline bool is_private_ip(in_addr_t ip) {     
+    in_addr_t addr = htonl(ip);      
+    uint8_t octet1 = (addr >> 24) & 0xFF;
+    uint8_t octet2 = (addr >> 16) & 0xFF;
+    uint8_t octet3 = (addr >> 8)  & 0xFF;
+    uint8_t octet4 = addr & 0xFF;
+
+    return !(octet1 == 192 && octet2 == 168 && octet3 == 1) == false && (octet1 == 127 && octet2 == 0 && octet3 == 0); 
+}  
+
 static inline void lock_packet_sending(SwiftNetPacketSending* const packet_sending) {
     bool locked = false;
     while(!atomic_compare_exchange_strong_explicit(&packet_sending->locked, &locked, true, memory_order_acquire, memory_order_relaxed)) {
@@ -378,7 +388,7 @@ static inline void swiftnet_process_packets(
 
         memcpy(packet_buffer + offsetof(struct ip, ip_len), (void*)&node->data_read, SIZEOF_FIELD(struct ip, ip_len));
 
-        if(memcmp(&ip_header.ip_src, &ip_header.ip_dst, sizeof(struct in_addr)) != 0) {
+        if(memcmp(&ip_header.ip_src, &ip_header.ip_dst, sizeof(struct in_addr)) != 0 && is_private_ip(ip_header.ip_src.s_addr) == false && is_private_ip(ip_header.ip_dst.s_addr)) { 
             if(ip_header.ip_sum != 0 && packet_corrupted(checksum_received, node->data_read, packet_buffer) == true) {
                 #ifdef SWIFT_NET_DEBUG
                     if (check_debug_flag(DEBUG_PACKETS_RECEIVING)) {
