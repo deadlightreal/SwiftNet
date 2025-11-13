@@ -11,6 +11,10 @@ jobs:
 
     runs-on: ubuntu-latest
 
+    strategy:
+      matrix:
+        arch: [x64, arm64]
+
     steps:
     - uses: actions/checkout@v4
     - name: build
