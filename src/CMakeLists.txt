@@ -87,7 +87,7 @@ configure_package_config_file(
 
 write_basic_package_version_file(
     ${CMAKE_CURRENT_BINARY_DIR}/cmake/deadlightreal-swiftnetConfigVersion.cmake
-    VERSION 1.0.0
+    VERSION 0.1.0
     COMPATIBILITY AnyNewerVersion
 )
 
