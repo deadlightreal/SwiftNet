@@ -4,6 +4,8 @@
 
 ## This library focuses on functionality over speed for now. If you need high performance for a release, consider waiting. We plan to optimize performance once the library is stable and feature-complete.
 
+## If you intend to use this library, please note that it has not been fully tested for public packet transmissions and will probably not work. These early versions are mainly for local testing and development.
+
 ## Supported Platforms
 - **Apple Silicon (macOS arm64)**
 - **Apple Intel (macOS x64)**
