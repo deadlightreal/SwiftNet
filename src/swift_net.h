@@ -9,6 +9,7 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
+#include <net/ethernet.h>
 #include <pthread.h>
 #include <netinet/ip.h>
 #include <stdbool.h>
@@ -212,6 +213,7 @@ typedef struct {
 // Connection data
 typedef struct {
     int bpf;
+    struct ether_header eth_header;
     SwiftNetPortInfo port_info;
     struct sockaddr_in server_addr;
     socklen_t server_addr_len;
@@ -232,7 +234,8 @@ typedef struct {
 } SwiftNetClientConnection;
 
 typedef struct {
-    int sockfd;
+    int bpf;
+    struct ether_header eth_header;
     uint16_t server_port;
     _Atomic(void (*)(SwiftNetServerPacketData* const)) packet_handler;
     _Atomic bool closing;

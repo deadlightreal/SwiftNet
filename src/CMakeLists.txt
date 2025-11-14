@@ -23,10 +23,12 @@ set(SOURCE_FILES
     make_response.c
     make_request.c
     internal/get_mtu.c
-    internal/get_default_interface.c
+    internal/get_default_interface_and_mac.c
     internal/datatype_allocator.c
     internal/datatype_vector.c
     internal/get_bpf_device.c
+    internal/bind_bpf_to_interface.c
+    internal/setup_bpf_settings.c
 )
 
 if(SANITIZER STREQUAL "address")
@@ -46,8 +48,8 @@ else()
 endif()
 
 add_library(swiftnet STATIC ${SOURCE_FILES})
-target_compile_options(swiftnet PRIVATE -O0)
-target_link_options(swiftnet PRIVATE -O0)
+target_compile_options(swiftnet PRIVATE -lpcap -O0)
+target_link_options(swiftnet PRIVATE -lpcap -O0)
 
 set_target_properties(swiftnet PROPERTIES
     OUTPUT_NAME "swiftnet"

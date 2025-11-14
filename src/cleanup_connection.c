@@ -14,9 +14,7 @@ void swiftnet_client_cleanup(SwiftNetClientConnection* const client) {
 
     atomic_store_explicit(&client->closing, true, memory_order_release);
 
-    shutdown(client->sockfd, SHUT_RD);
-
-    close(client->sockfd);
+    close(client->bpf);
 
     pthread_detach(client->handle_packets_thread);
     pthread_detach(client->process_packets_thread);
@@ -36,7 +34,7 @@ void swiftnet_server_cleanup(SwiftNetServer* const server) {
 
     atomic_store_explicit(&server->closing, true, memory_order_release);
 
-    close(server->sockfd);
+    close(server->bpf);
 
     pthread_detach(server->handle_packets_thread);
     pthread_detach(server->process_packets_thread);

@@ -1,4 +1,3 @@
-#include <cstring>
 #include <pthread.h>
 #include <stdatomic.h>
 #include <stdint.h>
@@ -18,6 +17,7 @@
 #include <stddef.h>
 #include <sys/time.h>
 #include <net/ethernet.h>
+#include <net/bpf.h>
 
 static _Atomic bool exit_thread = false;
 static _Atomic bool timeout_reached = false;
@@ -62,6 +62,11 @@ void* request_server_information(void* const request_server_information_args_voi
                 send_debug_message("Requested server information: {\"server_ip_address\": \"%s\"}\n", inet_ntoa(request_server_information_args->server_addr.sin_addr));
             }
         #endif
+
+        for (uint32_t i = 0; i < request_server_information_args->size; i++) {
+            printf("%d ", ((uint8_t*)request_server_information_args->data)[i]);
+        }
+        printf("\n");
 
         write(request_server_information_args->bpf, request_server_information_args->data, request_server_information_args->size);
 
@@ -114,16 +119,18 @@ SwiftNetClientConnection* swiftnet_create_client(const char* const ip_address, c
         new_connection->port_info
     );
 
-    const struct ip request_server_info_ip_header = construct_ip_header(new_connection->server_addr.sin_addr, PACKET_HEADER_SIZE, rand());
-
     struct ether_header eth_header = {
         .ether_dhost = {0xff,0xff,0xff,0xff,0xff,0xff},
-        .ether_type = 0x0800
+        .ether_type = htons(0x0800)
     };
 
     memcpy(eth_header.ether_shost, mac_address, sizeof(eth_header.ether_shost));
 
-    uint8_t request_server_info_buffer[PACKET_HEADER_SIZE + sizeof(eth_header)];
+    new_connection->eth_header = eth_header;
+
+    const struct ip request_server_info_ip_header = construct_ip_header(new_connection->server_addr.sin_addr, PACKET_HEADER_SIZE - sizeof(eth_header), rand());
+
+    uint8_t request_server_info_buffer[PACKET_HEADER_SIZE];
 
     memcpy(request_server_info_buffer, &eth_header, sizeof(eth_header)); 
     memcpy(request_server_info_buffer + sizeof(eth_header), &request_server_info_ip_header, sizeof(struct ip));
@@ -135,8 +142,6 @@ SwiftNetClientConnection* swiftnet_create_client(const char* const ip_address, c
 
     memset(&new_connection->packet_callback_queue, 0x00, sizeof(PacketCallbackQueue));
     atomic_store(&new_connection->packet_callback_queue.owner, PACKET_CALLBACK_QUEUE_OWNER_NONE);
-
-    uint8_t server_information_buffer[PACKET_HEADER_SIZE + sizeof(SwiftNetServerInformation)];
 
     pthread_t send_request_thread;
 
@@ -150,60 +155,77 @@ SwiftNetClientConnection* swiftnet_create_client(const char* const ip_address, c
     };
 
     pthread_create(&send_request_thread, NULL, request_server_information, (void*)&thread_args);
+
+    SwiftNetServerInformation* server_information;
+    SwiftNetPacketInfo* packet_info;
+    struct ip* ip_header;
+
+    uint8_t buffer[10000];
     
     while(1) {
-        const int bytes_received = recvfrom(new_connection->sockfd, server_information_buffer, sizeof(server_information_buffer), 0x00, NULL, NULL);
-        if(bytes_received != PACKET_HEADER_SIZE) {
-            if (atomic_load_explicit(&timeout_reached, memory_order_acquire) == true) {
-                pthread_join(send_request_thread, NULL);
+        const int data_read = read(new_connection->bpf, buffer, sizeof(buffer));
+        if (data_read <= 0) {
+            usleep(1000);
+            continue;
+        }
 
-                return NULL;
+        uint32_t offset = 0;
+
+        while (offset < data_read) {
+            struct bpf_hdr *hdr = (struct bpf_hdr *)(buffer + offset);
+            unsigned char *data = buffer + offset + hdr->bh_hdrlen;
+            uint32_t bytes_received = hdr->bh_caplen;
+
+            if(bytes_received != PACKET_HEADER_SIZE) {
+                if (atomic_load_explicit(&timeout_reached, memory_order_acquire) == true) {
+                    pthread_join(send_request_thread, NULL);
+
+                    return NULL;
+                }
+
+                #ifdef SWIFT_NET_DEBUG
+                    if (check_debug_flag(DEBUG_INITIALIZATION)) {
+                        send_debug_message("Invalid packet received from server. Expected server information: {\"bytes_received\": %u, \"expected_bytes\": %u}\n", bytes_received, PACKET_HEADER_SIZE + sizeof(SwiftNetServerInformation));
+                    }
+                #endif
+
+                continue;
             }
 
-            #ifdef SWIFT_NET_DEBUG
-                if (check_debug_flag(DEBUG_INITIALIZATION)) {
-                    send_debug_message("Invalid packet received from server. Expected server information: {\"bytes_received\": %d, \"expected_bytes\": %d}\n", bytes_received, PACKET_HEADER_SIZE + sizeof(SwiftNetServerInformation));
-                }
-            #endif
+            ip_header = (struct ip*)(data + sizeof(struct ether_header));
+            packet_info = (SwiftNetPacketInfo*)(data + sizeof(struct ether_header) + sizeof(struct ip));
+            server_information = (SwiftNetServerInformation*)(data + sizeof(struct ether_header) + sizeof(struct ip) + sizeof(SwiftNetPacketInfo));
+    
+            if(packet_info->port_info.destination_port != new_connection->port_info.source_port || packet_info->port_info.source_port != new_connection->port_info.destination_port) {
+                #ifdef SWIFT_NET_DEBUG
+                    if (check_debug_flag(DEBUG_INITIALIZATION)) {
+                        send_debug_message("Port info does not match: {\"destination_port\": %d, \"source_port\": %d, \"source_ip_address\": \"%s\"}\n", packet_info->port_info.destination_port, packet_info->port_info.source_port, inet_ntoa(ip_header->ip_src));
+                    }
+                #endif
 
-            continue;
-        }
+                continue;
+            }
 
-        const struct ip* const ip_header = (struct ip*)&server_information_buffer;
-
-        const SwiftNetPacketInfo* const packet_info = (SwiftNetPacketInfo *)&server_information_buffer[sizeof(struct ip)];
-
-        if(packet_info->port_info.destination_port != new_connection->port_info.source_port || packet_info->port_info.source_port != new_connection->port_info.destination_port) {
-            #ifdef SWIFT_NET_DEBUG
-                if (check_debug_flag(DEBUG_INITIALIZATION)) {
-                    send_debug_message("Port info does not match: {\"destination_port\": %d, \"source_port\": %d, \"source_ip_address\": \"%s\"}\n", packet_info->port_info.destination_port, packet_info->port_info.source_port, inet_ntoa(ip_header->ip_src));
-                }
-            #endif
-
-            continue;
-        }
-
-        if(packet_info->packet_type != PACKET_TYPE_REQUEST_INFORMATION) {
-            #ifdef SWIFT_NET_DEBUG
-                if (check_debug_flag(DEBUG_INITIALIZATION)) {
-                    send_debug_message("Invalid packet type: {\"packet_type\": %d}\n", packet_info->packet_type);
-                }
-            #endif
-            continue;
-        }
-            
-        if(bytes_received != 0) {
-            break;
+            if(packet_info->packet_type != PACKET_TYPE_REQUEST_INFORMATION) {
+                #ifdef SWIFT_NET_DEBUG
+                    if (check_debug_flag(DEBUG_INITIALIZATION)) {
+                        send_debug_message("Invalid packet type: {\"packet_type\": %d}\n", packet_info->packet_type);
+                    }
+                #endif
+                continue;
+            }
+                
+            if(bytes_received != 0) {
+                break;
+            }
+    
+            offset += BPF_WORDALIGN(hdr->bh_hdrlen + bytes_received);
         }
     }
 
     atomic_store(&exit_thread, true);
 
     pthread_join(send_request_thread, NULL);
-
-    const SwiftNetPacketInfo* const packet_info = (SwiftNetPacketInfo*)&server_information_buffer[sizeof(struct ip)];
-
-    const SwiftNetServerInformation* const server_information = (SwiftNetServerInformation*)&server_information_buffer[PACKET_HEADER_SIZE];
 
     new_connection->maximum_transmission_unit = packet_info->maximum_transmission_unit;
 

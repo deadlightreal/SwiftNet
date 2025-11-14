@@ -25,18 +25,20 @@ SwiftNetServer* swiftnet_create_server(const uint16_t port) {
 
     new_server->server_port = port;
 
-    // Create the socket
-    new_server->sockfd = socket(AF_INET, SOCK_RAW, PROTOCOL_NUMBER);
-    if (unlikely(new_server->sockfd < 0)) {
-        fprintf(stderr, "Socket creation failed\n");
-        exit(EXIT_FAILURE);
-    }
+    // Init bpf device
+    new_server->bpf = get_bpf_device();
 
-    int on = 1;
-    if(setsockopt(new_server->sockfd, IPPROTO_IP, IP_HDRINCL, &on, sizeof(on)) < 0) {
-        fprintf(stderr, "Failed to set sockopt IP_HDRINCL\n");
-        exit(EXIT_FAILURE);
-    }
+    bind_bpf_to_interface(new_server->bpf);
+    setup_bpf_settings(new_server->bpf);
+
+    struct ether_header eth_header = {
+        .ether_dhost = {0xff,0xff,0xff,0xff,0xff,0xff},
+        .ether_type = htons(0x0800)
+    };
+
+    memcpy(eth_header.ether_shost, mac_address, sizeof(eth_header.ether_shost));
+
+    new_server->eth_header = eth_header;
 
     new_server->packet_queue = (PacketQueue){
         .first_node = NULL,

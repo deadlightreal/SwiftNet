@@ -21,7 +21,7 @@ endif()
 
 link_directories(${CMAKE_SOURCE_DIR}/../build/output)
 
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g -O0")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g -O0 -lpcap")
 
 file(GLOB SRC_FILES "${CMAKE_SOURCE_DIR}/src/*.c")
 
@@ -35,4 +35,4 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 
 add_executable(run_all_tests run_all_tests.c)
 target_link_libraries(run_all_tests swiftnet)
-target_link_options(run_all_tests PRIVATE -g -O0)
+target_link_options(run_all_tests PRIVATE -g -O0 -lpcap)

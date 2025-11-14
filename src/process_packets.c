@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include <pthread.h>
 #include <string.h>
+#include <net/ethernet.h>
 #include <sys/socket.h>
 #include <unistd.h>
 #include <stdio.h>
@@ -320,7 +321,8 @@ static inline bool packet_corrupted(const uint16_t checksum, const uint32_t chun
 
 static inline void swiftnet_process_packets(
     void* _Atomic * packet_handler,
-    const int sockfd,
+    const int bpf,
+    const struct ether_header eth_hdr,
     const uint16_t source_port,
     SwiftNetVector* const packets_sending,
     SwiftNetMemoryAllocator* const packets_sending_messages_memory_allocator,
@@ -370,10 +372,10 @@ static inline void swiftnet_process_packets(
         #endif
 
         struct ip ip_header;
-        memcpy(&ip_header, packet_buffer, sizeof(ip_header));
+        memcpy(&ip_header, packet_buffer + sizeof(eth_hdr), sizeof(ip_header));
 
         SwiftNetPacketInfo packet_info;
-        memcpy(&packet_info, &packet_buffer[sizeof(ip_header)], sizeof(packet_info));
+        memcpy(&packet_info, &packet_buffer + sizeof(eth_hdr) + sizeof(ip_header), sizeof(packet_info));
 
         // Check if the packet is meant to be for this server
         if(packet_info.port_info.destination_port != source_port) {
@@ -384,9 +386,9 @@ static inline void swiftnet_process_packets(
 
         const uint16_t checksum_received = ip_header.ip_sum;
 
-        memset(&packet_buffer[offsetof(struct ip, ip_sum)], 0x00, SIZEOF_FIELD(struct ip, ip_sum));
+        memset(&packet_buffer[sizeof(eth_hdr) + offsetof(struct ip, ip_sum)], 0x00, SIZEOF_FIELD(struct ip, ip_sum));
 
-        memcpy(packet_buffer + offsetof(struct ip, ip_len), (void*)&node->data_read, SIZEOF_FIELD(struct ip, ip_len));
+        memcpy(packet_buffer + sizeof(eth_hdr) + offsetof(struct ip, ip_len), (void*)&node->data_read, SIZEOF_FIELD(struct ip, ip_len));
 
         if(memcmp(&ip_header.ip_src, &ip_header.ip_dst, sizeof(struct in_addr)) != 0 && is_private_ip(ip_header.ip_src.s_addr) == false && is_private_ip(ip_header.ip_dst.s_addr)) { 
             if(ip_header.ip_sum != 0 && packet_corrupted(checksum_received, node->data_read, packet_buffer) == true) {
@@ -411,7 +413,7 @@ static inline void swiftnet_process_packets(
         switch(packet_info.packet_type) {
             case PACKET_TYPE_REQUEST_INFORMATION:
             {
-                    const struct ip send_server_info_ip_header = construct_ip_header(node->sender_address.sin_addr, PACKET_HEADER_SIZE, rand());
+                    const struct ip send_server_info_ip_header = construct_ip_header(node->sender_address.sin_addr, PACKET_HEADER_SIZE - sizeof(eth_hdr), rand());
 
                     const SwiftNetPacketInfo packet_info_new = construct_packet_info(
                         sizeof(SwiftNetServerInformation),
@@ -426,14 +428,15 @@ static inline void swiftnet_process_packets(
 
                     uint8_t send_buffer[PACKET_HEADER_SIZE];
         
-                    memcpy(send_buffer, &send_server_info_ip_header, sizeof(send_server_info_ip_header));
-                    memcpy(send_buffer + sizeof(struct ip), &packet_info_new, sizeof(packet_info_new));
+                    memcpy(send_buffer, &eth_hdr, sizeof(eth_hdr));
+                    memcpy(send_buffer + sizeof(eth_hdr), &send_server_info_ip_header, sizeof(send_server_info_ip_header));
+                    memcpy(send_buffer + sizeof(eth_hdr) + sizeof(struct ip), &packet_info_new, sizeof(packet_info_new));
 
                     const uint16_t checksum = crc16(send_buffer, sizeof(send_buffer));
 
-                    memcpy(&send_buffer[offsetof(struct ip, ip_sum)], &checksum, SIZEOF_FIELD(struct ip, ip_sum));
+                    memcpy(&send_buffer[sizeof(eth_hdr) + offsetof(struct ip, ip_sum)], &checksum, SIZEOF_FIELD(struct ip, ip_sum));
 
-                    sendto(sockfd, send_buffer, sizeof(send_buffer), 0, (struct sockaddr *)&node->sender_address, node->server_address_length);
+                    write(bpf, send_buffer, sizeof(send_buffer));
 
                     allocator_free(&packet_buffer_memory_allocator, packet_buffer);
         
@@ -447,7 +450,7 @@ static inline void swiftnet_process_packets(
                 if(pending_message == NULL) {
                     const bool packet_already_completed = check_packet_already_completed(ip_header.ip_id, packets_completed_history);
                     if(likely(packet_already_completed == true)) {
-                        const struct ip send_packet_ip_header = construct_ip_header(node->sender_address.sin_addr, PACKET_HEADER_SIZE, ip_header.ip_id);
+                        const struct ip send_packet_ip_header = construct_ip_header(node->sender_address.sin_addr, PACKET_HEADER_SIZE - sizeof(eth_hdr), ip_header.ip_id);
 
                         SwiftNetPacketInfo send_packet_info = construct_packet_info(
                             0x00,
@@ -462,14 +465,15 @@ static inline void swiftnet_process_packets(
 
                         uint8_t send_buffer[PACKET_HEADER_SIZE];
 
-                        memcpy(send_buffer, &send_packet_ip_header, sizeof(send_packet_ip_header));
-                        memcpy(send_buffer + sizeof(send_packet_ip_header), &send_packet_info, sizeof(send_packet_info));
+                        memcpy(send_buffer, &eth_hdr, sizeof(eth_hdr));
+                        memcpy(send_buffer + sizeof(eth_hdr), &send_packet_ip_header, sizeof(send_packet_ip_header));
+                        memcpy(send_buffer + sizeof(eth_hdr) + sizeof(send_packet_ip_header), &send_packet_info, sizeof(send_packet_info));
 
                         const uint16_t checksum = crc16(send_buffer, sizeof(send_buffer));
 
-                        memcpy(send_buffer + offsetof(struct ip, ip_sum), &checksum, SIZEOF_FIELD(struct ip, ip_sum));
+                        memcpy(send_buffer + sizeof(eth_hdr) + offsetof(struct ip, ip_sum), &checksum, SIZEOF_FIELD(struct ip, ip_sum));
 
-                        sendto(sockfd, &send_buffer, sizeof(send_buffer), 0x00, (const struct sockaddr *)&node->sender_address, node->server_address_length);
+                        write(bpf, send_buffer, sizeof(send_buffer));
 
                         allocator_free(&packet_buffer_memory_allocator, packet_buffer);
 
@@ -496,6 +500,7 @@ static inline void swiftnet_process_packets(
 
                 uint8_t send_buffer[mtu];
                 memset(send_buffer, 0, mtu);
+
                 const uint32_t lost_chunk_indexes = return_lost_chunk_indexes(pending_message->chunks_received, pending_message->packet_info.chunk_amount, mtu - PACKET_HEADER_SIZE, (uint32_t*)(send_buffer + PACKET_HEADER_SIZE));
 
                 packet_info_new.packet_length = lost_chunk_indexes * sizeof(uint32_t);
@@ -504,16 +509,17 @@ static inline void swiftnet_process_packets(
 
                 const uint32_t packet_length = PACKET_HEADER_SIZE + (lost_chunk_indexes * sizeof(uint32_t));
 
-                memcpy(send_buffer, &send_lost_packets_ip_header, sizeof(send_lost_packets_ip_header));
-                memcpy(send_buffer + sizeof(struct ip), &packet_info_new, sizeof(packet_info_new));
+                memcpy(send_buffer, &eth_hdr, sizeof(eth_hdr));
+                memcpy(send_buffer + sizeof(eth_hdr), &send_lost_packets_ip_header, sizeof(send_lost_packets_ip_header));
+                memcpy(send_buffer + sizeof(eth_hdr) + sizeof(struct ip), &packet_info_new, sizeof(packet_info_new));
 
-                memcpy(send_buffer + offsetof(struct ip, ip_len), &packet_length, SIZEOF_FIELD(struct ip, ip_len));
+                memcpy(send_buffer + sizeof(eth_hdr) + offsetof(struct ip, ip_len), &packet_length - sizeof(eth_hdr), SIZEOF_FIELD(struct ip, ip_len));
 
                 const uint16_t checksum = crc16(send_buffer, packet_length);
 
-                memcpy(&send_buffer[offsetof(struct ip, ip_sum)], &checksum, SIZEOF_FIELD(struct ip, ip_sum));
+                memcpy(&send_buffer[sizeof(eth_hdr) + offsetof(struct ip, ip_sum)], &checksum, SIZEOF_FIELD(struct ip, ip_sum));
 
-                sendto(sockfd, send_buffer, packet_length, 0x00, (const struct sockaddr *)&node->sender_address, node->server_address_length);
+                write(bpf, send_buffer, packet_length);
 
                 allocator_free(&packet_buffer_memory_allocator, packet_buffer);
 
@@ -758,7 +764,7 @@ static inline void swiftnet_process_packets(
 void* swiftnet_server_process_packets(void* const void_server) {
     SwiftNetServer* const server = (SwiftNetServer*)void_server;
 
-    swiftnet_process_packets((void*)&server->packet_handler, server->sockfd, server->server_port, &server->packets_sending, &server->packets_sending_memory_allocator, &server->pending_messages, &server->pending_messages_memory_allocator, &server->packets_completed, &server->packets_completed_memory_allocator, CONNECTION_TYPE_SERVER, &server->packet_queue, &server->packet_callback_queue, server, &server->closing);
+    swiftnet_process_packets((void*)&server->packet_handler, server->bpf, server->eth_header, server->server_port, &server->packets_sending, &server->packets_sending_memory_allocator, &server->pending_messages, &server->pending_messages_memory_allocator, &server->packets_completed, &server->packets_completed_memory_allocator, CONNECTION_TYPE_SERVER, &server->packet_queue, &server->packet_callback_queue, server, &server->closing);
 
     return NULL;
 }
@@ -766,7 +772,7 @@ void* swiftnet_server_process_packets(void* const void_server) {
 void* swiftnet_client_process_packets(void* const void_client) {
     SwiftNetClientConnection* const client = (SwiftNetClientConnection*)void_client;
 
-    swiftnet_process_packets((void*)&client->packet_handler, client->sockfd, client->port_info.source_port, &client->packets_sending, &client->packets_sending_memory_allocator, &client->pending_messages, &client->pending_messages_memory_allocator, &client->packets_completed, &client->packets_completed_memory_allocator, CONNECTION_TYPE_CLIENT, &client->packet_queue, &client->packet_callback_queue, client, &client->closing);
+    swiftnet_process_packets((void*)&client->packet_handler, client->bpf, client->eth_header, client->port_info.source_port, &client->packets_sending, &client->packets_sending_memory_allocator, &client->pending_messages, &client->pending_messages_memory_allocator, &client->packets_completed, &client->packets_completed_memory_allocator, CONNECTION_TYPE_CLIENT, &client->packet_queue, &client->packet_callback_queue, client, &client->closing);
 
     return NULL;
 }

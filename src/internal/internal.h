@@ -14,7 +14,7 @@
 #define REQUEST_LOST_PACKETS_RETURN_UPDATED_BIT_ARRAY 0x00
 #define REQUEST_LOST_PACKETS_RETURN_COMPLETED_PACKET 0x01
 
-#define PACKET_HEADER_SIZE (sizeof(SwiftNetPacketInfo) + sizeof(struct ip))
+#define PACKET_HEADER_SIZE (sizeof(SwiftNetPacketInfo) + sizeof(struct ip) + sizeof(struct ether_header))
 
 #define PACKET_QUEUE_OWNER_NONE 0x00
 #define PACKET_QUEUE_OWNER_HANDLE_PACKETS 0x01
@@ -24,7 +24,7 @@
 #define PACKET_CALLBACK_QUEUE_OWNER_PROCESS_PACKETS 0x01
 #define PACKET_CALLBACK_QUEUE_OWNER_EXECUTE_PACKET_CALLBACK 0x02
 
-#define PROTOCOL_NUMBER IPPROTO_RAW
+#define PROTOCOL_NUMBER 253
 
 #define SIZEOF_FIELD(type, field) sizeof(((type *)0)->field)
 
@@ -170,7 +170,8 @@ extern void swiftnet_send_packet(
     const socklen_t* const target_addr_len,
     SwiftNetVector* const packets_sending,
     SwiftNetMemoryAllocator* const packets_sending_memory_allocator,
-    const int sockfd
+    const int bpf,
+    const struct ether_header eth_hdr
     #ifdef SWIFT_NET_REQUESTS
         , RequestSent* const request_sent
         , const bool response
@@ -195,7 +196,7 @@ static struct ip construct_ip_header(struct in_addr destination_addr, const uint
         .ip_hl = 5, // Header length
         .ip_tos = 0, // Type of service
         .ip_p = PROTOCOL_NUMBER, // Protocol
-        .ip_len = packet_size, // Chunk size
+        .ip_len = htons(packet_size), // Chunk size
         .ip_id = packet_id, // Packet id
         .ip_off = 0, // Not used
         .ip_ttl = 64,// Time to live
