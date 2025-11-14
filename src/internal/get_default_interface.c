@@ -1,6 +1,7 @@
 #include "internal.h"
 
 #include <stdio.h>
+#include <net/if_dl.h>
 #include <string.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -12,7 +13,7 @@
 #include <netinet/in.h>
 #include <net/route.h>
 
-const int get_default_interface(char* const restrict interface_name, const uint32_t interface_name_length, const int sockfd) {
+int get_default_interface_and_mac(char* restrict interface_name, uint32_t interface_name_length, uint8_t mac_out[6], int sockfd) {
     struct sockaddr_in local_addr;
     socklen_t addr_len = sizeof(local_addr);
 
@@ -33,26 +34,58 @@ const int get_default_interface(char* const restrict interface_name, const uint3
         return -1;
     }
 
-    int found = 0;
+    struct ifaddrs *match = NULL;
+
     for (ifa = ifaddr; ifa != NULL; ifa = ifa->ifa_next) {
-        if (ifa->ifa_addr == NULL) continue;
+        if (!ifa->ifa_addr) continue;
+
         if (ifa->ifa_addr->sa_family == AF_INET) {
             char iface_ip[INET_ADDRSTRLEN];
             struct sockaddr_in *sin = (struct sockaddr_in *)ifa->ifa_addr;
 
-            inet_ntop(AF_INET, &sin->sin_addr, iface_ip, sizeof(iface_ip));
+            if (!inet_ntop(AF_INET, &sin->sin_addr, iface_ip, sizeof(iface_ip)))
+                continue;
 
             if (strcmp(local_ip, iface_ip) == 0) {
-                strncpy(interface_name, ifa->ifa_name, interface_name_length - 1);
-                interface_name[interface_name_length - 1] = '\0';
-                freeifaddrs(ifaddr);
-                return 0;
+                match = ifa;
+                break;
+            }
+        }
+    }
+
+    if (!match) {
+        fprintf(stderr, "Fatal Error: No matching interface found for IP %s\n", local_ip);
+        freeifaddrs(ifaddr);
+        return -1;
+    }
+
+    strncpy(interface_name, match->ifa_name, interface_name_length - 1);
+    interface_name[interface_name_length - 1] = '\0';
+
+    int mac_found = 0;
+
+    for (ifa = ifaddr; ifa != NULL; ifa = ifa->ifa_next) {
+        if (!ifa->ifa_addr) continue;
+
+        if (strcmp(ifa->ifa_name, interface_name) == 0 &&
+            ifa->ifa_addr->sa_family == AF_LINK) {
+
+            struct sockaddr_dl *sdl = (struct sockaddr_dl *)ifa->ifa_addr;
+
+            if (sdl->sdl_alen == 6) {
+                memcpy(mac_out, LLADDR(sdl), 6);
+                mac_found = 1;
+                break;
             }
         }
     }
 
     freeifaddrs(ifaddr);
-    
-    fprintf(stderr, "Fatal Error: No matching interface found for IP %s\n", local_ip);
-    return -1;
+
+    if (!mac_found) {
+        fprintf(stderr, "Fatal Error: No MAC address found for interface %s\n", interface_name);
+        return -1;
+    }
+
+    return 0;
 }

@@ -14,6 +14,8 @@
 
 uint32_t maximum_transmission_unit = 0x00;
 struct in_addr private_ip_address;
+uint8_t mac_address[6];
+char default_network_interface[SIZEOF_FIELD(struct ifreq, ifr_name)];
 
 SwiftNetMemoryAllocator packet_queue_node_memory_allocator;
 SwiftNetMemoryAllocator packet_callback_queue_node_memory_allocator;
@@ -56,9 +58,7 @@ void swiftnet_initialize() {
 
     private_ip_address = ((struct sockaddr_in *)&private_sockaddr)->sin_addr;
 
-    char default_network_interface[128];
-
-    const int got_default_interface = get_default_interface(default_network_interface, sizeof(default_network_interface), temp_socket);
+    const int got_default_interface = get_default_interface_and_mac(default_network_interface, sizeof(default_network_interface), mac_address, temp_socket);
     if(unlikely(got_default_interface != 0)) {
         close(temp_socket);
         fprintf(stderr, "Failed to get the default interface\n");

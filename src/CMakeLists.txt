@@ -26,6 +26,7 @@ set(SOURCE_FILES
     internal/get_default_interface.c
     internal/datatype_allocator.c
     internal/datatype_vector.c
+    internal/get_bpf_device.c
 )
 
 if(SANITIZER STREQUAL "address")

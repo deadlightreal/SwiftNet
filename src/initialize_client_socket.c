@@ -1,3 +1,4 @@
+#include <cstring>
 #include <pthread.h>
 #include <stdatomic.h>
 #include <stdint.h>
@@ -16,12 +17,13 @@
 #include <fcntl.h>
 #include <stddef.h>
 #include <sys/time.h>
+#include <net/ethernet.h>
 
 static _Atomic bool exit_thread = false;
 static _Atomic bool timeout_reached = false;
 
 typedef struct {
-    const int sockfd;
+    const int bpf;
     const void* const data;
     const uint32_t size;
     const struct sockaddr_in server_addr;
@@ -61,7 +63,7 @@ void* request_server_information(void* const request_server_information_args_voi
             }
         #endif
 
-        sendto(request_server_information_args->sockfd, request_server_information_args->data, request_server_information_args->size, 0, (struct sockaddr *)&request_server_information_args->server_addr, request_server_information_args->server_addr_len);
+        write(request_server_information_args->bpf, request_server_information_args->data, request_server_information_args->size);
 
         usleep(100000);
     }
@@ -72,18 +74,11 @@ void* request_server_information(void* const request_server_information_args_voi
 SwiftNetClientConnection* swiftnet_create_client(const char* const ip_address, const uint16_t port, const uint32_t timeout_ms) {
     SwiftNetClientConnection* const new_connection = allocator_allocate(&client_connection_memory_allocator);
 
-    new_connection->sockfd = socket(AF_INET, SOCK_RAW, PROTOCOL_NUMBER);
-    if(unlikely(new_connection->sockfd < 0)) {
-        fprintf(stderr, "Socket creation failed\n");
-        exit(EXIT_FAILURE);
-    }
+    new_connection->bpf = get_bpf_device();
 
-    const int on = 1;
-    if(setsockopt(new_connection->sockfd, IPPROTO_IP, IP_HDRINCL, &on, sizeof(on)) < 0) {
-        fprintf(stderr, "Failed to set sockopt IP_HDRINCL\n");
-        exit(EXIT_FAILURE);
-    }
-    
+    bind_bpf_to_interface(new_connection->bpf);
+    setup_bpf_settings(new_connection->bpf);
+
     const uint16_t clientPort = rand();
 
     new_connection->packet_queue = (PacketQueue){
@@ -121,10 +116,18 @@ SwiftNetClientConnection* swiftnet_create_client(const char* const ip_address, c
 
     const struct ip request_server_info_ip_header = construct_ip_header(new_connection->server_addr.sin_addr, PACKET_HEADER_SIZE, rand());
 
-    uint8_t request_server_info_buffer[PACKET_HEADER_SIZE];
+    struct ether_header eth_header = {
+        .ether_dhost = {0xff,0xff,0xff,0xff,0xff,0xff},
+        .ether_type = 0x0800
+    };
 
-    memcpy(request_server_info_buffer, &request_server_info_ip_header, sizeof(struct ip));
-    memcpy(request_server_info_buffer + sizeof(struct ip), &request_server_information_packet_info, sizeof(SwiftNetPacketInfo));
+    memcpy(eth_header.ether_shost, mac_address, sizeof(eth_header.ether_shost));
+
+    uint8_t request_server_info_buffer[PACKET_HEADER_SIZE + sizeof(eth_header)];
+
+    memcpy(request_server_info_buffer, &eth_header, sizeof(eth_header)); 
+    memcpy(request_server_info_buffer + sizeof(eth_header), &request_server_info_ip_header, sizeof(struct ip));
+    memcpy(request_server_info_buffer + sizeof(struct ip) + sizeof(eth_header), &request_server_information_packet_info, sizeof(SwiftNetPacketInfo));
 
     const uint16_t checksum = crc16(request_server_info_buffer, sizeof(request_server_info_buffer));
 
@@ -138,7 +141,7 @@ SwiftNetClientConnection* swiftnet_create_client(const char* const ip_address, c
     pthread_t send_request_thread;
 
     const RequestServerInformationArgs thread_args = {
-        .sockfd = new_connection->sockfd,
+        .bpf = new_connection->bpf,
         .data = request_server_info_buffer,
         .size = sizeof(request_server_info_buffer),
         .server_addr = new_connection->server_addr,

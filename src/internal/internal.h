@@ -9,6 +9,7 @@
 #include <sys/socket.h>
 #include <stdarg.h>
 #include <stdio.h>
+#include <net/if.h>
 
 #define REQUEST_LOST_PACKETS_RETURN_UPDATED_BIT_ARRAY 0x00
 #define REQUEST_LOST_PACKETS_RETURN_COMPLETED_PACKET 0x01
@@ -76,8 +77,11 @@ static inline uint16_t crc16(const uint8_t *data, size_t length) {
     return crc ^ 0xFFFF;
 }
 
-extern const int get_default_interface(char* restrict const interface_name, const uint32_t interface_name_length, const int sockfd);
+extern int get_default_interface_and_mac(char *restrict interface_name, uint32_t interface_name_length, uint8_t mac_out[6], int sockfd);
 extern const uint32_t get_mtu(const char* restrict const interface, const int sockfd);
+extern int get_bpf_device();
+extern int bind_bpf_to_interface(const int bpf);
+extern int setup_bpf_settings(const int bpf);
 
 extern void* swiftnet_server_process_packets(void* const void_server);
 extern void* swiftnet_client_process_packets(void* const void_client);
@@ -86,6 +90,8 @@ extern void* execute_packet_callback_client(void* const void_client);
 extern void* execute_packet_callback_server(void* const void_server);
 
 extern struct in_addr private_ip_address;
+extern uint8_t mac_address[6];
+extern char default_network_interface[SIZEOF_FIELD(struct ifreq, ifr_name)];
 
 #ifdef SWIFT_NET_DEBUG
     extern SwiftNetDebugger debugger;

@@ -211,7 +211,7 @@ typedef struct {
 
 // Connection data
 typedef struct {
-    int sockfd;
+    int bpf;
     SwiftNetPortInfo port_info;
     struct sockaddr_in server_addr;
     socklen_t server_addr_len;
