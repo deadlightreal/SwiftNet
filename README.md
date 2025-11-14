@@ -1,4 +1,4 @@
-# SwiftNet - High-Performance Networking Library
+# SwiftNet - Networking Library
 
 ### SwiftNet is a simple and easy-to-use networking library built using raw sockets. It is designed for developers who value simplicity, readability, and good performance.
 
