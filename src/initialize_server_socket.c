@@ -26,7 +26,7 @@ SwiftNetServer* swiftnet_create_server(const uint16_t port, const bool loopback)
     new_server->server_port = port;
     new_server->loopback = loopback;
 
-    // Init bpf device
+    // Init pcap device
     new_server->pcap = swiftnet_pcap_open(loopback ? LOOPBACK_INTERFACE_NAME : default_network_interface);
     if (new_server->pcap == NULL) {
         fprintf(stderr, "Failed to open bpf\n");

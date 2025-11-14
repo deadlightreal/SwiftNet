@@ -18,6 +18,7 @@
 #include <stddef.h>
 #include <sys/time.h>
 #include <net/ethernet.h>
+#include <net/bpf.h>
 
 typedef struct {
     pcap_t* pcap;

@@ -21,7 +21,7 @@ endif()
 
 link_directories(${CMAKE_SOURCE_DIR}/../build/output)
 
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g -O0")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g -O0 -lpcap")
 
 file(GLOB SRC_FILES "${CMAKE_SOURCE_DIR}/src/*.c")
 
