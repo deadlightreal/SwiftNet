@@ -8,8 +8,15 @@ on:
 
 jobs:
   build:
+    strategy:
+      matrix:
+        os: [Linux, macOS]
+        arch: [ARM64]
 
-    runs-on: [self-hosted, Linux, macOS, ARM64]
+    runs-on:
+      - self-hosted
+      - ${{ matrix.os }}
+      - ${{ matrix.arch }}
 
     steps:
     - uses: actions/checkout@v4
