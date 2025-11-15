@@ -1,4 +1,4 @@
-name: Ubuntu Linux Run Tests
+name: Run all tests inside repo/tests
 
 on:
   push:
@@ -9,7 +9,7 @@ on:
 jobs:
   build:
 
-    runs-on: [self-hosted, macOS, ARM64]
+    runs-on: [self-hosted, linux, macOS, ARM64]
 
     steps:
     - uses: actions/checkout@v4
