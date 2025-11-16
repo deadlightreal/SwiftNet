@@ -321,13 +321,28 @@ inline void swiftnet_send_packet(
 
         const struct ip ip_header = construct_ip_header(target_addr->sin_addr, final_packet_size - prepend_size, packet_id);
 
-        HANDLE_PACKET_CONSTRUCTION(&ip_header, &packet_info, loopback, &eth_hdr, final_packet_size, buffer)
-        
-        memcpy(buffer + PACKET_HEADER_SIZE + prepend_size, packet->packet_data_start, packet_length);
+        if(loopback) {
+            uint32_t family = PF_INET;
+            memcpy(packet->packet_buffer_start + sizeof(struct ether_header) - sizeof(family), &family, sizeof(family));
+            memcpy(packet->packet_buffer_start + sizeof(struct ether_header), &ip_header, sizeof(ip_header));
+            memcpy(packet->packet_buffer_start + sizeof(struct ether_header) + sizeof(struct ip), &packet_info, sizeof(packet_info));
 
-        HANDLE_CHECKSUM(buffer, final_packet_size, prepend_size)
+            memcpy(packet->packet_buffer_start + PACKET_HEADER_SIZE + sizeof(struct ether_header), packet->packet_data_start, packet_length);
 
-        swiftnet_pcap_send(pcap, buffer, final_packet_size);
+            HANDLE_CHECKSUM(packet->packet_buffer_start + sizeof(struct ether_header) - sizeof(family), final_packet_size, prepend_size)
+
+            swiftnet_pcap_send(pcap, packet->packet_buffer_start + sizeof(struct ether_header) - sizeof(family), final_packet_size);
+        } else {
+            memcpy(packet->packet_buffer_start, &eth_hdr, sizeof(eth_hdr));
+            memcpy(packet->packet_buffer_start + sizeof(eth_hdr), &ip_header, sizeof(ip_header));
+            memcpy(packet->packet_buffer_start + sizeof(eth_hdr) + sizeof(ip_header), &packet_info, sizeof(packet_info));
+
+            memcpy(packet->packet_buffer_start + PACKET_HEADER_SIZE + sizeof(struct ether_header), packet->packet_data_start, packet_length);
+
+            HANDLE_CHECKSUM(packet->packet_buffer_start, final_packet_size, prepend_size)
+
+            swiftnet_pcap_send(pcap, packet->packet_buffer_start, final_packet_size);
+        }
     }
 }
 

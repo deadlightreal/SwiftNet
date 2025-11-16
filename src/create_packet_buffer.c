@@ -4,9 +4,9 @@
 #include <stdlib.h>
 
 static inline SwiftNetPacketBuffer create_packet_buffer(const uint32_t buffer_size) {
-    uint8_t* const mem = malloc(buffer_size + PACKET_HEADER_SIZE);
+    uint8_t* const mem = malloc(buffer_size + PACKET_HEADER_SIZE + sizeof(struct ether_header));
 
-    uint8_t* const data_pointer = mem + PACKET_HEADER_SIZE;
+    uint8_t* const data_pointer = mem + PACKET_HEADER_SIZE + sizeof(struct ether_header);
 
     return (SwiftNetPacketBuffer){
         .packet_buffer_start = mem,
