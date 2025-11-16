@@ -13,7 +13,7 @@
 #include "internal/internal.h"
 #include "swift_net.h"
 
-SwiftNetServer* swiftnet_create_server(const uint16_t port) {
+SwiftNetServer* swiftnet_create_server(const uint16_t port, const bool loopback) {
     SwiftNetServer* const new_server = allocator_allocate(&server_memory_allocator);
 
     #ifdef SWIFT_NET_ERROR
@@ -24,12 +24,15 @@ SwiftNetServer* swiftnet_create_server(const uint16_t port) {
     #endif
 
     new_server->server_port = port;
+    new_server->loopback = loopback;
+    new_server->prepend_size = PACKET_PREPEND_SIZE(loopback);
 
     // Init bpf device
-    new_server->bpf = get_bpf_device();
-
-    bind_bpf_to_interface(new_server->bpf);
-    setup_bpf_settings(new_server->bpf);
+    new_server->pcap = swiftnet_pcap_open(loopback ? "lo0" : default_network_interface);
+    if (new_server->pcap == NULL) {
+        fprintf(stderr, "Failed to open bpf\n");
+        exit(EXIT_FAILURE);
+    }
 
     struct ether_header eth_header = {
         .ether_dhost = {0xff,0xff,0xff,0xff,0xff,0xff},

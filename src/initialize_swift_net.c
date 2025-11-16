@@ -78,7 +78,7 @@ void swiftnet_initialize() {
     packet_callback_queue_node_memory_allocator = allocator_create(sizeof(PacketCallbackQueueNode), 100);
     server_packet_data_memory_allocator = allocator_create(sizeof(SwiftNetServerPacketData), 100);
     client_packet_data_memory_allocator = allocator_create(sizeof(SwiftNetClientPacketData), 100);
-    packet_buffer_memory_allocator = allocator_create(maximum_transmission_unit, 100);
+    packet_buffer_memory_allocator = allocator_create(maximum_transmission_unit + sizeof(struct ether_header), 100);
     server_memory_allocator = allocator_create(sizeof(SwiftNetServer), 10);
     client_connection_memory_allocator = allocator_create(sizeof(SwiftNetClientConnection), 10);
     pending_message_memory_allocator = allocator_create(sizeof(SwiftNetPendingMessage), 100);

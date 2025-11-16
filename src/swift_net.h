@@ -13,6 +13,7 @@
 #include <pthread.h>
 #include <netinet/ip.h>
 #include <stdbool.h>
+#include <pcap/pcap.h>
 
 #ifndef SWIFT_NET_DISABLE_ERROR_CHECKING
     #define SWIFT_NET_ERROR
@@ -212,13 +213,14 @@ typedef struct {
 
 // Connection data
 typedef struct {
-    int bpf;
+    pcap_t* pcap;
     struct ether_header eth_header;
     SwiftNetPortInfo port_info;
     struct sockaddr_in server_addr;
     socklen_t server_addr_len;
     _Atomic(void (*)(SwiftNetClientPacketData* const)) packet_handler;
     _Atomic bool closing;
+    bool loopback;
     pthread_t handle_packets_thread;
     pthread_t process_packets_thread;
     pthread_t execute_callback_thread;
@@ -231,14 +233,16 @@ typedef struct {
     SwiftNetMemoryAllocator packets_completed_memory_allocator;
     PacketQueue packet_queue;
     PacketCallbackQueue packet_callback_queue;
+    uint8_t prepend_size;
 } SwiftNetClientConnection;
 
 typedef struct {
-    int bpf;
+    pcap_t* pcap;
     struct ether_header eth_header;
     uint16_t server_port;
     _Atomic(void (*)(SwiftNetServerPacketData* const)) packet_handler;
     _Atomic bool closing;
+    bool loopback;
     pthread_t handle_packets_thread;
     pthread_t process_packets_thread;
     pthread_t execute_callback_thread;
@@ -251,6 +255,7 @@ typedef struct {
     uint8_t* current_read_pointer;
     PacketQueue packet_queue;
     PacketCallbackQueue packet_callback_queue;
+    uint8_t prepend_size;
 } SwiftNetServer;
 
 extern void swiftnet_server_set_message_handler(volatile SwiftNetServer* const server, void (* const new_handler)(SwiftNetServerPacketData* const));
@@ -269,7 +274,7 @@ extern SwiftNetPacketBuffer swiftnet_server_create_packet_buffer(const uint32_t 
 extern SwiftNetPacketBuffer swiftnet_client_create_packet_buffer(const uint32_t buffer_size);
 extern void swiftnet_server_destroy_packet_buffer(const SwiftNetPacketBuffer* const packet);
 extern void swiftnet_client_destroy_packet_buffer(const SwiftNetPacketBuffer* const packet);
-extern SwiftNetServer* swiftnet_create_server(const uint16_t port);
+extern SwiftNetServer* swiftnet_create_server(const uint16_t port, const bool loopback);
 extern SwiftNetClientConnection* swiftnet_create_client(const char* const ip_address, const uint16_t port, const uint32_t timeout_ms);
 extern void* swiftnet_client_read_packet(SwiftNetClientPacketData* const packet_data, const uint32_t data_size);
 extern void* swiftnet_server_read_packet(SwiftNetServerPacketData* const packet_data, const uint32_t data_size);

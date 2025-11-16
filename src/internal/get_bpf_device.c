@@ -32,5 +32,7 @@ int get_bpf_device() {
         exit(EXIT_FAILURE);
     }
 
+    printf("got bpf: %d\n", bpf);
+
     return bpf;
 }

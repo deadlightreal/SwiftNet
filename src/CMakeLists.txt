@@ -26,9 +26,8 @@ set(SOURCE_FILES
     internal/get_default_interface_and_mac.c
     internal/datatype_allocator.c
     internal/datatype_vector.c
-    internal/get_bpf_device.c
-    internal/bind_bpf_to_interface.c
-    internal/setup_bpf_settings.c
+    internal/pcap_open.c
+    internal/pcap_send.c
 )
 
 if(SANITIZER STREQUAL "address")

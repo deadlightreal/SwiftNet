@@ -1,6 +1,7 @@
 #pragma once
 
 #include <arpa/inet.h>
+#include <pcap/pcap.h>
 #include <string.h>
 #include <netinet/in.h>
 #include <stdatomic.h>
@@ -14,7 +15,24 @@
 #define REQUEST_LOST_PACKETS_RETURN_UPDATED_BIT_ARRAY 0x00
 #define REQUEST_LOST_PACKETS_RETURN_COMPLETED_PACKET 0x01
 
-#define PACKET_HEADER_SIZE (sizeof(SwiftNetPacketInfo) + sizeof(struct ip) + sizeof(struct ether_header))
+#define PACKET_PREPEND_SIZE(loopback) ((loopback) ? sizeof(uint32_t) : sizeof(struct ether_header))
+#define PACKET_HEADER_SIZE (sizeof(struct ip) + sizeof(SwiftNetPacketInfo))
+#define HANDLE_PACKET_CONSTRUCTION(ip_header, packet_info, loopback, eth_hdr, buffer_size, buffer_name) \
+    uint8_t buffer_name[buffer_size]; \
+    if(loopback) { \
+        uint32_t family = PF_INET; \
+        memcpy(buffer_name, &family, sizeof(family)); \
+        memcpy(buffer_name + sizeof(family), ip_header, sizeof(*ip_header)); \
+        memcpy(buffer_name + sizeof(family) + sizeof(*ip_header), packet_info, sizeof(*packet_info)); \
+    } else { \
+        memcpy(buffer_name, eth_hdr, sizeof(*eth_hdr)); \
+        memcpy(buffer_name + sizeof(*eth_hdr), ip_header, sizeof(*ip_header)); \
+        memcpy(buffer_name + sizeof(*eth_hdr) + sizeof(*ip_header), packet_info, sizeof(*packet_info)); \
+    } \
+
+#define HANDLE_CHECKSUM(buffer, size, prepend_size) \
+    uint16_t checksum = htons(crc16(buffer, size)); \
+    memcpy(buffer + prepend_size + offsetof(struct ip, ip_sum), &checksum, sizeof(checksum));
 
 #define PACKET_QUEUE_OWNER_NONE 0x00
 #define PACKET_QUEUE_OWNER_HANDLE_PACKETS 0x01
@@ -80,7 +98,7 @@ static inline uint16_t crc16(const uint8_t *data, size_t length) {
 extern int get_default_interface_and_mac(char *restrict interface_name, uint32_t interface_name_length, uint8_t mac_out[6], int sockfd);
 extern const uint32_t get_mtu(const char* restrict const interface, const int sockfd);
 extern int get_bpf_device();
-extern int bind_bpf_to_interface(const int bpf);
+extern int bind_bpf_to_interface(const int bpf, const bool loopback);
 extern int setup_bpf_settings(const int bpf);
 
 extern void* swiftnet_server_process_packets(void* const void_server);
@@ -92,6 +110,8 @@ extern void* execute_packet_callback_server(void* const void_server);
 extern struct in_addr private_ip_address;
 extern uint8_t mac_address[6];
 extern char default_network_interface[SIZEOF_FIELD(struct ifreq, ifr_name)];
+extern pcap_t* swiftnet_pcap_open(const char* interface);
+extern int swiftnet_pcap_send(pcap_t *pcap, const uint8_t *data, int len);
 
 #ifdef SWIFT_NET_DEBUG
     extern SwiftNetDebugger debugger;
@@ -170,8 +190,10 @@ extern void swiftnet_send_packet(
     const socklen_t* const target_addr_len,
     SwiftNetVector* const packets_sending,
     SwiftNetMemoryAllocator* const packets_sending_memory_allocator,
-    const int bpf,
-    const struct ether_header eth_hdr
+    pcap_t* const pcap,
+    const struct ether_header eth_hdr,
+    const bool loopback,
+    const uint8_t prepend_size
     #ifdef SWIFT_NET_REQUESTS
         , RequestSent* const request_sent
         , const bool response
@@ -197,10 +219,10 @@ static struct ip construct_ip_header(struct in_addr destination_addr, const uint
         .ip_tos = 0, // Type of service
         .ip_p = PROTOCOL_NUMBER, // Protocol
         .ip_len = htons(packet_size), // Chunk size
-        .ip_id = packet_id, // Packet id
-        .ip_off = 0, // Not used
+        .ip_id = htons(packet_id), // Packet id
+        .ip_off = htons(0), // Not used
         .ip_ttl = 64,// Time to live
-        .ip_sum = 0, // Checksum
+        .ip_sum = htons(0), // Checksum
         .ip_src = private_ip_address, // Source ip
         .ip_dst = destination_addr // Destination ip
     };

@@ -6,24 +6,38 @@
 #include <pcap/pcap.h>
 
 int setup_bpf_settings(const int bpf) {
-    struct bpf_program fp;
-    if (pcap_compile_nopcap(65535, DLT_EN10MB, &fp, "ip proto 253", 1, PCAP_NETMASK_UNKNOWN) != 0) {
-        fprintf(stderr, "Failed to compile filter\n");
-        return -1;
-    }
-
-    int im = 1;
-    if (ioctl(bpf, BIOCIMMEDIATE, &im) < 0) {
+    int one = 1;
+    if (ioctl(bpf, BIOCIMMEDIATE, &one) == -1) {
         perror("BIOCIMMEDIATE");
         close(bpf);
-        exit(EXIT_FAILURE);
+        exit(1);
     }
 
     int hdr_complete = 1;
-    if (ioctl(bpf, BIOCSHDRCMPLT, &hdr_complete) < 0) {
+    if (ioctl(bpf, BIOCSHDRCMPLT, &hdr_complete) == -1) {
         perror("BIOCSHDRCMPLT");
         close(bpf);
-        exit(EXIT_FAILURE);
+        exit(1);
+    }
+
+    int promisc = 1;
+    if (ioctl(bpf, BIOCPROMISC, &promisc) == -1) {
+        perror("BIOCPROMISC");
+        close(bpf);
+        exit(1);
+    }
+
+    struct bpf_program fp;
+    if (pcap_compile_nopcap(65535, DLT_EN10MB, &fp, "", 1, PCAP_NETMASK_UNKNOWN) != 0) {
+        fprintf(stderr, "Failed to compile filter\n");
+        close(bpf);
+        exit(1);
+    }
+
+    if (ioctl(bpf, BIOCSETF, &fp) == -1) {
+        perror("BIOCSETF");
+        close(bpf);
+        exit(1);
     }
 
     return 0;

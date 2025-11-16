@@ -69,7 +69,7 @@ int main() {
 
     swiftnet_initialize();
 
-    server = swiftnet_create_server(8080);
+    server = swiftnet_create_server(8080, LOOPBACK);
     swiftnet_server_set_message_handler(server, server_message_handler);
 
     client = swiftnet_create_client(IP_ADDRESS, 8080, 2000);

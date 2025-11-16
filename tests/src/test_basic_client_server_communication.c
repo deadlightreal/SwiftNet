@@ -35,6 +35,15 @@ void server_message_handler(SwiftNetServerPacketData* const packet_data) {
         swiftnet_server_send_packet(server, &buffer, packet_data->metadata.sender);
 
         swiftnet_server_destroy_packet_buffer(&buffer);
+    } else {
+        fprintf(stderr, "Invalid data received\n");
+
+        swiftnet_server_cleanup(server);
+        swiftnet_client_cleanup(client);
+
+        swiftnet_cleanup();
+
+        exit(EXIT_SUCCESS);
     };
 }
 
@@ -43,7 +52,7 @@ int main() {
 
     swiftnet_initialize();
 
-    server = swiftnet_create_server(8080);
+    server = swiftnet_create_server(8080, LOOPBACK);
     swiftnet_server_set_message_handler(server, server_message_handler);
 
     client = swiftnet_create_client(IP_ADDRESS, 8080, 2000);
