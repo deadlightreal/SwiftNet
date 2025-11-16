@@ -25,5 +25,5 @@ jobs:
       working-directory: tests
     - name: run_tests
       run: |
-        sudo ./run_all_tests
+        ./run_all_tests
       working-directory: tests
