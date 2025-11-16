@@ -89,7 +89,7 @@ SwiftNetClientConnection* swiftnet_create_client(const char* const ip_address, c
 
     new_connection->prepend_size = prepend_size;
 
-    new_connection->pcap = swiftnet_pcap_open(new_connection->loopback ? "lo0" : default_network_interface);
+    new_connection->pcap = swiftnet_pcap_open(new_connection->loopback ? LOOPBACK_INTERFACE_NAME : default_network_interface);
     if (new_connection->pcap == NULL) {
         fprintf(stderr, "Failed to open bpf\n");
         exit(EXIT_FAILURE);

@@ -12,6 +12,12 @@
 #include <stdio.h>
 #include <net/if.h>
 
+#ifdef __linux__
+    #define LOOPBACK_INTERFACE_NAME "lo"
+#elif defined(__APPLE__)
+    #define LOOPBACK_INTERFACE_NAME "lo0"
+#endif
+
 #define REQUEST_LOST_PACKETS_RETURN_UPDATED_BIT_ARRAY 0x00
 #define REQUEST_LOST_PACKETS_RETURN_COMPLETED_PACKET 0x01
 
