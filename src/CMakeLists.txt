@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.10)
-project(SwiftNet C CXX)
+project(swiftnet C CXX)
 
 include(GNUInstallDirs)
 
@@ -47,8 +47,8 @@ else()
 endif()
 
 add_library(swiftnet STATIC ${SOURCE_FILES})
-target_compile_options(swiftnet PRIVATE -lpcap -O0)
-target_link_options(swiftnet PRIVATE -lpcap -O0)
+target_compile_options(swiftnet PRIVATE -O0)
+target_link_options(swiftnet PRIVATE -O0)
 
 set_target_properties(swiftnet PROPERTIES
     OUTPUT_NAME "swiftnet"
