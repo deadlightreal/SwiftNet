@@ -24,10 +24,14 @@ SwiftNetMemoryAllocator client_packet_data_memory_allocator;
 SwiftNetMemoryAllocator packet_buffer_memory_allocator;
 SwiftNetMemoryAllocator server_memory_allocator;
 SwiftNetMemoryAllocator client_connection_memory_allocator;
-SwiftNetMemoryAllocator pending_message_memory_allocator;
-SwiftNetMemoryAllocator requests_sent_memory_allocator;
+SwiftNetMemoryAllocator listener_memory_allocator;
 
-SwiftNetVector requests_sent;
+#ifdef SWIFT_NET_REQUESTS
+    SwiftNetMemoryAllocator requests_sent_memory_allocator;
+    SwiftNetVector requests_sent;
+#endif
+
+SwiftNetVector listeners;
 
 void swiftnet_initialize() {
     const int temp_socket = socket(AF_INET, SOCK_DGRAM, 0);
@@ -81,13 +85,15 @@ void swiftnet_initialize() {
     packet_buffer_memory_allocator = allocator_create(maximum_transmission_unit + sizeof(struct ether_header), 100);
     server_memory_allocator = allocator_create(sizeof(SwiftNetServer), 10);
     client_connection_memory_allocator = allocator_create(sizeof(SwiftNetClientConnection), 10);
-    pending_message_memory_allocator = allocator_create(sizeof(SwiftNetPendingMessage), 100);
+    listener_memory_allocator = allocator_create(sizeof(Listener), 100);
 
     #ifdef SWIFT_NET_REQUESTS
         requests_sent_memory_allocator = allocator_create(sizeof(RequestSent), 100);
 
         requests_sent = vector_create(100);
     #endif
+
+    listeners = vector_create(10);
 
     return;
 }

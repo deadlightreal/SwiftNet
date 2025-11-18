@@ -15,8 +15,8 @@
 #include <stdio.h>
 #include <time.h>
 
-static inline bool is_private_ip(in_addr_t ip) {     
-    in_addr_t addr = htonl(ip);      
+static inline bool is_private_ip(struct in_addr ip) {     
+    in_addr_t addr = htonl(ip.s_addr);      
     uint8_t octet1 = (addr >> 24) & 0xFF;
     uint8_t octet2 = (addr >> 16) & 0xFF;
     uint8_t octet3 = (addr >> 8)  & 0xFF;
@@ -112,13 +112,13 @@ static inline bool check_packet_already_completed(const uint16_t packet_id, Swif
     return false;
 }
 
-static inline SwiftNetPendingMessage* const get_pending_message(const SwiftNetPacketInfo* const restrict packet_info, SwiftNetVector* const pending_messages_vector, const ConnectionType connection_type, const in_addr_t sender_address, const uint16_t packet_id) {
+static inline SwiftNetPendingMessage* const get_pending_message(const SwiftNetPacketInfo* const restrict packet_info, SwiftNetVector* const pending_messages_vector, const ConnectionType connection_type, const struct in_addr sender_address, const uint16_t packet_id) {
     vector_lock(pending_messages_vector);
 
     for(uint32_t i = 0; i < pending_messages_vector->size; i++) {
         SwiftNetPendingMessage* const current_pending_message = vector_get((SwiftNetVector*)pending_messages_vector, i);
 
-        if((connection_type == CONNECTION_TYPE_CLIENT && current_pending_message->packet_id == packet_id) || (connection_type == CONNECTION_TYPE_SERVER && current_pending_message->sender_address == sender_address && current_pending_message->packet_id == packet_id)) {
+        if((connection_type == CONNECTION_TYPE_CLIENT && current_pending_message->packet_id == packet_id) || (connection_type == CONNECTION_TYPE_SERVER && current_pending_message->sender_address.s_addr == sender_address.s_addr && current_pending_message->packet_id == packet_id)) {
             vector_unlock((SwiftNetVector*)pending_messages_vector);
 
             return current_pending_message;
@@ -159,7 +159,7 @@ static inline void insert_callback_queue_node(PacketCallbackQueueNode* const new
 
 #ifdef SWIFT_NET_REQUESTS
 
-static inline void handle_request_response(const uint16_t packet_id, const in_addr_t sender, SwiftNetPendingMessage* const pending_message, void* const packet_data, SwiftNetVector* const pending_messages, const ConnectionType connection_type, const bool loopback) {
+static inline void handle_request_response(const uint16_t packet_id, const struct in_addr sender, SwiftNetPendingMessage* const pending_message, void* const packet_data, SwiftNetVector* const pending_messages, SwiftNetMemoryAllocator* const pending_message_memory_allocator, const ConnectionType connection_type, const bool loopback) {
     bool is_valid_response = false;
 
     printf("got response\n");
@@ -177,7 +177,7 @@ static inline void handle_request_response(const uint16_t packet_id, const in_ad
 
         if (current_request_sent->packet_id == packet_id) {
             if (!loopback) {
-                if (current_request_sent->address != sender) {
+                if (current_request_sent->address.s_addr != sender.s_addr) {
                     continue;
                 }
             }
@@ -200,13 +200,13 @@ static inline void handle_request_response(const uint16_t packet_id, const in_ad
         if (pending_message != NULL) {
             free(pending_message->chunks_received);
             
-            allocator_free(&pending_message_memory_allocator, pending_message);
+            allocator_free(pending_message_memory_allocator, pending_message);
 
             vector_lock(pending_messages);
 
             for (uint32_t i = 0; i < pending_messages->size; i++) {
                 const SwiftNetPendingMessage* const pending_message = vector_get(pending_messages, i);
-                if ((connection_type == CONNECTION_TYPE_CLIENT && pending_message->packet_id == packet_id) || (connection_type == CONNECTION_TYPE_SERVER && pending_message->sender_address == sender && pending_message->packet_id == packet_id)) {
+                if ((connection_type == CONNECTION_TYPE_CLIENT && pending_message->packet_id == packet_id) || (connection_type == CONNECTION_TYPE_SERVER && pending_message->sender_address.s_addr == sender.s_addr && pending_message->packet_id == packet_id)) {
                     vector_remove(pending_messages, i);
                 }
             }
@@ -241,7 +241,7 @@ static inline void chunk_received(uint8_t* const chunks_received, const uint32_t
     chunks_received[byte] |= 1 << bit;
 }
 
-static inline SwiftNetPendingMessage* const create_new_pending_message(SwiftNetVector* const pending_messages, SwiftNetMemoryAllocator* const pending_messages_memory_allocator, const SwiftNetPacketInfo* const restrict packet_info, const ConnectionType connection_type, const in_addr_t sender_address, const uint16_t packet_id) {
+static inline SwiftNetPendingMessage* const create_new_pending_message(SwiftNetVector* const pending_messages, SwiftNetMemoryAllocator* const pending_messages_memory_allocator, const SwiftNetPacketInfo* const restrict packet_info, const ConnectionType connection_type, const struct in_addr sender_address, const uint16_t packet_id) {
     SwiftNetPendingMessage* const new_pending_message = allocator_allocate(pending_messages_memory_allocator);
 
     uint8_t* const allocated_memory = malloc(packet_info->packet_length);
@@ -259,7 +259,7 @@ static inline SwiftNetPendingMessage* const create_new_pending_message(SwiftNetV
     new_pending_message->packet_id = packet_id;
 
     if(connection_type == CONNECTION_TYPE_SERVER) {
-        new_pending_message->sender_address = sender_address;
+        new_pending_message->sender_address.s_addr = sender_address.s_addr;
     }
 
     vector_lock(pending_messages);
@@ -405,7 +405,7 @@ static inline void swiftnet_process_packets(
 
         printf("packet type: %d\n", packet_info.packet_type);
 
-        if(memcmp(&ip_header.ip_src, &ip_header.ip_dst, sizeof(struct in_addr)) != 0 && is_private_ip(ip_header.ip_src.s_addr) == false && is_private_ip(ip_header.ip_dst.s_addr)) { 
+        if(memcmp(&ip_header.ip_src, &ip_header.ip_dst, sizeof(struct in_addr)) != 0 && is_private_ip(ip_header.ip_src) == false && is_private_ip(ip_header.ip_dst)) { 
             if(ip_header.ip_sum != 0 && packet_corrupted(checksum_received, node->data_read, packet_buffer) == true) {
                 #ifdef SWIFT_NET_DEBUG
                     if (check_debug_flag(DEBUG_PACKETS_RECEIVING)) {
@@ -428,7 +428,7 @@ static inline void swiftnet_process_packets(
         switch(packet_info.packet_type) {
             case PACKET_TYPE_REQUEST_INFORMATION:
             {
-                    const struct ip send_server_info_ip_header = construct_ip_header(node->sender_address.sin_addr, PACKET_HEADER_SIZE, rand());
+                    const struct ip send_server_info_ip_header = construct_ip_header(node->sender_address, PACKET_HEADER_SIZE, rand());
 
                     const SwiftNetPacketInfo packet_info_new = construct_packet_info(
                         sizeof(SwiftNetServerInformation),
@@ -455,11 +455,11 @@ static inline void swiftnet_process_packets(
             {
                 const uint32_t mtu = MIN(packet_info.maximum_transmission_unit, maximum_transmission_unit);
 
-                SwiftNetPendingMessage* const pending_message = get_pending_message(&packet_info, pending_messages, connection_type, ip_header.ip_src.s_addr, ip_header.ip_id);
+                SwiftNetPendingMessage* const pending_message = get_pending_message(&packet_info, pending_messages, connection_type, ip_header.ip_src, ip_header.ip_id);
                 if(pending_message == NULL) {
                     const bool packet_already_completed = check_packet_already_completed(ip_header.ip_id, packets_completed_history);
                     if(likely(packet_already_completed == true)) {
-                        const struct ip send_packet_ip_header = construct_ip_header(node->sender_address.sin_addr, PACKET_HEADER_SIZE, ip_header.ip_id);
+                        const struct ip send_packet_ip_header = construct_ip_header(node->sender_address, PACKET_HEADER_SIZE, ip_header.ip_id);
 
                         SwiftNetPacketInfo send_packet_info = construct_packet_info(
                             0x00,
@@ -488,7 +488,7 @@ static inline void swiftnet_process_packets(
                     goto next_packet;
                 }
 
-                struct ip send_lost_packets_ip_header = construct_ip_header(node->sender_address.sin_addr, 0, ip_header.ip_id);
+                struct ip send_lost_packets_ip_header = construct_ip_header(node->sender_address, 0, ip_header.ip_id);
 
                 SwiftNetPacketInfo packet_info_new = construct_packet_info(
                     0,
@@ -569,23 +569,21 @@ static inline void swiftnet_process_packets(
                 break;
         }
 
-        node->sender_address.sin_port = packet_info.port_info.source_port;
-
         const SwiftNetClientAddrData sender = {
-            .sender_address = node->sender_address,
-            .sender_address_length = node->server_address_length,
-            .maximum_transmission_unit = packet_info.maximum_transmission_unit
+            .sender_address.s_addr = loopback == true ? inet_addr("127.0.0.1") : node->sender_address.s_addr,
+            .maximum_transmission_unit = packet_info.maximum_transmission_unit,
+            .port = packet_info.port_info.source_port
         };
 
         const uint32_t mtu = MIN(packet_info.maximum_transmission_unit, maximum_transmission_unit);
         const uint32_t chunk_data_size = mtu - PACKET_HEADER_SIZE;
 
-        SwiftNetPendingMessage* const pending_message = get_pending_message(&packet_info, pending_messages, connection_type, node->sender_address.sin_addr.s_addr, ip_header.ip_id);
+        SwiftNetPendingMessage* const pending_message = get_pending_message(&packet_info, pending_messages, connection_type, node->sender_address, ip_header.ip_id);
 
         if(pending_message == NULL) {
             if(packet_info.packet_length > chunk_data_size) {
                 // Split packet into chunks
-                SwiftNetPendingMessage* const new_pending_message = create_new_pending_message(pending_messages, pending_messages_memory_allocator, &packet_info, connection_type, node->sender_address.sin_addr.s_addr, ip_header.ip_id);
+                SwiftNetPendingMessage* const new_pending_message = create_new_pending_message(pending_messages, pending_messages_memory_allocator, &packet_info, connection_type, node->sender_address, ip_header.ip_id);
 
                 new_pending_message->chunks_received_number++;
 
@@ -617,7 +615,7 @@ static inline void swiftnet_process_packets(
 
                     #ifdef SWIFT_NET_REQUESTS
                     if (packet_info.packet_type == PACKET_TYPE_RESPONSE) {
-                        handle_request_response(ip_header.ip_id, sender.sender_address.sin_addr.s_addr, NULL, new_packet_data, pending_messages, connection_type, loopback);
+                        handle_request_response(ip_header.ip_id, sender.sender_address, NULL, new_packet_data, pending_messages, pending_messages_memory_allocator, connection_type, loopback);
                     } else {
                         pass_callback_execution(new_packet_data, packet_callback_queue, NULL, ip_header.ip_id);
                     }
@@ -639,7 +637,7 @@ static inline void swiftnet_process_packets(
 
                     #ifdef SWIFT_NET_REQUESTS
                     if (packet_info.packet_type == PACKET_TYPE_RESPONSE) {
-                        handle_request_response(ip_header.ip_id, ((SwiftNetClientConnection*)connection)->server_addr.sin_addr.s_addr, NULL, new_packet_data, pending_messages, connection_type, loopback);
+                        handle_request_response(ip_header.ip_id, ((SwiftNetClientConnection*)connection)->server_addr, NULL, new_packet_data, pending_messages, pending_messages_memory_allocator, connection_type, loopback);
                     } else {
                         pass_callback_execution(new_packet_data, packet_callback_queue, NULL, ip_header.ip_id);
                     }
@@ -693,7 +691,7 @@ static inline void swiftnet_process_packets(
 
                     #ifdef SWIFT_NET_REQUESTS
                     if (packet_info.packet_type == PACKET_TYPE_RESPONSE) {
-                        handle_request_response(ip_header.ip_id, sender.sender_address.sin_addr.s_addr, pending_message, packet_data, pending_messages, connection_type, loopback);
+                        handle_request_response(ip_header.ip_id, sender.sender_address, pending_message, packet_data, pending_messages, pending_messages_memory_allocator, connection_type, loopback);
                     } else {
                         pass_callback_execution(packet_data, packet_callback_queue, pending_message, ip_header.ip_id);
                     }
@@ -717,7 +715,7 @@ static inline void swiftnet_process_packets(
 
                     #ifdef SWIFT_NET_REQUESTS
                     if (packet_info.packet_type == PACKET_TYPE_RESPONSE) {
-                        handle_request_response(ip_header.ip_id, ((SwiftNetClientConnection*)connection)->server_addr.sin_addr.s_addr, pending_message, packet_data, pending_messages, connection_type, loopback);
+                        handle_request_response(ip_header.ip_id, ((SwiftNetClientConnection*)connection)->server_addr, pending_message, packet_data, pending_messages, pending_messages_memory_allocator, connection_type, loopback);
                     } else {
                         pass_callback_execution(packet_data, packet_callback_queue, pending_message, ip_header.ip_id);
                     }

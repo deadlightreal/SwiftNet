@@ -13,9 +13,9 @@
 #include <net/if.h>
 
 #ifdef __linux__
-    #define LOOPBACK_INTERFACE_NAME "lo"
+    #define LOOPBACK_INTERFACE_NAME "lo\0"
 #elif defined(__APPLE__)
-    #define LOOPBACK_INTERFACE_NAME "lo0"
+    #define LOOPBACK_INTERFACE_NAME "lo0\0"
 #endif
 
 #define REQUEST_LOST_PACKETS_RETURN_UPDATED_BIT_ARRAY 0x00
@@ -101,6 +101,22 @@ static inline uint16_t crc16(const uint8_t *data, size_t length) {
     return crc ^ 0xFFFF;
 }
 
+typedef struct {
+    pcap_t* pcap;
+    char interface_name[IFNAMSIZ];
+    SwiftNetVector servers;
+    SwiftNetVector client_connections;
+    pthread_t listener_thread;
+    bool loopback;
+} Listener;
+
+typedef enum {
+    CONNECTION_TYPE_SERVER,
+    CONNECTION_TYPE_CLIENT
+} ConnectionType;
+
+extern SwiftNetVector listeners;
+
 extern int get_default_interface_and_mac(char *restrict interface_name, uint32_t interface_name_length, uint8_t mac_out[6], int sockfd);
 extern const uint32_t get_mtu(const char* restrict const interface, const int sockfd);
 extern int get_bpf_device();
@@ -118,6 +134,8 @@ extern uint8_t mac_address[6];
 extern char default_network_interface[SIZEOF_FIELD(struct ifreq, ifr_name)];
 extern pcap_t* swiftnet_pcap_open(const char* interface);
 extern int swiftnet_pcap_send(pcap_t *pcap, const uint8_t *data, int len);
+
+extern void check_existing_listener(const char* interface_name, void* const connection, const ConnectionType connection_type, const bool loopback);
 
 #ifdef SWIFT_NET_DEBUG
     extern SwiftNetDebugger debugger;
@@ -165,20 +183,25 @@ extern SwiftNetMemoryAllocator client_packet_data_memory_allocator;
 extern SwiftNetMemoryAllocator packet_buffer_memory_allocator;
 extern SwiftNetMemoryAllocator server_memory_allocator;
 extern SwiftNetMemoryAllocator client_connection_memory_allocator;
-extern SwiftNetMemoryAllocator pending_message_memory_allocator;
+extern SwiftNetMemoryAllocator listener_memory_allocator;
 
-void* vector_get(SwiftNetVector* const vector, const uint32_t index);
-void vector_remove(SwiftNetVector* const vector, const uint32_t index);
-void vector_push(SwiftNetVector* const vector, void* const data);
-void vector_destroy(SwiftNetVector* const vector);
-SwiftNetVector vector_create(const uint32_t starting_amount);
-void vector_lock(SwiftNetVector* const vector);
-void vector_unlock(SwiftNetVector* const vector);
+extern void* interface_start_listening(void* listener_void);
+
+extern void* vector_get(SwiftNetVector* const vector, const uint32_t index);
+extern void vector_remove(SwiftNetVector* const vector, const uint32_t index);
+extern void vector_push(SwiftNetVector* const vector, void* const data);
+extern void vector_destroy(SwiftNetVector* const vector);
+extern SwiftNetVector vector_create(const uint32_t starting_amount);
+extern void vector_lock(SwiftNetVector* const vector);
+extern void vector_unlock(SwiftNetVector* const vector);
+
+extern void* server_start_pcap(void* server_void);
+extern void* client_start_pcap(void* client_void);
 
 #ifdef SWIFT_NET_REQUESTS
     typedef struct {
         uint16_t packet_id;
-        in_addr_t address;
+        struct in_addr address;
         _Atomic(void*) packet_data;
     } RequestSent;
 
@@ -192,8 +215,7 @@ extern void swiftnet_send_packet(
     const SwiftNetPortInfo port_info,
     const SwiftNetPacketBuffer* const packet,
     const uint32_t packet_length,
-    const struct sockaddr_in* const target_addr,
-    const socklen_t* const target_addr_len,
+    const struct in_addr* const target_addr,
     SwiftNetVector* const packets_sending,
     SwiftNetMemoryAllocator* const packets_sending_memory_allocator,
     pcap_t* const pcap,
@@ -235,8 +257,3 @@ static struct ip construct_ip_header(struct in_addr destination_addr, const uint
 
     return ip_header;
 }
-
-typedef enum {
-    CONNECTION_TYPE_SERVER,
-    CONNECTION_TYPE_CLIENT
-} ConnectionType;

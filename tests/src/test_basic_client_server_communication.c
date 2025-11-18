@@ -21,7 +21,16 @@ void client_message_handler(SwiftNetClientPacketData* const packet_data) {
         swiftnet_cleanup();
 
         exit(EXIT_SUCCESS);
-    }
+    } else {
+        fprintf(stderr, "Invalid data received\n");
+
+        swiftnet_server_cleanup(server);
+        swiftnet_client_cleanup(client);
+
+        swiftnet_cleanup();
+
+        exit(EXIT_SUCCESS);
+    };
 }
 
 void server_message_handler(SwiftNetServerPacketData* const packet_data) {

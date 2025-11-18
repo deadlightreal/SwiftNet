@@ -36,85 +36,101 @@ static inline void insert_queue_node(PacketQueueNode* const new_node, volatile P
     return;
 }
 
-static inline void swiftnet_handle_packets(pcap_t* const pcap, const uint16_t source_port, pthread_t* const process_packets_thread, void* connection, const ConnectionType connection_type, PacketQueue* const packet_queue, const _Atomic bool* closing, const bool loopback) {
-    struct pcap_pkthdr *hdr;
-    const uint8_t* pkt_data;
+static inline void swiftnet_handle_packets(const uint16_t source_port, pthread_t* const process_packets_thread, void* connection, const ConnectionType connection_type, PacketQueue* const packet_queue, const _Atomic bool* closing, const bool loopback, const struct pcap_pkthdr* hdr, const uint8_t* packet) {
+    printf("got packet: %u bytes\n", hdr->caplen);
 
-    while (1) {
-        int r = pcap_next_ex(pcap, &hdr, &pkt_data);
+    for (uint32_t i = 0; i < hdr->caplen; i++) {
+        printf("%d ", packet[i]);
+    }
+    printf("\n");
 
-        if (r == 0) {
-            usleep(1000);
-            continue;
-        }
-        if (r == -1) {
-            fprintf(stderr, "pcap error: %s\n", pcap_geterr(pcap));
-            break;
-        }
-        if (r == -2) {
-            break;
-        }
+    PacketQueueNode *node = allocator_allocate(&packet_queue_node_memory_allocator);
+    if (unlikely(node == NULL)) {
+        return;
+    }
 
-        printf("got packet: %u bytes\n", hdr->caplen);
+    uint8_t *packet_buffer = allocator_allocate(&packet_buffer_memory_allocator);
+    if (unlikely(packet_buffer == NULL)) {
+        allocator_free(&packet_queue_node_memory_allocator, node);
+        return;
+    }
 
-        PacketQueueNode *node = allocator_allocate(&packet_queue_node_memory_allocator);
-        if (unlikely(node == NULL))
-            continue;
+    uint32_t len = hdr->caplen;
+    memcpy(packet_buffer, packet, len);
 
-        uint8_t *packet_buffer = allocator_allocate(&packet_buffer_memory_allocator);
-        if (unlikely(packet_buffer == NULL)) {
-            allocator_free(&packet_queue_node_memory_allocator, node);
-            continue;
-        }
+    if (len == 0) {
+        allocator_free(&packet_queue_node_memory_allocator, node);
+        allocator_free(&packet_buffer_memory_allocator, packet_buffer);
+        return;
+    }
 
-        uint32_t len = hdr->caplen;
-        memcpy(packet_buffer, pkt_data, len);
+    if (!loopback) {
+        struct ether_header *eth = (struct ether_header *)packet_buffer;
 
-        if (len == 0) {
+        if (ntohs(eth->ether_type) == ETHERTYPE_IP) {
+            struct ip *ip_header = (struct ip *)(packet_buffer + sizeof(struct ether_header));
+
+            node->sender_address = ip_header->ip_src;
+        } else {
             allocator_free(&packet_queue_node_memory_allocator, node);
             allocator_free(&packet_buffer_memory_allocator, packet_buffer);
-            continue;
+            return;
         }
-
-        if (!loopback) {
-            struct ether_header *eth = (struct ether_header *)packet_buffer;
-
-            if (ntohs(eth->ether_type) == ETHERTYPE_IP) {
-                struct ip *ip_header = (struct ip *)(packet_buffer + sizeof(struct ether_header));
-
-                node->sender_address.sin_addr = ip_header->ip_src;
-            } else {
-                allocator_free(&packet_queue_node_memory_allocator, node);
-                allocator_free(&packet_buffer_memory_allocator, packet_buffer);
-                continue;
-            }
-        }
-
-        node->data_read = len;
-        node->data = packet_buffer;
-        node->next = NULL;
-
-        node->server_address_length = sizeof(node->sender_address);
-
-        atomic_thread_fence(memory_order_release);
-
-        insert_queue_node(node, packet_queue, connection_type);
     }
+
+    node->data_read = len;
+    node->data = packet_buffer;
+    node->next = NULL;
+
+    node->server_address_length = sizeof(node->sender_address);
+
+    atomic_thread_fence(memory_order_release);
+
+    insert_queue_node(node, packet_queue, connection_type);
 }
 
+static void pcap_packet_handle(uint8_t* user, const struct pcap_pkthdr* hdr, const uint8_t* packet) {
+    Listener* const listener = (Listener*)user;
 
-void* swiftnet_client_handle_packets(void* const client_void) {
-    SwiftNetClientConnection* const client = (SwiftNetClientConnection*)client_void;
+    SwiftNetPortInfo* const port_info = (SwiftNetPortInfo*)(packet + PACKET_PREPEND_SIZE(listener->loopback) + sizeof(struct ip) + offsetof(SwiftNetPacketInfo, port_info));
 
-    swiftnet_handle_packets(client->pcap, client->port_info.source_port, &client->process_packets_thread, client, CONNECTION_TYPE_CLIENT, &client->packet_queue, &client->closing, client->loopback);
+    printf("received packet for port: %d\n", port_info->destination_port);
 
-    return NULL;
+    vector_lock(&listener->servers);
+
+    for (uint16_t i = 0; i < listener->servers.size; i++) {
+        SwiftNetServer* const server = vector_get(&listener->servers, i);
+        if (server->server_port == port_info->destination_port) {
+            vector_unlock(&listener->servers);
+
+            swiftnet_handle_packets(server->server_port, &server->process_packets_thread, server, CONNECTION_TYPE_SERVER, &server->packet_queue, &server->closing, server->loopback, hdr, packet);
+
+            return;
+        }
+    }
+
+    vector_unlock(&listener->servers);
+
+    vector_lock(&listener->client_connections);
+
+    for (uint16_t i = 0; i < listener->client_connections.size; i++) {
+        SwiftNetClientConnection* const client_connection = vector_get(&listener->client_connections, i);
+        if (client_connection->port_info.source_port == port_info->destination_port) {
+            vector_unlock(&listener->client_connections);
+
+            swiftnet_handle_packets(client_connection->port_info.source_port, &client_connection->process_packets_thread, client_connection, CONNECTION_TYPE_CLIENT, &client_connection->packet_queue, &client_connection->closing, client_connection->loopback, hdr, packet);
+
+            return;
+        }
+    }
+
+    vector_unlock(&listener->client_connections);
 }
 
-void* swiftnet_server_handle_packets(void* const server_void) {
-    SwiftNetServer* const server = (SwiftNetServer*)server_void;
+void* interface_start_listening(void* listener_void) {
+    Listener* listener = listener_void;
 
-    swiftnet_handle_packets(server->pcap, server->server_port, &server->process_packets_thread, server, CONNECTION_TYPE_SERVER, &server->packet_queue, &server->closing, server->loopback);
+    pcap_loop(listener->pcap, 0, pcap_packet_handle, listener_void);
 
     return NULL;
 }

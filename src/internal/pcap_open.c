@@ -6,8 +6,8 @@ pcap_t* swiftnet_pcap_open(const char* interface) {
     pcap_t *p = pcap_open_live(
         interface,
         65535,
-        1,
-        1,
+        0,
+        25,
         errbuf
     );
 

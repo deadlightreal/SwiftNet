@@ -65,7 +65,7 @@ SwiftNetServer* swiftnet_create_server(const uint16_t port, const bool loopback)
     atomic_store_explicit(&new_server->closing, false, memory_order_release);
 
     // Create a new thread that will handle all packets received
-    pthread_create(&new_server->handle_packets_thread, NULL, swiftnet_server_handle_packets, new_server);
+    check_existing_listener(loopback ? LOOPBACK_INTERFACE_NAME : default_network_interface, new_server, CONNECTION_TYPE_SERVER, loopback);
     pthread_create(&new_server->process_packets_thread, NULL, swiftnet_server_process_packets, new_server);
     pthread_create(&new_server->execute_callback_thread, NULL, execute_packet_callback_server, new_server);
 

@@ -63,9 +63,9 @@ typedef struct {
 } SwiftNetPortInfo;
 
 typedef struct {
-    struct sockaddr_in sender_address;
-    socklen_t sender_address_length;
+    struct in_addr sender_address;
     uint32_t maximum_transmission_unit;
+    uint16_t port;
 } SwiftNetClientAddrData;
 
 typedef struct {
@@ -129,7 +129,7 @@ typedef struct {
     uint8_t* packet_data_start;
     SwiftNetPacketInfo packet_info;
     uint16_t packet_id;
-    in_addr_t sender_address;
+    struct in_addr sender_address;
     uint8_t* chunks_received;
     uint32_t chunks_received_length;
     uint32_t chunks_received_number;
@@ -141,7 +141,7 @@ struct PacketQueueNode {
     PacketQueueNode* next;
     uint8_t* data;
     uint32_t data_read;
-    struct sockaddr_in sender_address;
+    struct in_addr sender_address;
     socklen_t server_address_length;
 };
 
@@ -216,12 +216,11 @@ typedef struct {
     pcap_t* pcap;
     struct ether_header eth_header;
     SwiftNetPortInfo port_info;
-    struct sockaddr_in server_addr;
+    struct in_addr server_addr;
     socklen_t server_addr_len;
     _Atomic(void (*)(SwiftNetClientPacketData* const)) packet_handler;
     _Atomic bool closing;
     bool loopback;
-    pthread_t handle_packets_thread;
     pthread_t process_packets_thread;
     pthread_t execute_callback_thread;
     uint32_t maximum_transmission_unit;
@@ -243,7 +242,6 @@ typedef struct {
     _Atomic(void (*)(SwiftNetServerPacketData* const)) packet_handler;
     _Atomic bool closing;
     bool loopback;
-    pthread_t handle_packets_thread;
     pthread_t process_packets_thread;
     pthread_t execute_callback_thread;
     SwiftNetVector pending_messages;
@@ -265,8 +263,6 @@ extern void swiftnet_server_append_to_packet(const void* const data, const uint3
 extern void swiftnet_client_cleanup(SwiftNetClientConnection* const client);
 extern void swiftnet_server_cleanup(SwiftNetServer* const server);
 extern void swiftnet_initialize();
-extern void* swiftnet_server_handle_packets(void* const server_void);
-extern void* swiftnet_client_handle_packets(void* const client_void);
 extern void swiftnet_client_send_packet (SwiftNetClientConnection* const client, SwiftNetPacketBuffer* const packet);
 extern void swiftnet_server_send_packet (SwiftNetServer* const server, SwiftNetPacketBuffer* const packet, const SwiftNetClientAddrData target);
 

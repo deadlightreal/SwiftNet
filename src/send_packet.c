@@ -58,8 +58,7 @@ static inline void handle_lost_packets(
     const SwiftNetPacketBuffer* const packet, 
     pcap_t* pcap,
     const struct ether_header eth_hdr,
-    const struct sockaddr_in* const destination_address,
-    const socklen_t* destination_address_len,
+    const struct in_addr* const destination_address,
     const uint16_t source_port,
     const uint16_t destination_port,
     SwiftNetMemoryAllocator* const packets_sending_memory_allocator,
@@ -76,7 +75,7 @@ static inline void handle_lost_packets(
         .destination_port = destination_port
     };
 
-    const struct ip request_lost_packets_ip_header = construct_ip_header(destination_address->sin_addr, PACKET_HEADER_SIZE, packet_sending->packet_id);
+    const struct ip request_lost_packets_ip_header = construct_ip_header(*destination_address, PACKET_HEADER_SIZE, packet_sending->packet_id);
 
     SwiftNetPacketInfo request_lost_packets_bit_array = construct_packet_info(
         0x00,
@@ -105,7 +104,7 @@ static inline void handle_lost_packets(
         port_info
     );
  
-    const struct ip resend_chunk_ip_header = construct_ip_header(destination_address->sin_addr, mtu, packet_sending->packet_id);
+    const struct ip resend_chunk_ip_header = construct_ip_header(*destination_address, mtu, packet_sending->packet_id);
 
     HANDLE_PACKET_CONSTRUCTION(&resend_chunk_ip_header, &resend_chunk_packet_info, loopback, &eth_hdr, mtu + prepend_size, resend_chunk_buffer)
 
@@ -180,8 +179,7 @@ inline void swiftnet_send_packet(
     const SwiftNetPortInfo port_info,
     const SwiftNetPacketBuffer* const packet,
     const uint32_t packet_length,
-    const struct sockaddr_in* const target_addr,
-    const socklen_t* const target_addr_len,
+    const struct in_addr* const target_addr,
     SwiftNetVector* const packets_sending,
     SwiftNetMemoryAllocator* const packets_sending_memory_allocator,
     pcap_t* const pcap,
@@ -198,7 +196,7 @@ inline void swiftnet_send_packet(
 
     #ifdef SWIFT_NET_DEBUG
         if (check_debug_flag(DEBUG_PACKETS_SENDING)) {
-            send_debug_message("Sending packet: {\"destination_ip_address\": \"%s\", \"destination_port\": %d, \"packet_length\": %d}\n", inet_ntoa(target_addr->sin_addr), port_info.destination_port, packet_length);
+            send_debug_message("Sending packet: {\"destination_ip_address\": \"%s\", \"destination_port\": %d, \"packet_length\": %d}\n", inet_ntoa(*target_addr), port_info.destination_port, packet_length);
         }
     #endif
 
@@ -242,7 +240,7 @@ inline void swiftnet_send_packet(
             port_info
         );
 
-        const struct ip ip_header = construct_ip_header(target_addr->sin_addr, mtu, packet_id);
+        const struct ip ip_header = construct_ip_header(*target_addr, mtu, packet_id);
 
         SwiftNetPacketSending* const new_packet_sending = allocator_allocate(packets_sending_memory_allocator);
         if(unlikely(new_packet_sending == NULL)) {
@@ -288,7 +286,7 @@ inline void swiftnet_send_packet(
 
                 swiftnet_pcap_send(pcap, buffer, bytes_to_send);
 
-                handle_lost_packets(new_packet_sending, mtu, packet, pcap, eth_hdr, target_addr, target_addr_len, port_info.source_port, port_info.destination_port, packets_sending_memory_allocator, packets_sending, loopback, prepend_size
+                handle_lost_packets(new_packet_sending, mtu, packet, pcap, eth_hdr, target_addr, port_info.source_port, port_info.destination_port, packets_sending_memory_allocator, packets_sending, loopback, prepend_size
                 #ifdef SWIFT_NET_REQUESTS
                     , response
                     , packet_type
@@ -319,7 +317,7 @@ inline void swiftnet_send_packet(
             port_info
         );
 
-        const struct ip ip_header = construct_ip_header(target_addr->sin_addr, final_packet_size - prepend_size, packet_id);
+        const struct ip ip_header = construct_ip_header(*target_addr, final_packet_size - prepend_size, packet_id);
 
         if(loopback) {
             uint32_t family = PF_INET;
@@ -349,7 +347,7 @@ inline void swiftnet_send_packet(
 void swiftnet_client_send_packet(SwiftNetClientConnection* const client, SwiftNetPacketBuffer* const packet) {
     const uint32_t packet_length = packet->packet_append_pointer - packet->packet_data_start;
 
-    swiftnet_send_packet(client, client->maximum_transmission_unit, client->port_info, packet, packet_length, &client->server_addr, &client->server_addr_len, &client->packets_sending, &client->packets_sending_memory_allocator, client->pcap, client->eth_header, client->loopback, client->prepend_size
+    swiftnet_send_packet(client, client->maximum_transmission_unit, client->port_info, packet, packet_length, &client->server_addr, &client->packets_sending, &client->packets_sending_memory_allocator, client->pcap, client->eth_header, client->loopback, client->prepend_size
     #ifdef SWIFT_NET_REQUESTS
         , NULL, false, 0
     #endif
@@ -360,11 +358,11 @@ void swiftnet_server_send_packet(SwiftNetServer* const server, SwiftNetPacketBuf
     const uint32_t packet_length = packet->packet_append_pointer - packet->packet_data_start;
 
     const SwiftNetPortInfo port_info = {
-        .destination_port = target.sender_address.sin_port,
+        .destination_port = target.port,
         .source_port = server->server_port
     };
 
-    swiftnet_send_packet(server, target.maximum_transmission_unit, port_info, packet, packet_length, &target.sender_address, &target.sender_address_length, &server->packets_sending, &server->packets_sending_memory_allocator, server->pcap, server->eth_header, server->loopback, server->prepend_size
+    swiftnet_send_packet(server, target.maximum_transmission_unit, port_info, packet, packet_length, &target.sender_address, &server->packets_sending, &server->packets_sending_memory_allocator, server->pcap, server->eth_header, server->loopback, server->prepend_size
     #ifdef SWIFT_NET_REQUESTS
         , NULL, false, 0
     #endif

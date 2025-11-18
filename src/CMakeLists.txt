@@ -28,6 +28,7 @@ set(SOURCE_FILES
     internal/datatype_vector.c
     internal/pcap_open.c
     internal/pcap_send.c
+    internal/check_existing_listener.c
 )
 
 if(SANITIZER STREQUAL "address")

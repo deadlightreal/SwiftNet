@@ -25,8 +25,7 @@ typedef struct {
     pcap_t* pcap;
     const void* const data;
     const uint32_t size;
-    const struct sockaddr_in server_addr;
-    const socklen_t server_addr_len;
+    const struct in_addr server_addr;
     const uint32_t timeout_ms;
 } RequestServerInformationArgs;
 
@@ -58,7 +57,7 @@ void* request_server_information(void* const request_server_information_args_voi
 
         #ifdef SWIFT_NET_DEBUG
             if (check_debug_flag(DEBUG_INITIALIZATION)) {
-                send_debug_message("Requested server information: {\"server_ip_address\": \"%s\"}\n", inet_ntoa(request_server_information_args->server_addr.sin_addr));
+                send_debug_message("Requested server information: {\"server_ip_address\": \"%s\"}\n", inet_ntoa(request_server_information_args->server_addr));
             }
         #endif
 
@@ -89,7 +88,7 @@ SwiftNetClientConnection* swiftnet_create_client(const char* const ip_address, c
 
     new_connection->prepend_size = prepend_size;
 
-    new_connection->pcap = swiftnet_pcap_open(new_connection->loopback ? LOOPBACK_INTERFACE_NAME : default_network_interface);
+    new_connection->pcap = swiftnet_pcap_open(loopback ? LOOPBACK_INTERFACE_NAME : default_network_interface);
     if (new_connection->pcap == NULL) {
         fprintf(stderr, "Failed to open bpf\n");
         exit(EXIT_FAILURE);
@@ -113,15 +112,7 @@ SwiftNetClientConnection* swiftnet_create_client(const char* const ip_address, c
 
     new_connection->packet_handler = NULL;
 
-    new_connection->server_addr = (struct sockaddr_in){
-        .sin_family = AF_INET,
-        .sin_port = htons(port),
-        .sin_addr = {.s_addr = inet_addr(ip_address)},
-        .sin_zero = 0
-	#ifdef MACOS
-	    , .sin_len = 0
-	#endif
-    };
+    new_connection->server_addr.s_addr = inet_addr(ip_address);
 
     // Request the server information, and proccess it
     const SwiftNetPacketInfo request_server_information_packet_info = construct_packet_info(
@@ -141,7 +132,7 @@ SwiftNetClientConnection* swiftnet_create_client(const char* const ip_address, c
 
     new_connection->eth_header = eth_header;
 
-    const struct ip request_server_info_ip_header = construct_ip_header(new_connection->server_addr.sin_addr, PACKET_HEADER_SIZE, rand());
+    const struct ip request_server_info_ip_header = construct_ip_header(new_connection->server_addr, PACKET_HEADER_SIZE, rand());
 
     HANDLE_PACKET_CONSTRUCTION(&request_server_info_ip_header, &request_server_information_packet_info, loopback, &eth_header, PACKET_HEADER_SIZE + prepend_size, request_server_info_buffer)
 
@@ -157,7 +148,6 @@ SwiftNetClientConnection* swiftnet_create_client(const char* const ip_address, c
         .data = request_server_info_buffer,
         .size = sizeof(request_server_info_buffer),
         .server_addr = new_connection->server_addr,
-        .server_addr_len = sizeof(new_connection->server_addr),
         .timeout_ms = timeout_ms
     };
 
@@ -238,7 +228,8 @@ SwiftNetClientConnection* swiftnet_create_client(const char* const ip_address, c
 
     atomic_store_explicit(&new_connection->closing, false, memory_order_release);
 
-    pthread_create(&new_connection->handle_packets_thread, NULL, swiftnet_client_handle_packets, new_connection);
+    check_existing_listener(loopback ? LOOPBACK_INTERFACE_NAME : default_network_interface, new_connection, CONNECTION_TYPE_CLIENT, loopback);
+
     pthread_create(&new_connection->process_packets_thread, NULL, swiftnet_client_process_packets, new_connection);
     pthread_create(&new_connection->execute_callback_thread, NULL, execute_packet_callback_client, new_connection);
 
