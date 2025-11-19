@@ -441,7 +441,14 @@ static inline void swiftnet_process_packets(
                         }
                     );
 
-                    HANDLE_PACKET_CONSTRUCTION(&send_server_info_ip_header, &packet_info_new, loopback, &eth_hdr, prepend_size + PACKET_HEADER_SIZE, buffer)
+                    const SwiftNetServerInformation server_info = {
+                        .maximum_transmission_unit = maximum_transmission_unit
+                    };
+
+
+                    HANDLE_PACKET_CONSTRUCTION(&send_server_info_ip_header, &packet_info_new, loopback, &eth_hdr, prepend_size + PACKET_HEADER_SIZE + sizeof(server_info), buffer)
+
+                    memcpy(buffer + prepend_size + PACKET_HEADER_SIZE, &server_info, sizeof(server_info));
 
                     HANDLE_CHECKSUM(buffer, sizeof(buffer), prepend_size)
                     

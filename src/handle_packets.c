@@ -89,6 +89,53 @@ static inline void swiftnet_handle_packets(const uint16_t source_port, pthread_t
     insert_queue_node(node, packet_queue, connection_type);
 }
 
+static void handle_client_init(SwiftNetClientConnection* user, const struct pcap_pkthdr* hdr, const uint8_t* buffer) {
+    SwiftNetClientConnection* const client_connection = (SwiftNetClientConnection*)user;
+
+    if (atomic_load_explicit(&client_connection->closing, memory_order_acquire) == true) {
+        return;
+    }
+
+    const uint32_t bytes_received = hdr->caplen;
+
+    if(bytes_received != PACKET_HEADER_SIZE + sizeof(SwiftNetServerInformation) + client_connection->prepend_size) {
+        #ifdef SWIFT_NET_DEBUG
+            if (check_debug_flag(DEBUG_INITIALIZATION)) {
+                send_debug_message("Invalid packet received from server. Expected server information: {\"bytes_received\": %u, \"expected_bytes\": %u}\n", bytes_received, PACKET_HEADER_SIZE + sizeof(SwiftNetServerInformation));
+            }
+        #endif
+
+        return;
+    }
+
+    struct ip* ip_header = (struct ip*)(buffer + client_connection->prepend_size);
+    SwiftNetPacketInfo* packet_info = (SwiftNetPacketInfo*)(buffer + client_connection->prepend_size + sizeof(struct ip));
+    SwiftNetServerInformation* server_information = (SwiftNetServerInformation*)(buffer + client_connection->prepend_size + sizeof(struct ip) + sizeof(SwiftNetPacketInfo));
+
+    if(packet_info->port_info.destination_port != client_connection->port_info.source_port || packet_info->port_info.source_port != client_connection->port_info.destination_port) {
+        #ifdef SWIFT_NET_DEBUG
+            if (check_debug_flag(DEBUG_INITIALIZATION)) {
+                send_debug_message("Port info does not match: {\"destination_port\": %d, \"source_port\": %d, \"source_ip_address\": \"%s\"}\n", packet_info->port_info.destination_port, packet_info->port_info.source_port, inet_ntoa(ip_header->ip_src));
+            }
+        #endif
+
+        return;
+    }
+
+    if(packet_info->packet_type != PACKET_TYPE_REQUEST_INFORMATION) {
+        #ifdef SWIFT_NET_DEBUG
+            if (check_debug_flag(DEBUG_INITIALIZATION)) {
+                send_debug_message("Invalid packet type: {\"packet_type\": %d}\n", packet_info->packet_type);
+            }
+        #endif
+        return;
+    }
+        
+    client_connection->maximum_transmission_unit = server_information->maximum_transmission_unit;
+
+    atomic_store_explicit(&client_connection->initialized, true, memory_order_release);
+}
+
 static void pcap_packet_handle(uint8_t* user, const struct pcap_pkthdr* hdr, const uint8_t* packet) {
     Listener* const listener = (Listener*)user;
 
@@ -118,7 +165,11 @@ static void pcap_packet_handle(uint8_t* user, const struct pcap_pkthdr* hdr, con
         if (client_connection->port_info.source_port == port_info->destination_port) {
             vector_unlock(&listener->client_connections);
 
-            swiftnet_handle_packets(client_connection->port_info.source_port, &client_connection->process_packets_thread, client_connection, CONNECTION_TYPE_CLIENT, &client_connection->packet_queue, &client_connection->closing, client_connection->loopback, hdr, packet);
+            if (client_connection->initialized == false) {
+                handle_client_init(client_connection, hdr, packet);
+            } else {
+                swiftnet_handle_packets(client_connection->port_info.source_port, &client_connection->process_packets_thread, client_connection, CONNECTION_TYPE_CLIENT, &client_connection->packet_queue, &client_connection->closing, client_connection->loopback, hdr, packet);
+            }
 
             return;
         }

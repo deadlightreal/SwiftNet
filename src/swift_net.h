@@ -220,6 +220,7 @@ typedef struct {
     socklen_t server_addr_len;
     _Atomic(void (*)(SwiftNetClientPacketData* const)) packet_handler;
     _Atomic bool closing;
+    _Atomic bool initialized;
     bool loopback;
     pthread_t process_packets_thread;
     pthread_t execute_callback_thread;

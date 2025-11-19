@@ -135,7 +135,7 @@ extern char default_network_interface[SIZEOF_FIELD(struct ifreq, ifr_name)];
 extern pcap_t* swiftnet_pcap_open(const char* interface);
 extern int swiftnet_pcap_send(pcap_t *pcap, const uint8_t *data, int len);
 
-extern void check_existing_listener(const char* interface_name, void* const connection, const ConnectionType connection_type, const bool loopback);
+extern void* check_existing_listener(const char* interface_name, void* const connection, const ConnectionType connection_type, const bool loopback);
 
 #ifdef SWIFT_NET_DEBUG
     extern SwiftNetDebugger debugger;

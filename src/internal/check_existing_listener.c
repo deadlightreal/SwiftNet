@@ -1,6 +1,6 @@
 #include "internal.h"
            
-void check_existing_listener(const char* interface_name, void* const connection, const ConnectionType connection_type, const bool loopback) {
+void* check_existing_listener(const char* interface_name, void* const connection, const ConnectionType connection_type, const bool loopback) {
     vector_lock(&listeners);
 
     for (uint16_t i = 0; i < listeners.size; i++) {
@@ -22,7 +22,7 @@ void check_existing_listener(const char* interface_name, void* const connection,
 
             vector_unlock(&listeners);
 
-            return;
+            return current_listener;
         }
     }
 
@@ -45,5 +45,5 @@ void check_existing_listener(const char* interface_name, void* const connection,
 
     pthread_create(&new_listener->listener_thread, NULL, interface_start_listening, new_listener);
 
-    return;
+    return new_listener;
 }

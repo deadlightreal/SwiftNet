@@ -1,5 +1,6 @@
 #include <pthread.h>
 #include <stdatomic.h>
+#include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -18,15 +19,13 @@
 #include <sys/time.h>
 #include <net/ethernet.h>
 
-static _Atomic bool exit_thread = false;
-static _Atomic bool timeout_reached = false;
-
 typedef struct {
     pcap_t* pcap;
     const void* const data;
     const uint32_t size;
     const struct in_addr server_addr;
     const uint32_t timeout_ms;
+    SwiftNetClientConnection* const connection;
 } RequestServerInformationArgs;
 
 void* request_server_information(void* const request_server_information_args_void) {
@@ -44,14 +43,10 @@ void* request_server_information(void* const request_server_information_args_voi
         uint32_t end = (uint32_t)tv.tv_sec * 1000 + tv.tv_usec / 1000;
 
         if (end > start + request_server_information_args->timeout_ms) {
-            atomic_store_explicit(&timeout_reached, true, memory_order_release);
-
             break;
         }
 
-        if(atomic_load(&exit_thread) == true) {
-            atomic_store(&exit_thread, false);
-
+        if(atomic_load_explicit(&request_server_information_args->connection->initialized, memory_order_acquire) == true) {
             return NULL;
         }
 
@@ -68,11 +63,13 @@ void* request_server_information(void* const request_server_information_args_voi
 
         swiftnet_pcap_send(request_server_information_args->pcap, request_server_information_args->data, request_server_information_args->size);
 
-        usleep(100000);
+        usleep(250000);
     }
 
     return NULL;
 }
+
+
 
 SwiftNetClientConnection* swiftnet_create_client(const char* const ip_address, const uint16_t port, const uint32_t timeout_ms) {
     SwiftNetClientConnection* const new_connection = allocator_allocate(&client_connection_memory_allocator);
@@ -148,76 +145,40 @@ SwiftNetClientConnection* swiftnet_create_client(const char* const ip_address, c
         .data = request_server_info_buffer,
         .size = sizeof(request_server_info_buffer),
         .server_addr = new_connection->server_addr,
-        .timeout_ms = timeout_ms
+        .timeout_ms = timeout_ms,
+        .connection = new_connection
     };
+
+    atomic_store_explicit(&new_connection->closing, false, memory_order_release);
+
+    atomic_store_explicit(&new_connection->initialized, false, memory_order_release);
+
+    Listener* const listener = check_existing_listener(loopback ? LOOPBACK_INTERFACE_NAME : default_network_interface, new_connection, CONNECTION_TYPE_CLIENT, loopback);
 
     pthread_create(&send_request_thread, NULL, request_server_information, (void*)&thread_args);
 
-    SwiftNetServerInformation* server_information;
-    SwiftNetPacketInfo* packet_info;
-    struct ip* ip_header;
-
-    struct pcap_pkthdr *hdr;
-    const uint8_t *buffer;
-    
-    while(1) {
-        const int data_read = pcap_next_ex(new_connection->pcap, &hdr, &buffer);
-        if (data_read <= 0) {
-            usleep(1000);
-            continue;
-        }
-
-        if (atomic_load_explicit(&timeout_reached, memory_order_acquire) == true) {
-            pthread_join(send_request_thread, NULL);
-
-            return NULL;
-        }
-
-        const uint32_t bytes_received = hdr->caplen;
-
-        if(bytes_received != PACKET_HEADER_SIZE + sizeof(SwiftNetServerInformation)) {
-            #ifdef SWIFT_NET_DEBUG
-                if (check_debug_flag(DEBUG_INITIALIZATION)) {
-                    send_debug_message("Invalid packet received from server. Expected server information: {\"bytes_received\": %u, \"expected_bytes\": %u}\n", bytes_received, PACKET_HEADER_SIZE + sizeof(SwiftNetServerInformation));
-                }
-            #endif
-
-            continue;
-        }
-
-        ip_header = (struct ip*)(buffer + prepend_size);
-        packet_info = (SwiftNetPacketInfo*)(buffer + prepend_size + sizeof(struct ip));
-        server_information = (SwiftNetServerInformation*)(buffer + prepend_size + sizeof(struct ip) + sizeof(SwiftNetPacketInfo));
-
-        if(packet_info->port_info.destination_port != new_connection->port_info.source_port || packet_info->port_info.source_port != new_connection->port_info.destination_port) {
-            #ifdef SWIFT_NET_DEBUG
-                if (check_debug_flag(DEBUG_INITIALIZATION)) {
-                    send_debug_message("Port info does not match: {\"destination_port\": %d, \"source_port\": %d, \"source_ip_address\": \"%s\"}\n", packet_info->port_info.destination_port, packet_info->port_info.source_port, inet_ntoa(ip_header->ip_src));
-                }
-            #endif
-
-            continue;
-        }
-
-        if(packet_info->packet_type != PACKET_TYPE_REQUEST_INFORMATION) {
-            #ifdef SWIFT_NET_DEBUG
-                if (check_debug_flag(DEBUG_INITIALIZATION)) {
-                    send_debug_message("Invalid packet type: {\"packet_type\": %d}\n", packet_info->packet_type);
-                }
-            #endif
-            continue;
-        }
-            
-        if(bytes_received != 0) {
-            break;
-        }
-    }
-
-    atomic_store(&exit_thread, true);
-
     pthread_join(send_request_thread, NULL);
 
-    new_connection->maximum_transmission_unit = packet_info->maximum_transmission_unit;
+    if (atomic_load_explicit(&new_connection->initialized, memory_order_acquire) == false) {
+        atomic_store_explicit(&new_connection->closing, true, memory_order_release);
+
+        vector_lock(&listener->client_connections);
+
+        pcap_close(new_connection->pcap);
+
+        allocator_free(&client_connection_memory_allocator, new_connection);
+
+        for (uint16_t i = 0; i < listener->client_connections.size; i++) {
+            SwiftNetClientConnection* const client_connection = vector_get(&listener->client_connections, i);
+            if (client_connection == new_connection) {
+                vector_remove(&listener->client_connections, i);
+            }
+        }
+
+        vector_unlock(&listener->client_connections);
+
+        return NULL;
+    }
 
     new_connection->pending_messages_memory_allocator = allocator_create(sizeof(SwiftNetPendingMessage), 100);
     new_connection->pending_messages = vector_create(100);
@@ -225,10 +186,6 @@ SwiftNetClientConnection* swiftnet_create_client(const char* const ip_address, c
     new_connection->packets_sending = vector_create(100);
     new_connection->packets_completed_memory_allocator = allocator_create(sizeof(SwiftNetPacketCompleted), 100);
     new_connection->packets_completed = vector_create(100);
-
-    atomic_store_explicit(&new_connection->closing, false, memory_order_release);
-
-    check_existing_listener(loopback ? LOOPBACK_INTERFACE_NAME : default_network_interface, new_connection, CONNECTION_TYPE_CLIENT, loopback);
 
     pthread_create(&new_connection->process_packets_thread, NULL, swiftnet_client_process_packets, new_connection);
     pthread_create(&new_connection->execute_callback_thread, NULL, execute_packet_callback_client, new_connection);
