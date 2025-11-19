@@ -25,7 +25,6 @@ SwiftNetServer* swiftnet_create_server(const uint16_t port, const bool loopback)
 
     new_server->server_port = port;
     new_server->loopback = loopback;
-    new_server->prepend_size = PACKET_PREPEND_SIZE(loopback);
 
     // Init bpf device
     new_server->pcap = swiftnet_pcap_open(loopback ? LOOPBACK_INTERFACE_NAME : default_network_interface);
@@ -33,6 +32,10 @@ SwiftNetServer* swiftnet_create_server(const uint16_t port, const bool loopback)
         fprintf(stderr, "Failed to open bpf\n");
         exit(EXIT_FAILURE);
     }
+
+    new_server->addr_type = pcap_datalink(new_server->pcap);
+
+    new_server->prepend_size = PACKET_PREPEND_SIZE(new_server->addr_type);
 
     struct ether_header eth_header = {
         .ether_dhost = {0xff,0xff,0xff,0xff,0xff,0xff},

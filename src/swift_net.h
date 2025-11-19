@@ -1,5 +1,6 @@
 #pragma once
 
+#include <stdint.h>
 #ifdef __cplusplus
     extern "C" {
 
@@ -221,6 +222,7 @@ typedef struct {
     _Atomic(void (*)(SwiftNetClientPacketData* const)) packet_handler;
     _Atomic bool closing;
     _Atomic bool initialized;
+    uint16_t addr_type;
     bool loopback;
     pthread_t process_packets_thread;
     pthread_t execute_callback_thread;
@@ -242,6 +244,7 @@ typedef struct {
     uint16_t server_port;
     _Atomic(void (*)(SwiftNetServerPacketData* const)) packet_handler;
     _Atomic bool closing;
+    uint16_t addr_type;
     bool loopback;
     pthread_t process_packets_thread;
     pthread_t execute_callback_thread;

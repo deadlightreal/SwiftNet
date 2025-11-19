@@ -2,6 +2,7 @@
 
 #include <arpa/inet.h>
 #include <pcap/pcap.h>
+#include <stdint.h>
 #include <string.h>
 #include <netinet/in.h>
 #include <stdatomic.h>
@@ -21,16 +22,16 @@
 #define REQUEST_LOST_PACKETS_RETURN_UPDATED_BIT_ARRAY 0x00
 #define REQUEST_LOST_PACKETS_RETURN_COMPLETED_PACKET 0x01
 
-#define PACKET_PREPEND_SIZE(loopback) ((loopback) ? sizeof(uint32_t) : sizeof(struct ether_header))
+#define PACKET_PREPEND_SIZE(addr_type) ((addr_type == DLT_NULL) ? sizeof(uint32_t) : addr_type == DLT_EN10MB ? sizeof(struct ether_header) : 0)
 #define PACKET_HEADER_SIZE (sizeof(struct ip) + sizeof(SwiftNetPacketInfo))
-#define HANDLE_PACKET_CONSTRUCTION(ip_header, packet_info, loopback, eth_hdr, buffer_size, buffer_name) \
+#define HANDLE_PACKET_CONSTRUCTION(ip_header, packet_info, addr_type, eth_hdr, buffer_size, buffer_name) \
     uint8_t buffer_name[buffer_size]; \
-    if(loopback) { \
+    if(addr_type == DLT_NULL) { \
         uint32_t family = PF_INET; \
         memcpy(buffer_name, &family, sizeof(family)); \
         memcpy(buffer_name + sizeof(family), ip_header, sizeof(*ip_header)); \
         memcpy(buffer_name + sizeof(family) + sizeof(*ip_header), packet_info, sizeof(*packet_info)); \
-    } else { \
+    } else if(addr_type == DLT_EN10MB){ \
         memcpy(buffer_name, eth_hdr, sizeof(*eth_hdr)); \
         memcpy(buffer_name + sizeof(*eth_hdr), ip_header, sizeof(*ip_header)); \
         memcpy(buffer_name + sizeof(*eth_hdr) + sizeof(*ip_header), packet_info, sizeof(*packet_info)); \
@@ -108,6 +109,7 @@ typedef struct {
     SwiftNetVector client_connections;
     pthread_t listener_thread;
     bool loopback;
+    uint16_t addr_type;
 } Listener;
 
 typedef enum {
@@ -221,6 +223,7 @@ extern void swiftnet_send_packet(
     pcap_t* const pcap,
     const struct ether_header eth_hdr,
     const bool loopback,
+    const uint16_t addr_type,
     const uint8_t prepend_size
     #ifdef SWIFT_NET_REQUESTS
         , RequestSent* const request_sent

@@ -1,6 +1,7 @@
 #include "swift_net.h"
 #include <arpa/inet.h>
 #include <stdatomic.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <unistd.h>
 #include <string.h>
@@ -36,7 +37,7 @@ static inline void insert_queue_node(PacketQueueNode* const new_node, volatile P
     return;
 }
 
-static inline void swiftnet_handle_packets(const uint16_t source_port, pthread_t* const process_packets_thread, void* connection, const ConnectionType connection_type, PacketQueue* const packet_queue, const _Atomic bool* closing, const bool loopback, const struct pcap_pkthdr* hdr, const uint8_t* packet) {
+static inline void swiftnet_handle_packets(const uint16_t source_port, pthread_t* const process_packets_thread, void* connection, const ConnectionType connection_type, PacketQueue* const packet_queue, const _Atomic bool* closing, const bool loopback, const uint16_t addr_type, const struct pcap_pkthdr* hdr, const uint8_t* packet) {
     printf("got packet: %u bytes\n", hdr->caplen);
 
     for (uint32_t i = 0; i < hdr->caplen; i++) {
@@ -64,7 +65,7 @@ static inline void swiftnet_handle_packets(const uint16_t source_port, pthread_t
         return;
     }
 
-    if (!loopback) {
+    if (addr_type == DLT_EN10MB) {
         struct ether_header *eth = (struct ether_header *)packet_buffer;
 
         if (ntohs(eth->ether_type) == ETHERTYPE_IP) {
@@ -139,7 +140,7 @@ static void handle_client_init(SwiftNetClientConnection* user, const struct pcap
 static void pcap_packet_handle(uint8_t* user, const struct pcap_pkthdr* hdr, const uint8_t* packet) {
     Listener* const listener = (Listener*)user;
 
-    SwiftNetPortInfo* const port_info = (SwiftNetPortInfo*)(packet + PACKET_PREPEND_SIZE(listener->loopback) + sizeof(struct ip) + offsetof(SwiftNetPacketInfo, port_info));
+    SwiftNetPortInfo* const port_info = (SwiftNetPortInfo*)(packet + PACKET_PREPEND_SIZE(listener->addr_type) + sizeof(struct ip) + offsetof(SwiftNetPacketInfo, port_info));
 
     printf("received packet for port: %d\n", port_info->destination_port);
 
@@ -150,7 +151,7 @@ static void pcap_packet_handle(uint8_t* user, const struct pcap_pkthdr* hdr, con
         if (server->server_port == port_info->destination_port) {
             vector_unlock(&listener->servers);
 
-            swiftnet_handle_packets(server->server_port, &server->process_packets_thread, server, CONNECTION_TYPE_SERVER, &server->packet_queue, &server->closing, server->loopback, hdr, packet);
+            swiftnet_handle_packets(server->server_port, &server->process_packets_thread, server, CONNECTION_TYPE_SERVER, &server->packet_queue, &server->closing, server->loopback, server->addr_type, hdr, packet);
 
             return;
         }
@@ -168,7 +169,7 @@ static void pcap_packet_handle(uint8_t* user, const struct pcap_pkthdr* hdr, con
             if (client_connection->initialized == false) {
                 handle_client_init(client_connection, hdr, packet);
             } else {
-                swiftnet_handle_packets(client_connection->port_info.source_port, &client_connection->process_packets_thread, client_connection, CONNECTION_TYPE_CLIENT, &client_connection->packet_queue, &client_connection->closing, client_connection->loopback, hdr, packet);
+                swiftnet_handle_packets(client_connection->port_info.source_port, &client_connection->process_packets_thread, client_connection, CONNECTION_TYPE_CLIENT, &client_connection->packet_queue, &client_connection->closing, client_connection->loopback, client_connection->addr_type, hdr, packet);
             }
 
             return;
@@ -182,6 +183,8 @@ void* interface_start_listening(void* listener_void) {
     Listener* listener = listener_void;
 
     pcap_loop(listener->pcap, 0, pcap_packet_handle, listener_void);
+
+    printf("exiting\n");
 
     return NULL;
 }

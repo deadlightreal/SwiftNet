@@ -3,6 +3,7 @@
 #include <stdbool.h>
 #include <net/ethernet.h>
 #include <stddef.h>
+#include <stdint.h>
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -64,6 +65,7 @@ static inline void handle_lost_packets(
     SwiftNetMemoryAllocator* const packets_sending_memory_allocator,
     SwiftNetVector* const packets_sending,
     const bool loopback,
+    const uint16_t addr_type,
     const uint8_t prepend_size
     #ifdef SWIFT_NET_REQUESTS
         , const bool response
@@ -85,7 +87,7 @@ static inline void handle_lost_packets(
         port_info
     );
 
-    HANDLE_PACKET_CONSTRUCTION(&request_lost_packets_ip_header, &request_lost_packets_bit_array, loopback, &eth_hdr, PACKET_HEADER_SIZE + prepend_size, request_lost_packets_buffer)
+    HANDLE_PACKET_CONSTRUCTION(&request_lost_packets_ip_header, &request_lost_packets_bit_array, addr_type, &eth_hdr, PACKET_HEADER_SIZE + prepend_size, request_lost_packets_buffer)
  
     HANDLE_CHECKSUM(request_lost_packets_buffer, sizeof(request_lost_packets_buffer), prepend_size)
  
@@ -106,7 +108,7 @@ static inline void handle_lost_packets(
  
     const struct ip resend_chunk_ip_header = construct_ip_header(*destination_address, mtu, packet_sending->packet_id);
 
-    HANDLE_PACKET_CONSTRUCTION(&resend_chunk_ip_header, &resend_chunk_packet_info, loopback, &eth_hdr, mtu + prepend_size, resend_chunk_buffer)
+    HANDLE_PACKET_CONSTRUCTION(&resend_chunk_ip_header, &resend_chunk_packet_info, addr_type, &eth_hdr, mtu + prepend_size, resend_chunk_buffer)
 
     while(1) {
         const uint8_t request_lost_packets_bitarray_response = request_lost_packets_bitarray(request_lost_packets_buffer, PACKET_HEADER_SIZE + prepend_size, (const struct sockaddr*)destination_address, pcap, packet_sending);
@@ -185,6 +187,7 @@ inline void swiftnet_send_packet(
     pcap_t* const pcap,
     const struct ether_header eth_hdr,
     const bool loopback,
+    const uint16_t addr_type,
     const uint8_t prepend_size
     #ifdef SWIFT_NET_REQUESTS
         , RequestSent* const request_sent
@@ -260,7 +263,7 @@ inline void swiftnet_send_packet(
         new_packet_sending->lost_chunks_size = 0;
         new_packet_sending->packet_id = packet_id;
 
-        HANDLE_PACKET_CONSTRUCTION(&ip_header, &packet_info, loopback, &eth_hdr, mtu + prepend_size, buffer)
+        HANDLE_PACKET_CONSTRUCTION(&ip_header, &packet_info, addr_type, &eth_hdr, mtu + prepend_size, buffer)
 
         for(uint32_t i = 0; ; i++) {
             const uint32_t current_offset = i * (mtu - PACKET_HEADER_SIZE);
@@ -286,7 +289,7 @@ inline void swiftnet_send_packet(
 
                 swiftnet_pcap_send(pcap, buffer, bytes_to_send);
 
-                handle_lost_packets(new_packet_sending, mtu, packet, pcap, eth_hdr, target_addr, port_info.source_port, port_info.destination_port, packets_sending_memory_allocator, packets_sending, loopback, prepend_size
+                handle_lost_packets(new_packet_sending, mtu, packet, pcap, eth_hdr, target_addr, port_info.source_port, port_info.destination_port, packets_sending_memory_allocator, packets_sending, loopback, addr_type, prepend_size
                 #ifdef SWIFT_NET_REQUESTS
                     , response
                     , packet_type
@@ -319,7 +322,7 @@ inline void swiftnet_send_packet(
 
         const struct ip ip_header = construct_ip_header(*target_addr, final_packet_size - prepend_size, packet_id);
 
-        if(loopback) {
+        if(addr_type == DLT_NULL) {
             uint32_t family = PF_INET;
             memcpy(packet->packet_buffer_start + sizeof(struct ether_header) - sizeof(family), &family, sizeof(family));
             memcpy(packet->packet_buffer_start + sizeof(struct ether_header), &ip_header, sizeof(ip_header));
@@ -330,7 +333,7 @@ inline void swiftnet_send_packet(
             HANDLE_CHECKSUM(packet->packet_buffer_start + sizeof(struct ether_header) - sizeof(family), final_packet_size, prepend_size)
 
             swiftnet_pcap_send(pcap, packet->packet_buffer_start + sizeof(struct ether_header) - sizeof(family), final_packet_size);
-        } else {
+        } else if(addr_type == DLT_EN10MB) {
             memcpy(packet->packet_buffer_start, &eth_hdr, sizeof(eth_hdr));
             memcpy(packet->packet_buffer_start + sizeof(eth_hdr), &ip_header, sizeof(ip_header));
             memcpy(packet->packet_buffer_start + sizeof(eth_hdr) + sizeof(ip_header), &packet_info, sizeof(packet_info));
@@ -347,7 +350,7 @@ inline void swiftnet_send_packet(
 void swiftnet_client_send_packet(SwiftNetClientConnection* const client, SwiftNetPacketBuffer* const packet) {
     const uint32_t packet_length = packet->packet_append_pointer - packet->packet_data_start;
 
-    swiftnet_send_packet(client, client->maximum_transmission_unit, client->port_info, packet, packet_length, &client->server_addr, &client->packets_sending, &client->packets_sending_memory_allocator, client->pcap, client->eth_header, client->loopback, client->prepend_size
+    swiftnet_send_packet(client, client->maximum_transmission_unit, client->port_info, packet, packet_length, &client->server_addr, &client->packets_sending, &client->packets_sending_memory_allocator, client->pcap, client->eth_header, client->loopback, client->addr_type, client->prepend_size
     #ifdef SWIFT_NET_REQUESTS
         , NULL, false, 0
     #endif
@@ -362,7 +365,7 @@ void swiftnet_server_send_packet(SwiftNetServer* const server, SwiftNetPacketBuf
         .source_port = server->server_port
     };
 
-    swiftnet_send_packet(server, target.maximum_transmission_unit, port_info, packet, packet_length, &target.sender_address, &server->packets_sending, &server->packets_sending_memory_allocator, server->pcap, server->eth_header, server->loopback, server->prepend_size
+    swiftnet_send_packet(server, target.maximum_transmission_unit, port_info, packet, packet_length, &target.sender_address, &server->packets_sending, &server->packets_sending_memory_allocator, server->pcap, server->eth_header, server->loopback, server->addr_type, server->prepend_size
     #ifdef SWIFT_NET_REQUESTS
         , NULL, false, 0
     #endif

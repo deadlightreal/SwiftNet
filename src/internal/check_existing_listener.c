@@ -30,6 +30,7 @@ void* check_existing_listener(const char* interface_name, void* const connection
     new_listener->servers = vector_create(10);
     new_listener->client_connections = vector_create(10);
     new_listener->pcap = swiftnet_pcap_open(interface_name);
+    new_listener->addr_type = pcap_datalink(new_listener->pcap);
     memcpy(new_listener->interface_name, interface_name, strlen(interface_name) + 1);
     new_listener->loopback = loopback;
 

@@ -81,17 +81,19 @@ SwiftNetClientConnection* swiftnet_create_client(const char* const ip_address, c
 
     new_connection->loopback = loopback;
 
-    const uint8_t prepend_size = PACKET_PREPEND_SIZE(loopback);
-
-    new_connection->prepend_size = prepend_size;
-
     new_connection->pcap = swiftnet_pcap_open(loopback ? LOOPBACK_INTERFACE_NAME : default_network_interface);
     if (new_connection->pcap == NULL) {
         fprintf(stderr, "Failed to open bpf\n");
         exit(EXIT_FAILURE);
     }
 
+    new_connection->addr_type = pcap_datalink(new_connection->pcap);
+
     const uint16_t clientPort = rand();
+
+    const uint8_t prepend_size = PACKET_PREPEND_SIZE(new_connection->addr_type);
+
+    new_connection->prepend_size = prepend_size;
 
     new_connection->packet_queue = (PacketQueue){
         .first_node = NULL,
@@ -131,7 +133,7 @@ SwiftNetClientConnection* swiftnet_create_client(const char* const ip_address, c
 
     const struct ip request_server_info_ip_header = construct_ip_header(new_connection->server_addr, PACKET_HEADER_SIZE, rand());
 
-    HANDLE_PACKET_CONSTRUCTION(&request_server_info_ip_header, &request_server_information_packet_info, loopback, &eth_header, PACKET_HEADER_SIZE + prepend_size, request_server_info_buffer)
+    HANDLE_PACKET_CONSTRUCTION(&request_server_info_ip_header, &request_server_information_packet_info, new_connection->addr_type, &eth_header, PACKET_HEADER_SIZE + prepend_size, request_server_info_buffer)
 
     HANDLE_CHECKSUM(request_server_info_buffer, sizeof(request_server_info_buffer), prepend_size)
 

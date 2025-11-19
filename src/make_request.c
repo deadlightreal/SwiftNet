@@ -14,7 +14,7 @@ SwiftNetClientPacketData* swiftnet_client_make_request(SwiftNetClientConnection*
 
     const uint32_t packet_length = packet->packet_append_pointer - packet->packet_data_start;
 
-    swiftnet_send_packet(client, client->maximum_transmission_unit, client->port_info, packet, packet_length, &client->server_addr, &client->packets_sending, &client->packets_sending_memory_allocator, client->pcap, client->eth_header, client->loopback, client->prepend_size, request_sent, false, 0);
+    swiftnet_send_packet(client, client->maximum_transmission_unit, client->port_info, packet, packet_length, &client->server_addr, &client->packets_sending, &client->packets_sending_memory_allocator, client->pcap, client->eth_header, client->loopback, client->addr_type, client->prepend_size, request_sent, false, 0);
 
     struct timeval tv;
     gettimeofday(&tv, NULL);
@@ -65,7 +65,7 @@ SwiftNetServerPacketData* swiftnet_server_make_request(SwiftNetServer* const ser
         .source_port = server->server_port
     };
 
-    swiftnet_send_packet(server, addr_data.maximum_transmission_unit, port_info, packet, packet_length, &addr_data.sender_address, &server->packets_sending, &server->packets_sending_memory_allocator, server->pcap, server->eth_header, server->loopback, server->prepend_size, request_sent, false, 0);
+    swiftnet_send_packet(server, addr_data.maximum_transmission_unit, port_info, packet, packet_length, &addr_data.sender_address, &server->packets_sending, &server->packets_sending_memory_allocator, server->pcap, server->eth_header, server->loopback, server->addr_type, server->prepend_size, request_sent, false, 0);
 
     while (1) {
         if (request_sent->packet_data != NULL) {

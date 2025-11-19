@@ -332,6 +332,7 @@ static inline void swiftnet_process_packets(
     const struct ether_header eth_hdr,
     const uint16_t source_port,
     const bool loopback,
+    const uint16_t addr_type,
     SwiftNetVector* const packets_sending,
     SwiftNetMemoryAllocator* const packets_sending_messages_memory_allocator,
     SwiftNetVector* const pending_messages,
@@ -445,8 +446,7 @@ static inline void swiftnet_process_packets(
                         .maximum_transmission_unit = maximum_transmission_unit
                     };
 
-
-                    HANDLE_PACKET_CONSTRUCTION(&send_server_info_ip_header, &packet_info_new, loopback, &eth_hdr, prepend_size + PACKET_HEADER_SIZE + sizeof(server_info), buffer)
+                    HANDLE_PACKET_CONSTRUCTION(&send_server_info_ip_header, &packet_info_new, addr_type, &eth_hdr, prepend_size + PACKET_HEADER_SIZE + sizeof(server_info), buffer)
 
                     memcpy(buffer + prepend_size + PACKET_HEADER_SIZE, &server_info, sizeof(server_info));
 
@@ -479,7 +479,7 @@ static inline void swiftnet_process_packets(
                             }
                         );
 
-                        HANDLE_PACKET_CONSTRUCTION(&send_packet_ip_header, &send_packet_info, loopback, &eth_hdr, prepend_size + PACKET_HEADER_SIZE, buffer)
+                        HANDLE_PACKET_CONSTRUCTION(&send_packet_ip_header, &send_packet_info, addr_type, &eth_hdr, prepend_size + PACKET_HEADER_SIZE, buffer)
 
                         HANDLE_CHECKSUM(buffer, sizeof(buffer), prepend_size)
 
@@ -510,7 +510,7 @@ static inline void swiftnet_process_packets(
 
                 const uint16_t header_size = sizeof(struct ip) + sizeof(SwiftNetPacketInfo) + prepend_size;
 
-                HANDLE_PACKET_CONSTRUCTION(&send_lost_packets_ip_header, &packet_info_new, loopback, &eth_hdr, mtu + prepend_size, buffer)
+                HANDLE_PACKET_CONSTRUCTION(&send_lost_packets_ip_header, &packet_info_new, addr_type, &eth_hdr, mtu + prepend_size, buffer)
 
                 const uint16_t lost_chunk_indexes = return_lost_chunk_indexes(pending_message->chunks_received, pending_message->packet_info.chunk_amount, mtu - PACKET_HEADER_SIZE, (uint32_t*)(buffer + header_size));
 
@@ -764,7 +764,7 @@ static inline void swiftnet_process_packets(
 void* swiftnet_server_process_packets(void* const void_server) {
     SwiftNetServer* const server = (SwiftNetServer*)void_server;
 
-    swiftnet_process_packets((void*)&server->packet_handler, server->pcap, server->eth_header, server->server_port, server->loopback, &server->packets_sending, &server->packets_sending_memory_allocator, &server->pending_messages, &server->pending_messages_memory_allocator, &server->packets_completed, &server->packets_completed_memory_allocator, CONNECTION_TYPE_SERVER, &server->packet_queue, &server->packet_callback_queue, server, &server->closing, server->prepend_size);
+    swiftnet_process_packets((void*)&server->packet_handler, server->pcap, server->eth_header, server->server_port, server->loopback, server->addr_type, &server->packets_sending, &server->packets_sending_memory_allocator, &server->pending_messages, &server->pending_messages_memory_allocator, &server->packets_completed, &server->packets_completed_memory_allocator, CONNECTION_TYPE_SERVER, &server->packet_queue, &server->packet_callback_queue, server, &server->closing, server->prepend_size);
 
     return NULL;
 }
@@ -772,7 +772,7 @@ void* swiftnet_server_process_packets(void* const void_server) {
 void* swiftnet_client_process_packets(void* const void_client) {
     SwiftNetClientConnection* const client = (SwiftNetClientConnection*)void_client;
 
-    swiftnet_process_packets((void*)&client->packet_handler, client->pcap, client->eth_header, client->port_info.source_port, client->loopback, &client->packets_sending, &client->packets_sending_memory_allocator, &client->pending_messages, &client->pending_messages_memory_allocator, &client->packets_completed, &client->packets_completed_memory_allocator, CONNECTION_TYPE_CLIENT, &client->packet_queue, &client->packet_callback_queue, client, &client->closing, client->prepend_size);
+    swiftnet_process_packets((void*)&client->packet_handler, client->pcap, client->eth_header, client->port_info.source_port, client->loopback, client->addr_type, &client->packets_sending, &client->packets_sending_memory_allocator, &client->pending_messages, &client->pending_messages_memory_allocator, &client->packets_completed, &client->packets_completed_memory_allocator, CONNECTION_TYPE_CLIENT, &client->packet_queue, &client->packet_callback_queue, client, &client->closing, client->prepend_size);
 
     return NULL;
 }
