@@ -62,13 +62,13 @@ int main() {
 
     swiftnet_initialize();
 
-    server = swiftnet_create_server(FIRST_PORT);
+    server = swiftnet_create_server(FIRST_PORT, LOOPBACK);
     swiftnet_server_set_message_handler(server, server_message_handler);
 
     client = swiftnet_create_client(IP_ADDRESS, FIRST_PORT, 2000);
     swiftnet_client_set_message_handler(client, client_message_handler);
 
-    second_server = swiftnet_create_server(SECOND_PORT);
+    second_server = swiftnet_create_server(SECOND_PORT, LOOPBACK);
     swiftnet_server_set_message_handler(second_server, server_message_handler);
 
     second_client = swiftnet_create_client(IP_ADDRESS, SECOND_PORT, 2000);

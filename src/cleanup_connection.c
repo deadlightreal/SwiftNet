@@ -14,13 +14,10 @@ void swiftnet_client_cleanup(SwiftNetClientConnection* const client) {
 
     atomic_store_explicit(&client->closing, true, memory_order_release);
 
-    shutdown(client->sockfd, SHUT_RD);
+    pthread_join(client->process_packets_thread, NULL);
+    pthread_join(client->execute_callback_thread, NULL);
 
-    close(client->sockfd);
-
-    pthread_detach(client->handle_packets_thread);
-    pthread_detach(client->process_packets_thread);
-    pthread_detach(client->execute_callback_thread);
+    pcap_close(client->pcap);
 
     allocator_free(&client_connection_memory_allocator, client);
 }
@@ -36,11 +33,10 @@ void swiftnet_server_cleanup(SwiftNetServer* const server) {
 
     atomic_store_explicit(&server->closing, true, memory_order_release);
 
-    close(server->sockfd);
+    pthread_join(server->process_packets_thread, NULL);
+    pthread_join(server->execute_callback_thread, NULL);
 
-    pthread_detach(server->handle_packets_thread);
-    pthread_detach(server->process_packets_thread);
-    pthread_detach(server->execute_callback_thread);
+    pcap_close(server->pcap);
 
     allocator_free(&server_memory_allocator, server);
 }

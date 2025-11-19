@@ -13,7 +13,7 @@
 #include "internal/internal.h"
 #include "swift_net.h"
 
-SwiftNetServer* swiftnet_create_server(const uint16_t port) {
+SwiftNetServer* swiftnet_create_server(const uint16_t port, const bool loopback) {
     SwiftNetServer* const new_server = allocator_allocate(&server_memory_allocator);
 
     #ifdef SWIFT_NET_ERROR
@@ -24,19 +24,27 @@ SwiftNetServer* swiftnet_create_server(const uint16_t port) {
     #endif
 
     new_server->server_port = port;
+    new_server->loopback = loopback;
 
-    // Create the socket
-    new_server->sockfd = socket(AF_INET, SOCK_RAW, PROTOCOL_NUMBER);
-    if (unlikely(new_server->sockfd < 0)) {
-        fprintf(stderr, "Socket creation failed\n");
+    // Init bpf device
+    new_server->pcap = swiftnet_pcap_open(loopback ? LOOPBACK_INTERFACE_NAME : default_network_interface);
+    if (new_server->pcap == NULL) {
+        fprintf(stderr, "Failed to open bpf\n");
         exit(EXIT_FAILURE);
     }
 
-    int on = 1;
-    if(setsockopt(new_server->sockfd, IPPROTO_IP, IP_HDRINCL, &on, sizeof(on)) < 0) {
-        fprintf(stderr, "Failed to set sockopt IP_HDRINCL\n");
-        exit(EXIT_FAILURE);
-    }
+    new_server->addr_type = pcap_datalink(new_server->pcap);
+
+    new_server->prepend_size = PACKET_PREPEND_SIZE(new_server->addr_type);
+
+    struct ether_header eth_header = {
+        .ether_dhost = {0xff,0xff,0xff,0xff,0xff,0xff},
+        .ether_type = htons(0x0800)
+    };
+
+    memcpy(eth_header.ether_shost, mac_address, sizeof(eth_header.ether_shost));
+
+    new_server->eth_header = eth_header;
 
     new_server->packet_queue = (PacketQueue){
         .first_node = NULL,
@@ -60,7 +68,7 @@ SwiftNetServer* swiftnet_create_server(const uint16_t port) {
     atomic_store_explicit(&new_server->closing, false, memory_order_release);
 
     // Create a new thread that will handle all packets received
-    pthread_create(&new_server->handle_packets_thread, NULL, swiftnet_server_handle_packets, new_server);
+    check_existing_listener(loopback ? LOOPBACK_INTERFACE_NAME : default_network_interface, new_server, CONNECTION_TYPE_SERVER, loopback);
     pthread_create(&new_server->process_packets_thread, NULL, swiftnet_server_process_packets, new_server);
     pthread_create(&new_server->execute_callback_thread, NULL, execute_packet_callback_server, new_server);
 

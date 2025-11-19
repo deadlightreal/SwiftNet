@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.10)
-project(SwiftNet C CXX)
+project(swiftnet C CXX)
 
 include(GNUInstallDirs)
 
@@ -23,9 +23,12 @@ set(SOURCE_FILES
     make_response.c
     make_request.c
     internal/get_mtu.c
-    internal/get_default_interface.c
+    internal/get_default_interface_and_mac.c
     internal/datatype_allocator.c
     internal/datatype_vector.c
+    internal/pcap_open.c
+    internal/pcap_send.c
+    internal/check_existing_listener.c
 )
 
 if(SANITIZER STREQUAL "address")

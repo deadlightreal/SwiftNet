@@ -14,6 +14,8 @@
 
 uint32_t maximum_transmission_unit = 0x00;
 struct in_addr private_ip_address;
+uint8_t mac_address[6];
+char default_network_interface[SIZEOF_FIELD(struct ifreq, ifr_name)];
 
 SwiftNetMemoryAllocator packet_queue_node_memory_allocator;
 SwiftNetMemoryAllocator packet_callback_queue_node_memory_allocator;
@@ -22,10 +24,14 @@ SwiftNetMemoryAllocator client_packet_data_memory_allocator;
 SwiftNetMemoryAllocator packet_buffer_memory_allocator;
 SwiftNetMemoryAllocator server_memory_allocator;
 SwiftNetMemoryAllocator client_connection_memory_allocator;
-SwiftNetMemoryAllocator pending_message_memory_allocator;
-SwiftNetMemoryAllocator requests_sent_memory_allocator;
+SwiftNetMemoryAllocator listener_memory_allocator;
 
-SwiftNetVector requests_sent;
+#ifdef SWIFT_NET_REQUESTS
+    SwiftNetMemoryAllocator requests_sent_memory_allocator;
+    SwiftNetVector requests_sent;
+#endif
+
+SwiftNetVector listeners;
 
 void swiftnet_initialize() {
     const int temp_socket = socket(AF_INET, SOCK_DGRAM, 0);
@@ -56,9 +62,7 @@ void swiftnet_initialize() {
 
     private_ip_address = ((struct sockaddr_in *)&private_sockaddr)->sin_addr;
 
-    char default_network_interface[128];
-
-    const int got_default_interface = get_default_interface(default_network_interface, sizeof(default_network_interface), temp_socket);
+    const int got_default_interface = get_default_interface_and_mac(default_network_interface, sizeof(default_network_interface), mac_address, temp_socket);
     if(unlikely(got_default_interface != 0)) {
         close(temp_socket);
         fprintf(stderr, "Failed to get the default interface\n");
@@ -78,16 +82,18 @@ void swiftnet_initialize() {
     packet_callback_queue_node_memory_allocator = allocator_create(sizeof(PacketCallbackQueueNode), 100);
     server_packet_data_memory_allocator = allocator_create(sizeof(SwiftNetServerPacketData), 100);
     client_packet_data_memory_allocator = allocator_create(sizeof(SwiftNetClientPacketData), 100);
-    packet_buffer_memory_allocator = allocator_create(maximum_transmission_unit, 100);
+    packet_buffer_memory_allocator = allocator_create(maximum_transmission_unit + sizeof(struct ether_header), 100);
     server_memory_allocator = allocator_create(sizeof(SwiftNetServer), 10);
     client_connection_memory_allocator = allocator_create(sizeof(SwiftNetClientConnection), 10);
-    pending_message_memory_allocator = allocator_create(sizeof(SwiftNetPendingMessage), 100);
+    listener_memory_allocator = allocator_create(sizeof(Listener), 100);
 
     #ifdef SWIFT_NET_REQUESTS
         requests_sent_memory_allocator = allocator_create(sizeof(RequestSent), 100);
 
         requests_sent = vector_create(100);
     #endif
+
+    listeners = vector_create(10);
 
     return;
 }

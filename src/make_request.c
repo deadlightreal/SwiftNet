@@ -10,11 +10,11 @@
 SwiftNetClientPacketData* swiftnet_client_make_request(SwiftNetClientConnection* const client, SwiftNetPacketBuffer* const packet, const uint32_t timeout_ms) {
     RequestSent* const request_sent = allocator_allocate(&requests_sent_memory_allocator);
     request_sent->packet_data = NULL;
-    request_sent->address = client->server_addr.sin_addr.s_addr;
+    request_sent->address = client->server_addr;
 
     const uint32_t packet_length = packet->packet_append_pointer - packet->packet_data_start;
 
-    swiftnet_send_packet(client, client->maximum_transmission_unit, client->port_info, packet, packet_length, &client->server_addr, &client->server_addr_len, &client->packets_sending, &client->packets_sending_memory_allocator, client->sockfd, request_sent, false, 0);
+    swiftnet_send_packet(client, client->maximum_transmission_unit, client->port_info, packet, packet_length, &client->server_addr, &client->packets_sending, &client->packets_sending_memory_allocator, client->pcap, client->eth_header, client->loopback, client->addr_type, client->prepend_size, request_sent, false, 0);
 
     struct timeval tv;
     gettimeofday(&tv, NULL);
@@ -56,16 +56,16 @@ SwiftNetClientPacketData* swiftnet_client_make_request(SwiftNetClientConnection*
 SwiftNetServerPacketData* swiftnet_server_make_request(SwiftNetServer* const server, SwiftNetPacketBuffer* const packet, const SwiftNetClientAddrData addr_data, const uint32_t timeout_ms) {
     RequestSent* const request_sent = allocator_allocate(&requests_sent_memory_allocator);
     request_sent->packet_data = NULL;
-    request_sent->address = addr_data.sender_address.sin_addr.s_addr;
+    request_sent->address = addr_data.sender_address;
 
     const uint32_t packet_length = packet->packet_append_pointer - packet->packet_data_start;
 
     const SwiftNetPortInfo port_info = {
-        .destination_port = addr_data.sender_address.sin_port,
+        .destination_port = addr_data.port,
         .source_port = server->server_port
     };
 
-    swiftnet_send_packet(server, addr_data.maximum_transmission_unit, port_info, packet, packet_length, &addr_data.sender_address, &addr_data.sender_address_length, &server->packets_sending, &server->packets_sending_memory_allocator, server->sockfd, request_sent, false, 0);
+    swiftnet_send_packet(server, addr_data.maximum_transmission_unit, port_info, packet, packet_length, &addr_data.sender_address, &server->packets_sending, &server->packets_sending_memory_allocator, server->pcap, server->eth_header, server->loopback, server->addr_type, server->prepend_size, request_sent, false, 0);
 
     while (1) {
         if (request_sent->packet_data != NULL) {
