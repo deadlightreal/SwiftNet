@@ -15,7 +15,7 @@
 #include "internal/internal.h"
 #include <netinet/in.h>
 
-static const uint16_t null_sum = htons(0);
+const uint16_t null_sum = htons(0);
 
 static inline void lock_packet_sending(SwiftNetPacketSending* const packet_sending) {
     bool locked = false;
