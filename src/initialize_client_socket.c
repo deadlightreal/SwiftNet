@@ -56,11 +56,6 @@ void* request_server_information(void* const request_server_information_args_voi
             }
         #endif
 
-        for (uint32_t i = 0; i < request_server_information_args->size; i++) {
-            printf("%d ", ((uint8_t*)request_server_information_args->data)[i]);
-        }
-        printf("\n");
-
         swiftnet_pcap_send(request_server_information_args->pcap, request_server_information_args->data, request_server_information_args->size);
 
         usleep(250000);
@@ -103,8 +98,6 @@ SwiftNetClientConnection* swiftnet_create_client(const char* const ip_address, c
     atomic_store(&new_connection->packet_queue.owner, PACKET_QUEUE_OWNER_NONE);
 
     new_connection->server_addr_len = sizeof(new_connection->server_addr);
-
-    printf("destination: %d\n", port);
 
     new_connection->port_info.destination_port = port;
     new_connection->port_info.source_port = clientPort;

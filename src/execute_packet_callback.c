@@ -53,8 +53,6 @@ void execute_packet_callback(PacketCallbackQueue* const queue, void (* const _At
             continue;
         }
 
-        printf("executing\n");
-
         if(node->pending_message != NULL) {
             vector_lock(pending_messages);
 

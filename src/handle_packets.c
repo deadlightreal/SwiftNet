@@ -38,13 +38,6 @@ static inline void insert_queue_node(PacketQueueNode* const new_node, volatile P
 }
 
 static inline void swiftnet_handle_packets(const uint16_t source_port, pthread_t* const process_packets_thread, void* connection, const ConnectionType connection_type, PacketQueue* const packet_queue, const _Atomic bool* closing, const bool loopback, const uint16_t addr_type, const struct pcap_pkthdr* hdr, const uint8_t* packet) {
-    printf("got packet: %u bytes\n", hdr->caplen);
-
-    for (uint32_t i = 0; i < hdr->caplen; i++) {
-        printf("%d ", packet[i]);
-    }
-    printf("\n");
-
     PacketQueueNode *node = allocator_allocate(&packet_queue_node_memory_allocator);
     if (unlikely(node == NULL)) {
         return;
@@ -142,8 +135,6 @@ static void pcap_packet_handle(uint8_t* user, const struct pcap_pkthdr* hdr, con
 
     SwiftNetPortInfo* const port_info = (SwiftNetPortInfo*)(packet + PACKET_PREPEND_SIZE(listener->addr_type) + sizeof(struct ip) + offsetof(SwiftNetPacketInfo, port_info));
 
-    printf("received packet for port: %d\n", port_info->destination_port);
-
     vector_lock(&listener->servers);
 
     for (uint16_t i = 0; i < listener->servers.size; i++) {
@@ -183,8 +174,6 @@ void* interface_start_listening(void* listener_void) {
     Listener* listener = listener_void;
 
     pcap_loop(listener->pcap, 0, pcap_packet_handle, listener_void);
-
-    printf("exiting\n");
 
     return NULL;
 }
