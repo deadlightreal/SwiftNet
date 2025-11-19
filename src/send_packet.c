@@ -15,8 +15,6 @@
 #include "internal/internal.h"
 #include <netinet/in.h>
 
-const uint16_t null_sum = htons(0);
-
 static inline void lock_packet_sending(SwiftNetPacketSending* const packet_sending) {
     bool locked = false;
     while(!atomic_compare_exchange_strong_explicit(&packet_sending->locked, &locked, true, memory_order_acquire, memory_order_relaxed)) {
@@ -153,6 +151,7 @@ static inline void handle_lost_packets(
     
             const uint32_t current_offset = lost_chunk_index * (mtu - PACKET_HEADER_SIZE);
 
+            const uint16_t null_sum = htons(0);
             memcpy(&resend_chunk_buffer[prepend_size + offsetof(struct ip, ip_sum)], &null_sum, SIZEOF_FIELD(struct ip, ip_sum));
 
             if(current_offset + mtu - PACKET_HEADER_SIZE >= packet_length) {
@@ -280,6 +279,7 @@ inline void swiftnet_send_packet(
 
             memcpy(&buffer[sizeof(struct ip) + prepend_size + offsetof(SwiftNetPacketInfo, chunk_index)], &i, SIZEOF_FIELD(SwiftNetPacketInfo, chunk_index));
             
+            const uint16_t null_sum = htons(0);
             memcpy(&buffer[prepend_size + offsetof(struct ip, ip_sum)], &null_sum, SIZEOF_FIELD(struct ip, ip_sum));
         
             if(current_offset + (mtu - PACKET_HEADER_SIZE) >= packet_info.packet_length) {
