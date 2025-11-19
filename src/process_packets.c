@@ -523,6 +523,8 @@ static inline void swiftnet_process_packets(
             {
                 SwiftNetPacketSending* const target_packet_sending = get_packet_sending(packets_sending, ip_header.ip_id);
 
+                printf("got response\n");
+
                 if(unlikely(target_packet_sending == NULL)) {
                     allocator_free(&packet_buffer_memory_allocator, packet_buffer);
 
@@ -581,6 +583,7 @@ static inline void swiftnet_process_packets(
         SwiftNetPendingMessage* const pending_message = get_pending_message(&packet_info, pending_messages, connection_type, node->sender_address, ip_header.ip_id);
 
         if(pending_message == NULL) {
+            printf("packet len: %d cds: %d\n", packet_info.packet_length, chunk_data_size);
             if(packet_info.packet_length > chunk_data_size) {
                 // Split packet into chunks
                 SwiftNetPendingMessage* const new_pending_message = create_new_pending_message(pending_messages, pending_messages_memory_allocator, &packet_info, connection_type, node->sender_address, ip_header.ip_id);

@@ -60,7 +60,7 @@ void execute_packet_callback(PacketCallbackQueue* const queue, void (* const _At
 
             for (uint32_t i = 0; i < pending_messages->size; i++) {
                 const SwiftNetPendingMessage* const pending_message = vector_get(pending_messages, i);
-                if ((connection_type == CONNECTION_TYPE_CLIENT && pending_message->packet_id == node->pending_message->packet_id) || (connection_type == CONNECTION_TYPE_SERVER && pending_message->sender_address.s_addr == ((SwiftNetServerPacketData*)node->packet_data)->metadata.sender.sender_address.s_addr && pending_message->packet_id == node->pending_message->packet_id)) {
+                if (pending_message == node->pending_message) {
                     vector_remove(pending_messages, i);
                 }
             }
