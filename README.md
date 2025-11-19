@@ -8,12 +8,7 @@
 
 ## Supported Platforms
 - **Apple Silicon (macOS arm64)**
-- **Apple Intel (macOS x64)**
-- **Linux x64**
-
-- Apple Silicon (macOS arm64)
-Apple Intel (macOS x64)
-Linux x64
+- **Linux arm64**
 
 ## Features
 - **💡 Ease of Use**: Simple API designed to get up and running quickly, without needing to deal directly with raw sockets.
