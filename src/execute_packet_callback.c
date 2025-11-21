@@ -70,25 +70,6 @@ void execute_packet_callback(PacketCallbackQueue* const queue, void (* const _At
 
         (*packet_handler_loaded)(node->packet_data);
 
-        if(node->pending_message != NULL) {
-            free(node->pending_message->chunks_received);
-            allocator_free(pending_message_memory_allocator, node->pending_message);
-
-            if (connection_type == 0) {
-                free(((const SwiftNetClientPacketData* const)(node->packet_data))->data);
-            } else {
-                free(((const SwiftNetServerPacketData* const)(node->packet_data))->data);
-            }
-        } else {
-            if (connection_type == 0) {
-                allocator_free(&packet_buffer_memory_allocator, ((SwiftNetClientPacketData*)(node->packet_data))->data - PACKET_HEADER_SIZE);
-                allocator_free(&client_packet_data_memory_allocator, node->packet_data);
-            } else {
-                allocator_free(&packet_buffer_memory_allocator, ((SwiftNetServerPacketData*)(node->packet_data))->data - PACKET_HEADER_SIZE);
-                allocator_free(&server_packet_data_memory_allocator, node->packet_data);
-            }
-        }
-
         allocator_free(&packet_callback_queue_node_memory_allocator, (void*)node);
     }
 }

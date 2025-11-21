@@ -192,10 +192,6 @@ static inline void handle_request_response(const uint16_t packet_id, const struc
 
     if (is_valid_response == true) {
         if (pending_message != NULL) {
-            free(pending_message->chunks_received);
-            
-            allocator_free(pending_message_memory_allocator, pending_message);
-
             vector_lock(pending_messages);
 
             for (uint32_t i = 0; i < pending_messages->size; i++) {
@@ -596,6 +592,7 @@ static inline void swiftnet_process_packets(
                     SwiftNetServerPacketData* const new_packet_data = allocator_allocate(&server_packet_data_memory_allocator) ;
                     new_packet_data->data = packet_data;
                     new_packet_data->current_pointer = packet_data;
+                    new_packet_data->internal_pending_message = NULL;
                     new_packet_data->metadata = (SwiftNetPacketServerMetadata){
                         .port_info = packet_info.port_info,
                         .sender = sender,
@@ -619,6 +616,7 @@ static inline void swiftnet_process_packets(
                     SwiftNetClientPacketData* const new_packet_data = allocator_allocate(&client_packet_data_memory_allocator) ;
                     new_packet_data->data = packet_data;
                     new_packet_data->current_pointer = packet_data;
+                    new_packet_data->internal_pending_message = NULL;
                     new_packet_data->metadata = (SwiftNetPacketClientMetadata){
                         .port_info = packet_info.port_info,
                         .data_length = packet_info.packet_length,
@@ -672,6 +670,7 @@ static inline void swiftnet_process_packets(
                     SwiftNetServerPacketData* const packet_data = allocator_allocate(&server_packet_data_memory_allocator);
                     packet_data->data = ptr;
                     packet_data->current_pointer = ptr;
+                    packet_data->internal_pending_message = pending_message;
                     packet_data->metadata = (SwiftNetPacketServerMetadata){
                         .port_info = packet_info.port_info,
                         .sender = sender,
@@ -697,6 +696,7 @@ static inline void swiftnet_process_packets(
                     SwiftNetClientPacketData* const packet_data = allocator_allocate(&client_packet_data_memory_allocator) ;
                     packet_data->data = ptr;
                     packet_data->current_pointer = ptr;
+                    packet_data->internal_pending_message = pending_message;
                     packet_data->metadata = (SwiftNetPacketClientMetadata){
                         .port_info = packet_info.port_info,
                         .data_length = packet_info.packet_length,

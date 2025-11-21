@@ -79,6 +79,25 @@ typedef struct {
 } SwiftNetPacketClientMetadata;
 
 typedef struct {
+    uint32_t packet_length;
+    SwiftNetPortInfo port_info;
+    uint8_t packet_type;
+    uint32_t chunk_amount;
+    uint32_t chunk_index;
+    uint32_t maximum_transmission_unit;
+} SwiftNetPacketInfo;
+
+typedef struct {
+    uint8_t* packet_data_start;
+    SwiftNetPacketInfo packet_info;
+    uint16_t packet_id;
+    struct in_addr sender_address;
+    uint8_t* chunks_received;
+    uint32_t chunks_received_length;
+    uint32_t chunks_received_number;
+} SwiftNetPendingMessage;
+
+typedef struct {
     uint32_t data_length;
     SwiftNetPortInfo port_info;
     SwiftNetClientAddrData sender;
@@ -87,15 +106,6 @@ typedef struct {
         bool expecting_response;
     #endif
 } SwiftNetPacketServerMetadata;
-
-typedef struct {
-    uint32_t packet_length;
-    SwiftNetPortInfo port_info;
-    uint8_t packet_type;
-    uint32_t chunk_amount;
-    uint32_t chunk_index;
-    uint32_t maximum_transmission_unit;
-} SwiftNetPacketInfo;
 
 typedef struct {
     uint32_t maximum_transmission_unit;
@@ -126,16 +136,6 @@ typedef struct {
     uint8_t* packet_append_pointer; // Current position to append new data
 } SwiftNetPacketBuffer;
 
-typedef struct {
-    uint8_t* packet_data_start;
-    SwiftNetPacketInfo packet_info;
-    uint16_t packet_id;
-    struct in_addr sender_address;
-    uint8_t* chunks_received;
-    uint32_t chunks_received_length;
-    uint32_t chunks_received_number;
-} SwiftNetPendingMessage;
-
 typedef struct PacketQueueNode PacketQueueNode;
 
 struct PacketQueueNode {
@@ -165,12 +165,14 @@ typedef struct {
     uint8_t* data;
     uint8_t* current_pointer;
     SwiftNetPacketServerMetadata metadata;
+    SwiftNetPendingMessage* internal_pending_message; // Do not use!!
 } SwiftNetServerPacketData;
 
 typedef struct {
     uint8_t* data;
     uint8_t* current_pointer;
     SwiftNetPacketClientMetadata metadata;
+    SwiftNetPendingMessage* internal_pending_message; // Do not use!!
 } SwiftNetClientPacketData;
 
 typedef struct {
@@ -278,8 +280,8 @@ extern SwiftNetServer* swiftnet_create_server(const uint16_t port, const bool lo
 extern SwiftNetClientConnection* swiftnet_create_client(const char* const ip_address, const uint16_t port, const uint32_t timeout_ms);
 extern void* swiftnet_client_read_packet(SwiftNetClientPacketData* const packet_data, const uint32_t data_size);
 extern void* swiftnet_server_read_packet(SwiftNetServerPacketData* const packet_data, const uint32_t data_size);
-extern void swiftnet_client_destroy_packet_data(SwiftNetClientPacketData* const packet_data);
-extern void swiftnet_server_destroy_packet_data(SwiftNetServerPacketData* const packet_data);
+extern void swiftnet_client_destroy_packet_data(SwiftNetClientPacketData* const packet_data, SwiftNetClientConnection* const client_conn);
+extern void swiftnet_server_destroy_packet_data(SwiftNetServerPacketData* const packet_data, SwiftNetServer* const server);
 
 extern void swiftnet_cleanup();
 
