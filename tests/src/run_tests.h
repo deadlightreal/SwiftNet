@@ -1,7 +1,8 @@
 #pragma once
 
-#include "stdlib.h"
-#include "stdbool.h"
+#include <stdlib.h>
+#include <stdbool.h>
+#include <stdint.h>
 
 #define PRINT_ERROR(error, ...) \
     printf("\033[31m" error "\033[0m\n", ##__VA_ARGS__)
