@@ -9,7 +9,6 @@
 #include <netinet/ip.h>
 #include "internal/internal.h"
 #include <stddef.h>
-#include <net/bpf.h>
 
 static inline void insert_queue_node(PacketQueueNode* const new_node, volatile PacketQueue* const packet_queue, const ConnectionType contype) {
     if(new_node == NULL) {
