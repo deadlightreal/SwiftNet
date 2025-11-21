@@ -57,10 +57,28 @@ void* swiftnet_server_read_packet(SwiftNetServerPacketData* const packet_data, c
     return ptr;
 }
 
-void swiftnet_client_destroy_packet_data(SwiftNetClientPacketData* const packet_data) {
-    allocator_free(&client_packet_data_memory_allocator, packet_data);
+void swiftnet_client_destroy_packet_data(SwiftNetClientPacketData* const packet_data, SwiftNetClientConnection* const client_conn) {
+    if(packet_data->internal_pending_message != NULL) {
+        free(packet_data->internal_pending_message->chunks_received);
+        
+        allocator_free(&client_conn->pending_messages_memory_allocator, packet_data->internal_pending_message);
+
+        free(packet_data->data);
+    } else {
+        allocator_free(&packet_buffer_memory_allocator, packet_data->data - PACKET_HEADER_SIZE - client_conn->prepend_size);
+        allocator_free(&client_packet_data_memory_allocator, packet_data);
+    }
 }
 
-void swiftnet_server_destroy_packet_data(SwiftNetServerPacketData* const packet_data) {
-    allocator_free(&server_packet_data_memory_allocator, packet_data);
+void swiftnet_server_destroy_packet_data(SwiftNetServerPacketData* const packet_data, SwiftNetServer* const server) {
+    if(packet_data->internal_pending_message != NULL) {
+        free(packet_data->internal_pending_message->chunks_received);
+
+        allocator_free(&server->pending_messages_memory_allocator, packet_data->internal_pending_message);
+
+        free(packet_data->data);
+    } else {
+        allocator_free(&packet_buffer_memory_allocator, packet_data->data - PACKET_HEADER_SIZE - server->prepend_size);
+        allocator_free(&server_packet_data_memory_allocator, packet_data);
+    }
 }
