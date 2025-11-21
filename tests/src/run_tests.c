@@ -105,6 +105,8 @@ int main() {
 
     swiftnet_initialize();
 
+    swiftnet_add_debug_flags(DEBUG_INITIALIZATION | DEBUG_LOST_PACKETS | DEBUG_PACKETS_RECEIVING | DEBUG_PACKETS_SENDING);
+
     for (uint16_t i = 0; i < sizeof(tests) / sizeof(struct Test); i++) {
         const struct Test* current_test = &tests[i];
 
