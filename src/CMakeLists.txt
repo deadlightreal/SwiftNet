@@ -82,15 +82,8 @@ else()
     message(FATAL_ERROR "libpcap not found! Please install libpcap or set PCAP_INCLUDE_DIR/PCAP_LIBRARY")
 endif()
 
-if(NOT TARGET Pcap::Pcap)
-    add_library(Pcap::Pcap UNKNOWN IMPORTED)
-    set_target_properties(Pcap::Pcap PROPERTIES
-        INTERFACE_INCLUDE_DIRECTORIES "${PCAP_INCLUDE_DIR}"
-        IMPORTED_LOCATION "${PCAP_LIBRARY}"
-    )
-endif()
-
-target_link_libraries(swiftnet PUBLIC Pcap::Pcap)
+target_include_directories(swiftnet PUBLIC ${PCAP_INCLUDE_DIR})
+target_link_libraries(swiftnet PUBLIC ${PCAP_LIBRARY})
 
 set_target_properties(swiftnet PROPERTIES
     OUTPUT_NAME "swiftnet"
