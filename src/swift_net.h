@@ -136,8 +136,6 @@ struct SwiftNetPacketBuffer {
     uint8_t* packet_append_pointer; // Current position to append new data
 };
 
-struct PacketQueueNode PacketQueueNode;
-
 struct PacketQueueNode {
     struct PacketQueueNode* next;
     uint8_t* data;
@@ -151,8 +149,6 @@ struct PacketQueue {
     struct PacketQueueNode* first_node;
     struct PacketQueueNode* last_node;
 };
-
-struct PacketCallbackQueueNode PacketCallbackQueueNode;
 
 struct PacketCallbackQueueNode {
     void* packet_data;
