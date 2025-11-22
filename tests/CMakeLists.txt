@@ -27,7 +27,7 @@ file(GLOB SRC_FILES "${CMAKE_SOURCE_DIR}/src/*.c")
 
 add_executable(run_tests ${SRC_FILES})
 
-target_link_libraries(run_tests swiftnet pcap)
-target_link_options(run_tests PRIVATE -g -O0)
+target_link_libraries(run_tests PRIVATE swiftnet)
+target_link_options(run_tests PRIVATE -g -O0 -lpcap)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
