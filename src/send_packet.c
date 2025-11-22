@@ -285,9 +285,10 @@ inline void swiftnet_send_packet(
             if(current_offset + (mtu - PACKET_HEADER_SIZE) >= packet_info.packet_length) {
                 // Last chunk
                 const uint16_t bytes_to_send = (uint16_t)packet_length - current_offset + PACKET_HEADER_SIZE + prepend_size;
+		const uint16_t bytes_to_send_net_order = htons(bytes_to_send - prepend_size);
 
                 memcpy(&buffer[PACKET_HEADER_SIZE + prepend_size], packet->packet_data_start + current_offset, bytes_to_send - prepend_size - PACKET_HEADER_SIZE);
-                memcpy(&buffer[prepend_size + offsetof(struct ip, ip_len)], &bytes_to_send, SIZEOF_FIELD(struct ip, ip_len));
+                memcpy(&buffer[prepend_size + offsetof(struct ip, ip_len)], &bytes_to_send_net_order, SIZEOF_FIELD(struct ip, ip_len));
 
                 HANDLE_CHECKSUM(buffer, bytes_to_send, prepend_size)
 
