@@ -15,13 +15,13 @@ static inline void swiftnet_validate_new_handler(const void* const new_handler, 
     #endif
 }
 
-void swiftnet_client_set_message_handler(SwiftNetClientConnection* const client, void (* const new_handler)(SwiftNetClientPacketData* const)) {
+void swiftnet_client_set_message_handler(struct SwiftNetClientConnection* const client, void (* const new_handler)(struct SwiftNetClientPacketData* const)) {
     swiftnet_validate_new_handler(new_handler, __func__);
 
     atomic_store(&client->packet_handler, new_handler);
 }
 
-void swiftnet_server_set_message_handler(SwiftNetServer* const server, void (* const new_handler)(SwiftNetServerPacketData* const)) {
+void swiftnet_server_set_message_handler(struct SwiftNetServer* const server, void (* const new_handler)(struct SwiftNetServerPacketData* const)) {
     swiftnet_validate_new_handler(new_handler, __func__);
 
     atomic_store(&server->packet_handler, new_handler);
@@ -29,7 +29,7 @@ void swiftnet_server_set_message_handler(SwiftNetServer* const server, void (* c
 
 // Read packet data into buffers
 
-void* swiftnet_client_read_packet(SwiftNetClientPacketData* const packet_data, const uint32_t data_size) {
+void* swiftnet_client_read_packet(struct SwiftNetClientPacketData* const packet_data, const uint32_t data_size) {
     const uint32_t data_already_read = (packet_data->current_pointer - packet_data->data) + data_size;
     if (data_already_read > packet_data->metadata.data_length) {
         fprintf(stderr, "Error: Tried to read more data than there actually is\n");
@@ -43,7 +43,7 @@ void* swiftnet_client_read_packet(SwiftNetClientPacketData* const packet_data, c
     return ptr;
 }
 
-void* swiftnet_server_read_packet(SwiftNetServerPacketData* const packet_data, const uint32_t data_size) {
+void* swiftnet_server_read_packet(struct SwiftNetServerPacketData* const packet_data, const uint32_t data_size) {
     const uint32_t data_already_read = (packet_data->current_pointer - packet_data->data) + data_size;
     if (data_already_read > packet_data->metadata.data_length) {
         fprintf(stderr, "Error: Tried to read more data than there actually is\n");
@@ -57,7 +57,7 @@ void* swiftnet_server_read_packet(SwiftNetServerPacketData* const packet_data, c
     return ptr;
 }
 
-void swiftnet_client_destroy_packet_data(SwiftNetClientPacketData* const packet_data, SwiftNetClientConnection* const client_conn) {
+void swiftnet_client_destroy_packet_data(struct SwiftNetClientPacketData* const packet_data, struct SwiftNetClientConnection* const client_conn) {
     if(packet_data->internal_pending_message != NULL) {
         free(packet_data->internal_pending_message->chunks_received);
         
@@ -70,7 +70,7 @@ void swiftnet_client_destroy_packet_data(SwiftNetClientPacketData* const packet_
     }
 }
 
-void swiftnet_server_destroy_packet_data(SwiftNetServerPacketData* const packet_data, SwiftNetServer* const server) {
+void swiftnet_server_destroy_packet_data(struct SwiftNetServerPacketData* const packet_data, struct SwiftNetServer* const server) {
     if(packet_data->internal_pending_message != NULL) {
         free(packet_data->internal_pending_message->chunks_received);
 

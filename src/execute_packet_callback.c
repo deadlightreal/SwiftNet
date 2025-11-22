@@ -6,7 +6,7 @@
 #include <unistd.h>
 #include <pthread.h>
 
-static PacketCallbackQueueNode* const wait_for_next_packet_callback(PacketCallbackQueue* const packet_queue) {
+static struct PacketCallbackQueueNode* const wait_for_next_packet_callback(struct PacketCallbackQueue* const packet_queue) {
     uint32_t owner_none = PACKET_CALLBACK_QUEUE_OWNER_NONE;
     while(!atomic_compare_exchange_strong_explicit(&packet_queue->owner, &owner_none, PACKET_CALLBACK_QUEUE_OWNER_EXECUTE_PACKET_CALLBACK, memory_order_acquire, memory_order_relaxed)) {
         owner_none = PACKET_CALLBACK_QUEUE_OWNER_NONE;
@@ -17,7 +17,7 @@ static PacketCallbackQueueNode* const wait_for_next_packet_callback(PacketCallba
         return NULL;
     }
 
-    PacketCallbackQueueNode* const node_to_process = packet_queue->first_node;
+    struct PacketCallbackQueueNode* const node_to_process = packet_queue->first_node;
 
     if(node_to_process->next == NULL) {
         packet_queue->first_node = NULL;
@@ -35,13 +35,13 @@ static PacketCallbackQueueNode* const wait_for_next_packet_callback(PacketCallba
     return node_to_process;
 }
 
-void execute_packet_callback(PacketCallbackQueue* const queue, void (* const _Atomic * const packet_handler) (void* const), const uint8_t connection_type, SwiftNetMemoryAllocator* const pending_message_memory_allocator, _Atomic bool* closing, const void* const connection, SwiftNetVector* const pending_messages) {
+void execute_packet_callback(struct PacketCallbackQueue* const queue, void (* const _Atomic * const packet_handler) (void* const), const uint8_t connection_type, struct SwiftNetMemoryAllocator* const pending_message_memory_allocator, _Atomic bool* closing, const void* const connection, struct SwiftNetVector* const pending_messages) {
     while (1) {
         if (atomic_load_explicit(closing, memory_order_acquire) == true) {
             break;
         }
 
-        const PacketCallbackQueueNode* const node = wait_for_next_packet_callback(queue);
+        const struct PacketCallbackQueueNode* const node = wait_for_next_packet_callback(queue);
         if(node == NULL) {
             continue;
         }
@@ -57,7 +57,7 @@ void execute_packet_callback(PacketCallbackQueue* const queue, void (* const _At
             vector_lock(pending_messages);
 
             for (uint32_t i = 0; i < pending_messages->size; i++) {
-                const SwiftNetPendingMessage* const pending_message = vector_get(pending_messages, i);
+                const struct SwiftNetPendingMessage* const pending_message = vector_get(pending_messages, i);
                 if (pending_message == node->pending_message) {
                     vector_remove(pending_messages, i);
                 }
@@ -75,7 +75,7 @@ void execute_packet_callback(PacketCallbackQueue* const queue, void (* const _At
 }
 
 void* execute_packet_callback_client(void* const void_client) {
-    SwiftNetClientConnection* const client = void_client;
+    struct SwiftNetClientConnection* const client = void_client;
 
     execute_packet_callback(&client->packet_callback_queue, (void*)&client->packet_handler, 0, &client->pending_messages_memory_allocator, &client->closing, void_client, &client->pending_messages);
 
@@ -83,7 +83,7 @@ void* execute_packet_callback_client(void* const void_client) {
 }
 
 void* execute_packet_callback_server(void* const void_server) {
-    SwiftNetServer* const server = void_server;
+    struct SwiftNetServer* const server = void_server;
 
     execute_packet_callback(&server->packet_callback_queue, (void*)&server->packet_handler, 1, &server->pending_messages_memory_allocator, &server->closing, void_server, &server->pending_messages);
 

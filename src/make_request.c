@@ -7,8 +7,8 @@
 
 #ifdef SWIFT_NET_REQUESTS
 
-SwiftNetClientPacketData* swiftnet_client_make_request(SwiftNetClientConnection* const client, SwiftNetPacketBuffer* const packet, const uint32_t timeout_ms) {
-    RequestSent* const request_sent = allocator_allocate(&requests_sent_memory_allocator);
+struct SwiftNetClientPacketData* swiftnet_client_make_request(struct SwiftNetClientConnection* const client, struct SwiftNetPacketBuffer* const packet, const uint32_t timeout_ms) {
+    struct RequestSent* const request_sent = allocator_allocate(&requests_sent_memory_allocator);
     request_sent->packet_data = NULL;
     request_sent->address = client->server_addr;
 
@@ -42,7 +42,7 @@ SwiftNetClientPacketData* swiftnet_client_make_request(SwiftNetClientConnection*
         }
 
         if (atomic_load_explicit(&request_sent->packet_data, memory_order_acquire) != NULL) {
-            SwiftNetClientPacketData* const packet_data = request_sent->packet_data;
+            struct SwiftNetClientPacketData* const packet_data = request_sent->packet_data;
 
             allocator_free(&requests_sent_memory_allocator, request_sent);
 
@@ -53,14 +53,14 @@ SwiftNetClientPacketData* swiftnet_client_make_request(SwiftNetClientConnection*
     }
 }
 
-SwiftNetServerPacketData* swiftnet_server_make_request(SwiftNetServer* const server, SwiftNetPacketBuffer* const packet, const SwiftNetClientAddrData addr_data, const uint32_t timeout_ms) {
-    RequestSent* const request_sent = allocator_allocate(&requests_sent_memory_allocator);
+struct SwiftNetServerPacketData* swiftnet_server_make_request(struct SwiftNetServer* const server, struct SwiftNetPacketBuffer* const packet, const struct SwiftNetClientAddrData addr_data, const uint32_t timeout_ms) {
+    struct RequestSent* const request_sent = allocator_allocate(&requests_sent_memory_allocator);
     request_sent->packet_data = NULL;
     request_sent->address = addr_data.sender_address;
 
     const uint32_t packet_length = packet->packet_append_pointer - packet->packet_data_start;
 
-    const SwiftNetPortInfo port_info = {
+    const struct SwiftNetPortInfo port_info = {
         .destination_port = addr_data.port,
         .source_port = server->server_port
     };
@@ -69,7 +69,7 @@ SwiftNetServerPacketData* swiftnet_server_make_request(SwiftNetServer* const ser
 
     while (1) {
         if (request_sent->packet_data != NULL) {
-            SwiftNetServerPacketData* const packet_data = request_sent->packet_data;
+            struct SwiftNetServerPacketData* const packet_data = request_sent->packet_data;
 
             allocator_free(&requests_sent_memory_allocator, (void*)request_sent);
 

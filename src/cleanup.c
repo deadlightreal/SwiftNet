@@ -18,7 +18,7 @@ void swiftnet_cleanup() {
     vector_lock(&listeners);
 
     for (uint16_t i = 0; i < listeners.size; i++) {
-        Listener* const current_listener = vector_get(&listeners, i);
+        struct Listener* const current_listener = vector_get(&listeners, i);
 
         pcap_breakloop(current_listener->pcap);
 

@@ -1,10 +1,10 @@
 #include "internal.h"
            
-void* check_existing_listener(const char* interface_name, void* const connection, const ConnectionType connection_type, const bool loopback) {
+void* check_existing_listener(const char* interface_name, void* const connection, const enum ConnectionType connection_type, const bool loopback) {
     vector_lock(&listeners);
 
     for (uint16_t i = 0; i < listeners.size; i++) {
-        Listener* const current_listener = vector_get(&listeners, i);
+        struct Listener* const current_listener = vector_get(&listeners, i);
         if (strcmp(interface_name, current_listener->interface_name) == 0) {
             if (connection_type == CONNECTION_TYPE_CLIENT) {
                 vector_lock(&current_listener->client_connections);
@@ -26,7 +26,7 @@ void* check_existing_listener(const char* interface_name, void* const connection
         }
     }
 
-    Listener* const new_listener = allocator_allocate(&listener_memory_allocator);
+    struct Listener* const new_listener = allocator_allocate(&listener_memory_allocator);
     new_listener->servers = vector_create(10);
     new_listener->client_connections = vector_create(10);
     new_listener->pcap = swiftnet_pcap_open(interface_name);

@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include <unistd.h>
 
-void swiftnet_client_cleanup(SwiftNetClientConnection* const client) {
+void swiftnet_client_cleanup(struct SwiftNetClientConnection* const client) {
     allocator_destroy(&client->packets_sending_memory_allocator);
     allocator_destroy(&client->pending_messages_memory_allocator);
     allocator_destroy(&client->packets_completed_memory_allocator);
@@ -18,12 +18,12 @@ void swiftnet_client_cleanup(SwiftNetClientConnection* const client) {
     vector_lock(&listeners);
 
     for (uint16_t i = 0; i < listeners.size; i++) {
-        Listener* const current_listener = vector_get(&listeners, i);
+        struct Listener* const current_listener = vector_get(&listeners, i);
         if (strcmp(interface_name, current_listener->interface_name) == 0) {
             vector_lock(&current_listener->client_connections);
 
             for (uint16_t inx = 0; inx < current_listener->client_connections.size; inx++) {
-                SwiftNetClientConnection* const current_client_conn = vector_get(&current_listener->client_connections, i);
+                struct SwiftNetClientConnection* const current_client_conn = vector_get(&current_listener->client_connections, i);
                 if (current_client_conn != client) {
                     continue;
                 }
@@ -51,7 +51,7 @@ void swiftnet_client_cleanup(SwiftNetClientConnection* const client) {
     allocator_free(&client_connection_memory_allocator, client);
 }
 
-void swiftnet_server_cleanup(SwiftNetServer* const server) {
+void swiftnet_server_cleanup(struct SwiftNetServer* const server) {
     allocator_destroy(&server->packets_sending_memory_allocator);
     allocator_destroy(&server->pending_messages_memory_allocator);
     allocator_destroy(&server->packets_completed_memory_allocator);
@@ -65,12 +65,12 @@ void swiftnet_server_cleanup(SwiftNetServer* const server) {
     vector_lock(&listeners);
 
     for (uint16_t i = 0; i < listeners.size; i++) {
-        Listener* const current_listener = vector_get(&listeners, i);
+        struct Listener* const current_listener = vector_get(&listeners, i);
         if (strcmp(interface_name, current_listener->interface_name) == 0) {
             vector_lock(&current_listener->servers);
 
             for (uint16_t inx = 0; inx < current_listener->servers.size; inx++) {
-                SwiftNetServer* const current_server = vector_get(&current_listener->servers, i);
+                struct SwiftNetServer* const current_server = vector_get(&current_listener->servers, i);
                 if (current_server != server) {
                     continue;
                 }

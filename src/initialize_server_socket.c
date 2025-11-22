@@ -13,8 +13,8 @@
 #include "internal/internal.h"
 #include "swift_net.h"
 
-SwiftNetServer* swiftnet_create_server(const uint16_t port, const bool loopback) {
-    SwiftNetServer* const new_server = allocator_allocate(&server_memory_allocator);
+struct SwiftNetServer* swiftnet_create_server(const uint16_t port, const bool loopback) {
+    struct SwiftNetServer* const new_server = allocator_allocate(&server_memory_allocator);
 
     #ifdef SWIFT_NET_ERROR
         if(unlikely(new_server == NULL)) {
@@ -46,23 +46,23 @@ SwiftNetServer* swiftnet_create_server(const uint16_t port, const bool loopback)
 
     new_server->eth_header = eth_header;
 
-    new_server->packet_queue = (PacketQueue){
+    new_server->packet_queue = (struct PacketQueue){
         .first_node = NULL,
         .last_node = NULL
     };
 
     atomic_store(&new_server->packet_queue.owner, PACKET_QUEUE_OWNER_NONE);
 
-    memset(&new_server->packet_callback_queue, 0x00, sizeof(PacketCallbackQueue));
+    memset(&new_server->packet_callback_queue, 0x00, sizeof(struct PacketCallbackQueue));
     atomic_store(&new_server->packet_callback_queue.owner, PACKET_CALLBACK_QUEUE_OWNER_NONE);
 
     atomic_store(&new_server->packet_handler, NULL);
 
-    new_server->pending_messages_memory_allocator = allocator_create(sizeof(SwiftNetPendingMessage), 100);
+    new_server->pending_messages_memory_allocator = allocator_create(sizeof(struct SwiftNetPendingMessage), 100);
     new_server->pending_messages = vector_create(100);
-    new_server->packets_sending_memory_allocator = allocator_create(sizeof(SwiftNetPacketSending), 100);
+    new_server->packets_sending_memory_allocator = allocator_create(sizeof(struct SwiftNetPacketSending), 100);
     new_server->packets_sending = vector_create(100);
-    new_server->packets_completed_memory_allocator = allocator_create(sizeof(SwiftNetPacketCompleted), 100);
+    new_server->packets_completed_memory_allocator = allocator_create(sizeof(struct SwiftNetPacketCompleted), 100);
     new_server->packets_completed = vector_create(100);
 
     atomic_store_explicit(&new_server->closing, false, memory_order_release);
