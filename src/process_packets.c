@@ -195,8 +195,8 @@ static inline void handle_request_response(const uint16_t packet_id, const struc
             vector_lock(pending_messages);
 
             for (uint32_t i = 0; i < pending_messages->size; i++) {
-                const SwiftNetPendingMessage* const pending_message = vector_get(pending_messages, i);
-                if ((connection_type == CONNECTION_TYPE_CLIENT && pending_message->packet_id == packet_id) || (connection_type == CONNECTION_TYPE_SERVER && pending_message->sender_address.s_addr == sender.s_addr && pending_message->packet_id == packet_id)) {
+                const SwiftNetPendingMessage* const current_pending_message = vector_get(pending_messages, i);
+                if (current_pending_message == pending_message) {
                     vector_remove(pending_messages, i);
                 }
             }
@@ -499,8 +499,9 @@ static inline void swiftnet_process_packets(
                 const uint16_t lost_chunk_indexes = return_lost_chunk_indexes(pending_message->chunks_received, pending_message->packet_info.chunk_amount, mtu - PACKET_HEADER_SIZE, (uint32_t*)(buffer + header_size));
 
                 const uint16_t packet_length = sizeof(struct ip) + sizeof(SwiftNetPacketInfo) + (lost_chunk_indexes * sizeof(uint32_t));
+                const uint16_t packet_length_net_order = htons(packet_length);
 
-                memcpy(buffer + prepend_size + offsetof(struct ip, ip_len), &packet_length, SIZEOF_FIELD(struct ip, ip_len));
+                memcpy(buffer + prepend_size + offsetof(struct ip, ip_len), &packet_length_net_order, SIZEOF_FIELD(struct ip, ip_len));
 
                 HANDLE_CHECKSUM(buffer, packet_length + prepend_size, prepend_size);
 
