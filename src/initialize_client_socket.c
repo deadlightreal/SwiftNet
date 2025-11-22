@@ -19,14 +19,14 @@
 #include <sys/time.h>
 #include <net/ethernet.h>
 
-typedef struct {
+struct RequestServerInformationArgs {
     pcap_t* pcap;
     const void* const data;
     const uint32_t size;
     const struct in_addr server_addr;
     const uint32_t timeout_ms;
-    SwiftNetClientConnection* const connection;
-} RequestServerInformationArgs;
+    struct SwiftNetClientConnection* const connection;
+};
 
 void* request_server_information(void* const request_server_information_args_void) {
     struct timeval tv;
@@ -34,7 +34,7 @@ void* request_server_information(void* const request_server_information_args_voi
 
     uint32_t start = (uint32_t)tv.tv_sec * 1000 + tv.tv_usec / 1000;
 
-    const RequestServerInformationArgs* const request_server_information_args = (RequestServerInformationArgs*)request_server_information_args_void;
+    const struct RequestServerInformationArgs* const request_server_information_args = (struct RequestServerInformationArgs*)request_server_information_args_void;
 
     while (1) {
         struct timeval tv;
@@ -66,8 +66,8 @@ void* request_server_information(void* const request_server_information_args_voi
 
 
 
-SwiftNetClientConnection* swiftnet_create_client(const char* const ip_address, const uint16_t port, const uint32_t timeout_ms) {
-    SwiftNetClientConnection* const new_connection = allocator_allocate(&client_connection_memory_allocator);
+struct SwiftNetClientConnection* swiftnet_create_client(const char* const ip_address, const uint16_t port, const uint32_t timeout_ms) {
+    struct SwiftNetClientConnection* const new_connection = allocator_allocate(&client_connection_memory_allocator);
 
     struct in_addr addr;
     inet_aton(ip_address, &addr);
@@ -90,7 +90,7 @@ SwiftNetClientConnection* swiftnet_create_client(const char* const ip_address, c
 
     new_connection->prepend_size = prepend_size;
 
-    new_connection->packet_queue = (PacketQueue){
+    new_connection->packet_queue = (struct PacketQueue){
         .first_node = NULL,
         .last_node = NULL
     };
@@ -107,7 +107,7 @@ SwiftNetClientConnection* swiftnet_create_client(const char* const ip_address, c
     new_connection->server_addr.s_addr = inet_addr(ip_address);
 
     // Request the server information, and proccess it
-    const SwiftNetPacketInfo request_server_information_packet_info = construct_packet_info(
+    const struct SwiftNetPacketInfo request_server_information_packet_info = construct_packet_info(
         0x00,
         PACKET_TYPE_REQUEST_INFORMATION,
         1,
@@ -130,12 +130,12 @@ SwiftNetClientConnection* swiftnet_create_client(const char* const ip_address, c
 
     HANDLE_CHECKSUM(request_server_info_buffer, sizeof(request_server_info_buffer), prepend_size)
 
-    memset(&new_connection->packet_callback_queue, 0x00, sizeof(PacketCallbackQueue));
+    memset(&new_connection->packet_callback_queue, 0x00, sizeof(struct PacketCallbackQueue));
     atomic_store(&new_connection->packet_callback_queue.owner, PACKET_CALLBACK_QUEUE_OWNER_NONE);
 
     pthread_t send_request_thread;
 
-    const RequestServerInformationArgs thread_args = {
+    const struct RequestServerInformationArgs thread_args = {
         .pcap = new_connection->pcap,
         .data = request_server_info_buffer,
         .size = sizeof(request_server_info_buffer),
@@ -148,7 +148,7 @@ SwiftNetClientConnection* swiftnet_create_client(const char* const ip_address, c
 
     atomic_store_explicit(&new_connection->initialized, false, memory_order_release);
 
-    Listener* const listener = check_existing_listener(loopback ? LOOPBACK_INTERFACE_NAME : default_network_interface, new_connection, CONNECTION_TYPE_CLIENT, loopback);
+    struct Listener* const listener = check_existing_listener(loopback ? LOOPBACK_INTERFACE_NAME : default_network_interface, new_connection, CONNECTION_TYPE_CLIENT, loopback);
 
     pthread_create(&send_request_thread, NULL, request_server_information, (void*)&thread_args);
 
@@ -164,7 +164,7 @@ SwiftNetClientConnection* swiftnet_create_client(const char* const ip_address, c
         allocator_free(&client_connection_memory_allocator, new_connection);
 
         for (uint16_t i = 0; i < listener->client_connections.size; i++) {
-            SwiftNetClientConnection* const client_connection = vector_get(&listener->client_connections, i);
+            struct SwiftNetClientConnection* const client_connection = vector_get(&listener->client_connections, i);
             if (client_connection == new_connection) {
                 vector_remove(&listener->client_connections, i);
             }
@@ -175,11 +175,11 @@ SwiftNetClientConnection* swiftnet_create_client(const char* const ip_address, c
         return NULL;
     }
 
-    new_connection->pending_messages_memory_allocator = allocator_create(sizeof(SwiftNetPendingMessage), 100);
+    new_connection->pending_messages_memory_allocator = allocator_create(sizeof(struct SwiftNetPendingMessage), 100);
     new_connection->pending_messages = vector_create(100);
-    new_connection->packets_sending_memory_allocator = allocator_create(sizeof(SwiftNetPacketSending), 100);
+    new_connection->packets_sending_memory_allocator = allocator_create(sizeof(struct SwiftNetPacketSending), 100);
     new_connection->packets_sending = vector_create(100);
-    new_connection->packets_completed_memory_allocator = allocator_create(sizeof(SwiftNetPacketCompleted), 100);
+    new_connection->packets_completed_memory_allocator = allocator_create(sizeof(struct SwiftNetPacketCompleted), 100);
     new_connection->packets_completed = vector_create(100);
 
     pthread_create(&new_connection->process_packets_thread, NULL, swiftnet_client_process_packets, new_connection);

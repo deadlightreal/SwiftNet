@@ -18,7 +18,7 @@ static inline void append_data(uint8_t** const append_pointer, const void* const
     (*append_pointer) += data_size;
 }
 
-void swiftnet_client_append_to_packet(const void* const data, const uint32_t data_size, SwiftNetPacketBuffer* const packet) {
+void swiftnet_client_append_to_packet(const void* const data, const uint32_t data_size, struct SwiftNetPacketBuffer* const packet) {
     #ifdef SWIFT_NET_ERROR
         validate_args(data, data_size, __func__);
     #endif
@@ -26,7 +26,7 @@ void swiftnet_client_append_to_packet(const void* const data, const uint32_t dat
     append_data(&packet->packet_append_pointer, data, data_size);
 }
 
-void swiftnet_server_append_to_packet(const void* const data, const uint32_t data_size, SwiftNetPacketBuffer* const packet) {
+void swiftnet_server_append_to_packet(const void* const data, const uint32_t data_size, struct SwiftNetPacketBuffer* const packet) {
     #ifdef SWIFT_NET_ERROR
         validate_args(data, data_size, __func__);
     #endif

@@ -8,8 +8,8 @@
 #include <stdlib.h>
 #include "run_tests.h"
 
-static _Atomic (SwiftNetClientConnection*) g_client_conn = NULL;
-static _Atomic (SwiftNetServer*) g_server = NULL;
+static _Atomic (struct SwiftNetClientConnection*) g_client_conn = NULL;
+static _Atomic (struct SwiftNetServer*) g_server = NULL;
 
 static _Atomic int g_test_result = INT_MAX;
 
@@ -53,8 +53,8 @@ static void reset_test_state() {
     atomic_store_explicit(&g_test_result, INT_MAX, memory_order_release);
 }
 
-static void on_client_packet(SwiftNetClientPacketData* packet) {
-    SwiftNetClientConnection* const client_conn = atomic_load_explicit(&g_client_conn, memory_order_acquire);
+static void on_client_packet(struct SwiftNetClientPacketData* packet) {
+    struct SwiftNetClientConnection* const client_conn = atomic_load_explicit(&g_client_conn, memory_order_acquire);
 
     if (packet->metadata.data_length != atomic_load_explicit(&g_request_data_len, memory_order_acquire)) {
         PRINT_ERROR("Server received invalid data size: %d | %d",
@@ -87,7 +87,7 @@ static void on_client_packet(SwiftNetClientPacketData* packet) {
     const uint32_t response_data_len = atomic_load_explicit(&g_response_data_len, memory_order_acquire);
     uint8_t* response_data = atomic_load_explicit(&g_response_data, memory_order_acquire);
 
-    SwiftNetPacketBuffer send_buffer = swiftnet_client_create_packet_buffer(response_data_len);
+    struct SwiftNetPacketBuffer send_buffer = swiftnet_client_create_packet_buffer(response_data_len);
 
     swiftnet_client_append_to_packet(response_data, response_data_len, &send_buffer);
 
@@ -99,8 +99,8 @@ static void on_client_packet(SwiftNetClientPacketData* packet) {
     atomic_store_explicit(&g_sent_response, true, memory_order_release);
 }
 
-static void on_server_packet(SwiftNetServerPacketData* packet) {
-    SwiftNetServer* const server = atomic_load_explicit(&g_server, memory_order_acquire);
+static void on_server_packet(struct SwiftNetServerPacketData* packet) {
+    struct SwiftNetServer* const server = atomic_load_explicit(&g_server, memory_order_acquire);
 
     if (packet->metadata.expecting_response) {
         if (packet->metadata.data_length != atomic_load_explicit(&g_request_data_len, memory_order_acquire)) {
@@ -134,7 +134,7 @@ static void on_server_packet(SwiftNetServerPacketData* packet) {
         const uint32_t response_data_len = atomic_load_explicit(&g_response_data_len, memory_order_acquire);
         uint8_t* response_data = atomic_load_explicit(&g_response_data, memory_order_acquire);
 
-        SwiftNetPacketBuffer send_buffer = swiftnet_server_create_packet_buffer(response_data_len);
+        struct SwiftNetPacketBuffer send_buffer = swiftnet_server_create_packet_buffer(response_data_len);
 
         swiftnet_server_append_to_packet(response_data, response_data_len, &send_buffer);
 
@@ -175,11 +175,11 @@ static void on_server_packet(SwiftNetServerPacketData* packet) {
         const uint32_t response_data_len = atomic_load_explicit(&g_response_data_len, memory_order_acquire);
         uint8_t* response_data = atomic_load_explicit(&g_response_data, memory_order_acquire);
 
-        SwiftNetPacketBuffer buffer = swiftnet_server_create_packet_buffer(request_data_len);
+        struct SwiftNetPacketBuffer buffer = swiftnet_server_create_packet_buffer(request_data_len);
 
         swiftnet_server_append_to_packet(request_data, request_data_len, &buffer);
 
-        SwiftNetServerPacketData* response = swiftnet_server_make_request(atomic_load_explicit(&g_server, memory_order_acquire), &buffer, packet->metadata.sender, 1000);
+        struct SwiftNetServerPacketData* response = swiftnet_server_make_request(atomic_load_explicit(&g_server, memory_order_acquire), &buffer, packet->metadata.sender, 1000);
 
         swiftnet_server_destroy_packet_buffer(&buffer);
 
@@ -235,7 +235,7 @@ static void on_server_packet(SwiftNetServerPacketData* packet) {
 int test_making_request(const union Args* args_ptr) {
     const struct TestMakingRequestArgs args = args_ptr->test_making_request_args;
 
-    SwiftNetServer* const server = swiftnet_create_server(8080, args.loopback);
+    struct SwiftNetServer* const server = swiftnet_create_server(8080, args.loopback);
     if (server == NULL) {
         PRINT_ERROR("Failed to create server");
         return -1;
@@ -243,7 +243,7 @@ int test_making_request(const union Args* args_ptr) {
 
     swiftnet_server_set_message_handler(server, on_server_packet);
 
-    SwiftNetClientConnection* const client_conn = swiftnet_create_client(args.ip_address, 8080, 1000);
+    struct SwiftNetClientConnection* const client_conn = swiftnet_create_client(args.ip_address, 8080, 1000);
     if (client_conn == NULL) {
         PRINT_ERROR("Failed to create client connection");
         return -1;
@@ -273,11 +273,11 @@ int test_making_request(const union Args* args_ptr) {
     atomic_store_explicit(&g_response_data_len, args.response_data_len, memory_order_release);
 
     if (args.receiver == Server) {
-        SwiftNetPacketBuffer buffer = swiftnet_client_create_packet_buffer(args.request_data_len);
+        struct SwiftNetPacketBuffer buffer = swiftnet_client_create_packet_buffer(args.request_data_len);
 
         swiftnet_client_append_to_packet(req_data, args.request_data_len, &buffer);
 
-        SwiftNetClientPacketData* const response = swiftnet_client_make_request(client_conn, &buffer, 1000);
+        struct SwiftNetClientPacketData* const response = swiftnet_client_make_request(client_conn, &buffer, 1000);
 
         swiftnet_client_destroy_packet_buffer(&buffer);
 
@@ -328,7 +328,7 @@ int test_making_request(const union Args* args_ptr) {
 
         return 0;
     } else {
-        SwiftNetPacketBuffer buffer = swiftnet_client_create_packet_buffer(sizeof(g_make_request_code));
+        struct SwiftNetPacketBuffer buffer = swiftnet_client_create_packet_buffer(sizeof(g_make_request_code));
 
         swiftnet_client_append_to_packet(&g_make_request_code, sizeof(g_make_request_code), &buffer);
 
