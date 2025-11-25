@@ -51,39 +51,29 @@ add_library(swiftnet STATIC ${SOURCE_FILES})
 target_compile_options(swiftnet PRIVATE -O0)
 target_link_options(swiftnet PRIVATE -O0)
 
-find_path(PCAP_INCLUDE_DIR
-    NAMES pcap.h
-    PATHS
-        $ENV{VCPKG_ROOT}/installed
-        /usr/include
-        /usr/local/include
-        /opt/homebrew/include
-        /usr/include
-)
+if(DEFINED ENV{VCPKG_ROOT} AND DEFINED CMAKE_VCPKG_TARGET_TRIPLET)
+    set(VCPKG_INCLUDE_DIR "$ENV{VCPKG_ROOT}/installed/${CMAKE_VCPKG_TARGET_TRIPLET}/include")
+    set(VCPKG_LIB_DIR "$ENV{VCPKG_ROOT}/installed/${CMAKE_VCPKG_TARGET_TRIPLET}/lib")
 
-# Find libpcap library
-find_library(PCAP_LIBRARY
-    NAMES pcap libpcap
-    PATHS
-        $ENV{VCPKG_ROOT}/installed
-        /usr/lib
-        /usr/local/lib
-        /opt/homebrew/lib
-        /usr/lib
-)
+    find_path(PCAP_INCLUDE_DIR pcap.h
+        PATHS ${VCPKG_INCLUDE_DIR} /usr/include /usr/local/include /opt/homebrew/include
+    )
+    find_library(PCAP_LIBRARY pcap
+        PATHS ${VCPKG_LIB_DIR} /usr/lib /usr/local/lib /opt/homebrew/lib
+    )
 
-include(FindPackageHandleStandardArgs)
-find_package_handle_standard_args(Pcap DEFAULT_MSG PCAP_LIBRARY PCAP_INCLUDE_DIR)
-
-if(PCAP_FOUND)
-    message(STATUS "Found libpcap: ${PCAP_LIBRARY} (includes: ${PCAP_INCLUDE_DIR})")
-    include_directories(${PCAP_INCLUDE_DIR})
+    if(PCAP_INCLUDE_DIR AND PCAP_LIBRARY)
+        message(STATUS "libpcap found: ${PCAP_LIBRARY}")
+        target_include_directories(swiftnet PUBLIC ${PCAP_INCLUDE_DIR})
+        target_link_libraries(swiftnet PUBLIC ${PCAP_LIBRARY})
+    else()
+        message(WARNING "libpcap not found!!!")
+    endif()
 else()
-    message(FATAL_ERROR "libpcap not found! Please install libpcap or set PCAP_INCLUDE_DIR/PCAP_LIBRARY")
-endif()
+    target_link_options(swiftnet PRIVATE -lpcap)
 
-target_include_directories(swiftnet PUBLIC ${PCAP_INCLUDE_DIR})
-target_link_libraries(swiftnet PUBLIC ${PCAP_LIBRARY})
+    message("using linking option: -lpcap")
+endif()
 
 set_target_properties(swiftnet PROPERTIES
     OUTPUT_NAME "swiftnet"
