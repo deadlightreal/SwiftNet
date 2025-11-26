@@ -360,17 +360,6 @@ static inline void swiftnet_process_packets(
 
         uint8_t* const packet_data = &packet_buffer[prepend_size + PACKET_HEADER_SIZE];
 
-        // Check if user set a function that will execute with the packet data received as arg
-        #ifdef SWIFT_NET_ERROR
-            const void* const packet_handler_derenfernced = atomic_load(packet_handler);
-            if(unlikely(packet_handler_derenfernced == NULL)) {
-                allocator_free(&packet_queue_node_memory_allocator, (void*)node);
-                allocator_free(&packet_buffer_memory_allocator, packet_buffer);
-                fprintf(stderr, "Message Handler not set!!\n");
-                continue;
-            }
-        #endif
-
         struct ip ip_header;
         memcpy(&ip_header, packet_buffer + prepend_size, sizeof(ip_header));
 
