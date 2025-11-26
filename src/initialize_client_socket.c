@@ -106,6 +106,8 @@ struct SwiftNetClientConnection* swiftnet_create_client(const char* const ip_add
 
     new_connection->server_addr.s_addr = inet_addr(ip_address);
 
+    atomic_store_explicit(&new_connection->packet_handler_user_arg, NULL, memory_order_release);
+
     // Request the server information, and proccess it
     const struct SwiftNetPacketInfo request_server_information_packet_info = construct_packet_info(
         0x00,

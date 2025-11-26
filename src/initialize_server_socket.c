@@ -54,9 +54,10 @@ struct SwiftNetServer* swiftnet_create_server(const uint16_t port, const bool lo
     atomic_store(&new_server->packet_queue.owner, PACKET_QUEUE_OWNER_NONE);
 
     memset(&new_server->packet_callback_queue, 0x00, sizeof(struct PacketCallbackQueue));
-    atomic_store(&new_server->packet_callback_queue.owner, PACKET_CALLBACK_QUEUE_OWNER_NONE);
+    atomic_store_explicit(&new_server->packet_callback_queue.owner, PACKET_CALLBACK_QUEUE_OWNER_NONE, memory_order_release);
 
-    atomic_store(&new_server->packet_handler, NULL);
+    atomic_store_explicit(&new_server->packet_handler, NULL, memory_order_release);
+    atomic_store_explicit(&new_server->packet_handler_user_arg, NULL, memory_order_release);
 
     new_server->pending_messages_memory_allocator = allocator_create(sizeof(struct SwiftNetPendingMessage), 100);
     new_server->pending_messages = vector_create(100);

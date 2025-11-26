@@ -217,7 +217,8 @@ struct SwiftNetClientConnection {
     struct SwiftNetPortInfo port_info;
     struct in_addr server_addr;
     socklen_t server_addr_len;
-    _Atomic(void (*)(struct SwiftNetClientPacketData* const)) packet_handler;
+    _Atomic(void (*)(struct SwiftNetClientPacketData* const, void* const user)) packet_handler;
+    _Atomic(void*) packet_handler_user_arg;
     _Atomic bool closing;
     _Atomic bool initialized;
     uint16_t addr_type;
@@ -240,7 +241,8 @@ struct SwiftNetServer {
     pcap_t* pcap;
     struct ether_header eth_header;
     uint16_t server_port;
-    _Atomic(void (*)(struct SwiftNetServerPacketData* const)) packet_handler;
+    _Atomic(void (*)(struct SwiftNetServerPacketData* const, void* const user)) packet_handler;
+    _Atomic(void*) packet_handler_user_arg;
     _Atomic bool closing;
     uint16_t addr_type;
     bool loopback;
@@ -265,7 +267,8 @@ struct SwiftNetServer {
  */
 extern void swiftnet_server_set_message_handler(
     struct SwiftNetServer* const server,
-    void (* const new_handler)(struct SwiftNetServerPacketData* const)
+    void (* const new_handler)(struct SwiftNetServerPacketData* const, void* const),
+    void* const user_arg
 );
 
 /**
@@ -275,7 +278,8 @@ extern void swiftnet_server_set_message_handler(
  */
 extern void swiftnet_client_set_message_handler(
     struct SwiftNetClientConnection* const client,
-    void (* const new_handler)(struct SwiftNetClientPacketData* const)
+    void (* const new_handler)(struct SwiftNetClientPacketData* const, void* const),
+    void* const user_arg
 );
 
 /**

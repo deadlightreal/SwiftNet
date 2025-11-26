@@ -36,7 +36,7 @@ static struct PacketCallbackQueueNode* const wait_for_next_packet_callback(struc
     return node_to_process;
 }
 
-void execute_packet_callback(struct PacketCallbackQueue* const queue, void (* const _Atomic * const packet_handler) (void* const), const enum ConnectionType connection_type, struct SwiftNetMemoryAllocator* const pending_message_memory_allocator, _Atomic bool* closing, void* const connection, struct SwiftNetVector* const pending_messages) {
+void execute_packet_callback(struct PacketCallbackQueue* const queue, void (* const _Atomic * const packet_handler) (void* const, void* const), const enum ConnectionType connection_type, struct SwiftNetMemoryAllocator* const pending_message_memory_allocator, _Atomic bool* closing, void* const connection, struct SwiftNetVector* const pending_messages, _Atomic(void*)* user_data) {
     while (1) {
         if (atomic_load_explicit(closing, memory_order_acquire) == true) {
             break;
@@ -67,7 +67,7 @@ void execute_packet_callback(struct PacketCallbackQueue* const queue, void (* co
             vector_unlock(pending_messages);
         }
 
-        void (*const packet_handler_loaded)(void*) = atomic_load(packet_handler);
+        void (*const packet_handler_loaded)(void* const, void* const) = atomic_load(packet_handler);
         if (unlikely(packet_handler_loaded == NULL)) {
             if (connection_type == CONNECTION_TYPE_CLIENT) {
                 swiftnet_client_destroy_packet_data(node->packet_data, connection);
@@ -80,7 +80,7 @@ void execute_packet_callback(struct PacketCallbackQueue* const queue, void (* co
             continue;
         }
 
-        (*packet_handler_loaded)(node->packet_data);
+        (*packet_handler_loaded)(node->packet_data, atomic_load_explicit(user_data, memory_order_acquire));
 
         allocator_free(&packet_callback_queue_node_memory_allocator, (void*)node);
     }
@@ -89,7 +89,7 @@ void execute_packet_callback(struct PacketCallbackQueue* const queue, void (* co
 void* execute_packet_callback_client(void* const void_client) {
     struct SwiftNetClientConnection* const client = void_client;
 
-    execute_packet_callback(&client->packet_callback_queue, (void*)&client->packet_handler, CONNECTION_TYPE_CLIENT, &client->pending_messages_memory_allocator, &client->closing, void_client, &client->pending_messages);
+    execute_packet_callback(&client->packet_callback_queue, (void*)&client->packet_handler, CONNECTION_TYPE_CLIENT, &client->pending_messages_memory_allocator, &client->closing, void_client, &client->pending_messages, &client->packet_handler_user_arg);
 
     return NULL;
 }
@@ -97,7 +97,7 @@ void* execute_packet_callback_client(void* const void_client) {
 void* execute_packet_callback_server(void* const void_server) {
     struct SwiftNetServer* const server = void_server;
 
-    execute_packet_callback(&server->packet_callback_queue, (void*)&server->packet_handler, CONNECTION_TYPE_SERVER, &server->pending_messages_memory_allocator, &server->closing, void_server, &server->pending_messages);
+    execute_packet_callback(&server->packet_callback_queue, (void*)&server->packet_handler, CONNECTION_TYPE_SERVER, &server->pending_messages_memory_allocator, &server->closing, void_server, &server->pending_messages, &server->packet_handler_user_arg);
 
     return NULL;
 }
