@@ -46,7 +46,7 @@ static void reset_test_state() {
     atomic_store_explicit(&g_test_result, INT_MAX, memory_order_release);
 }
 
-static void on_client_packet(struct SwiftNetClientPacketData* packet) {
+static void on_client_packet(struct SwiftNetClientPacketData* packet, void* const user) {
     struct SwiftNetClientConnection* const client_conn = atomic_load_explicit(&g_client_conn, memory_order_acquire);
 
     while (!atomic_load_explicit(&g_client_send_done, memory_order_acquire)) usleep(1000);
@@ -84,7 +84,7 @@ static void on_client_packet(struct SwiftNetClientPacketData* packet) {
     swiftnet_client_destroy_packet_data(packet, client_conn);
 }
 
-static void on_server_packet(struct SwiftNetServerPacketData* packet) {
+static void on_server_packet(struct SwiftNetServerPacketData* packet, void* const user) {
     struct SwiftNetServer* const server = atomic_load_explicit(&g_server, memory_order_acquire);
 
     while (!atomic_load_explicit(&g_server_send_done, memory_order_acquire)) usleep(1000);
@@ -143,7 +143,7 @@ int test_sending_packet(const union Args* args_ptr) {
         return -1;
     }
 
-    swiftnet_server_set_message_handler(server, on_server_packet);
+    swiftnet_server_set_message_handler(server, on_server_packet, NULL);
 
     struct SwiftNetClientConnection* const client_conn = swiftnet_create_client(args.ip_address, 8080, 1000);
     if (client_conn == NULL) {
@@ -151,7 +151,7 @@ int test_sending_packet(const union Args* args_ptr) {
         return -1;
     }
 
-    swiftnet_client_set_message_handler(client_conn, on_client_packet);
+    swiftnet_client_set_message_handler(client_conn, on_client_packet, NULL);
 
     atomic_store_explicit(&g_client_conn, client_conn, memory_order_release);
     atomic_store_explicit(&g_server, server, memory_order_release);

@@ -1,5 +1,6 @@
 #include "internal/internal.h"
 #include "swift_net.h"
+#include <stdatomic.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -15,16 +16,18 @@ static inline void swiftnet_validate_new_handler(const void* const new_handler, 
     #endif
 }
 
-void swiftnet_client_set_message_handler(struct SwiftNetClientConnection* const client, void (* const new_handler)(struct SwiftNetClientPacketData* const)) {
+void swiftnet_client_set_message_handler(struct SwiftNetClientConnection* const client, void (* const new_handler)(struct SwiftNetClientPacketData* const, void* const), void* const user_arg) {
     swiftnet_validate_new_handler(new_handler, __func__);
 
-    atomic_store(&client->packet_handler, new_handler);
+    atomic_store_explicit(&client->packet_handler, new_handler, memory_order_release);
+    atomic_store_explicit(&client->packet_handler_user_arg, user_arg, memory_order_release);
 }
 
-void swiftnet_server_set_message_handler(struct SwiftNetServer* const server, void (* const new_handler)(struct SwiftNetServerPacketData* const)) {
+void swiftnet_server_set_message_handler(struct SwiftNetServer* const server, void (* const new_handler)(struct SwiftNetServerPacketData* const, void* const), void* const user_arg) {
     swiftnet_validate_new_handler(new_handler, __func__);
 
-    atomic_store(&server->packet_handler, new_handler);
+    atomic_store_explicit(&server->packet_handler, new_handler, memory_order_release);
+    atomic_store_explicit(&server->packet_handler_user_arg, user_arg, memory_order_release);
 }
 
 // Read packet data into buffers
