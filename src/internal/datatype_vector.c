@@ -16,7 +16,7 @@ void vector_unlock(struct SwiftNetVector* const vector) {
 struct SwiftNetVector vector_create(const uint32_t starting_amount) {
     void* const data_ptr = malloc(sizeof(void*) * starting_amount);
     if (unlikely(data_ptr == NULL)) {
-        fprintf(stderr, "Failed to malloc\n");
+        PRINT_ERROR("Failed to malloc");
         exit(EXIT_FAILURE);
     }
 
@@ -45,7 +45,7 @@ void vector_push(struct SwiftNetVector* const vector, void* const data) {
 
         void** const new_data_ptr = realloc(vector->data, sizeof(void*) * new_capacity);
         if (unlikely(new_data_ptr == NULL)) {
-            fprintf(stderr, "Failed to malloc\n");
+            PRINT_ERROR("Failed to malloc");
             exit(EXIT_FAILURE);
         }
 

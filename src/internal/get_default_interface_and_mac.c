@@ -58,7 +58,7 @@ int get_default_interface_and_mac(char* restrict interface_name, uint32_t interf
     }
 
     if (!match) {
-        fprintf(stderr, "No matching interface found for IP %s\n", local_ip);
+        PRINT_ERROR("No matching interface found for IP %s", local_ip);
         freeifaddrs(ifaddr);
         return -1;
     }
@@ -96,7 +96,7 @@ int get_default_interface_and_mac(char* restrict interface_name, uint32_t interf
     freeifaddrs(ifaddr);
 
     if (!mac_found) {
-        fprintf(stderr, "No MAC address found for interface %s\n", interface_name);
+        PRINT_ERROR("No MAC address found for interface %s", interface_name);
         return -1;
     }
 

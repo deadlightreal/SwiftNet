@@ -58,13 +58,13 @@ struct SwiftNetMemoryAllocator allocator_create(const uint32_t item_size, const 
     void* const stack_allocated_memory = malloc(chunk_item_amount * sizeof(void*));
 
     if (unlikely(allocated_memory == NULL || stack_allocated_memory == NULL)) {
-        fprintf(stderr, "Failed to allocate memory\n");
+        PRINT_ERROR("Failed to allocate memory");
         exit(EXIT_FAILURE);
     }
 
     struct SwiftNetMemoryAllocatorStack* const first_stack_pointers = malloc(sizeof(struct SwiftNetMemoryAllocatorStack));
     if (unlikely(first_stack_pointers == NULL)) {
-        fprintf(stderr, "Failed to allocate memory\n");
+        PRINT_ERROR("Failed to allocate memory");
         exit(EXIT_FAILURE);
     }
 
@@ -76,7 +76,7 @@ struct SwiftNetMemoryAllocator allocator_create(const uint32_t item_size, const 
 
     struct SwiftNetMemoryAllocatorStack* const first_stack_data = malloc(sizeof(struct SwiftNetMemoryAllocatorStack));
     if (unlikely(first_stack_data == NULL)) {
-        fprintf(stderr, "Failed to allocate memory\n");
+        PRINT_ERROR("Failed to allocate memory");
         exit(EXIT_FAILURE);
     }
 
@@ -124,13 +124,13 @@ static void create_new_stack(struct SwiftNetMemoryAllocator* const memory_alloca
     void* const allocated_memory = malloc(memory_allocator->item_size * chunk_item_amount);
     void* const stack_allocated_memory = malloc(chunk_item_amount * sizeof(void*));
     if (unlikely(allocated_memory == NULL || stack_allocated_memory == NULL)) {
-        fprintf(stderr, "Failed to allocate memory\n");
+        PRINT_ERROR("Failed to allocate memory");
         exit(EXIT_FAILURE);
     }
 
     struct SwiftNetMemoryAllocatorStack* const stack_pointers = malloc(sizeof(struct SwiftNetMemoryAllocatorStack));
     if (unlikely(stack_pointers == NULL)) {
-        fprintf(stderr, "Failed to allocate memory\n");
+        PRINT_ERROR("Failed to allocate memory");
         exit(EXIT_FAILURE);
     }
 
@@ -142,7 +142,7 @@ static void create_new_stack(struct SwiftNetMemoryAllocator* const memory_alloca
 
     struct SwiftNetMemoryAllocatorStack* const stack_data = malloc(sizeof(struct SwiftNetMemoryAllocatorStack));
     if (unlikely(stack_data == NULL)) {
-        fprintf(stderr, "Failed to allocate memory\n");
+        PRINT_ERROR("Failed to allocate memory");
         exit(EXIT_FAILURE);
     }
 
@@ -204,7 +204,7 @@ void allocator_free(struct SwiftNetMemoryAllocator* const memory_allocator, void
         const bool already_free = is_already_free(memory_allocator, memory_location);
 
         if (already_free == true) {
-            fprintf(stderr, "Pointer %p has already been freed\n", memory_location);
+            PRINT_ERROR("Pointer %p has already been freed", memory_location);
             exit(EXIT_FAILURE);
         }
     #endif

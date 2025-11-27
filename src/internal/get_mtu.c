@@ -16,7 +16,7 @@ const uint32_t get_mtu(const char* const restrict interface, const int sockfd) {
     strncpy(ifr.ifr_name, interface, IFNAMSIZ - 1);
 
     if (ioctl(sockfd, SIOCGIFMTU, &ifr) < 0) {
-        fprintf(stderr, "ioctl failed\n");
+        PRINT_ERROR("ioctl failed");
          exit(EXIT_FAILURE);
     }
 
