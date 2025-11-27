@@ -18,7 +18,7 @@ struct SwiftNetServer* swiftnet_create_server(const uint16_t port, const bool lo
 
     #ifdef SWIFT_NET_ERROR
         if(unlikely(new_server == NULL)) {
-            fprintf(stderr, "Failed to get an empty server\n");
+            PRINT_ERROR("Failed to get an empty server");
             exit(EXIT_FAILURE);
         }
     #endif
@@ -29,7 +29,7 @@ struct SwiftNetServer* swiftnet_create_server(const uint16_t port, const bool lo
     // Init pcap device
     new_server->pcap = swiftnet_pcap_open(loopback ? LOOPBACK_INTERFACE_NAME : default_network_interface);
     if (new_server->pcap == NULL) {
-        fprintf(stderr, "Failed to open bpf\n");
+        PRINT_ERROR("Failed to open bpf");
         exit(EXIT_FAILURE);
     }
 

@@ -53,6 +53,9 @@
 
 #define SIZEOF_FIELD(type, field) sizeof(((type *)0)->field)
 
+#define PRINT_ERROR(fmt, ...) \
+    do { fprintf(stderr, fmt " | function: %s | line: %d\n", ##__VA_ARGS__, __FUNCTION__, __LINE__); } while (0)
+
 #define MIN(one, two) (one > two ? two : one)
 
 static const uint16_t crc16_table[256] = {
