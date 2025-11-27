@@ -36,7 +36,7 @@ struct SwiftNetVector listeners;
 void swiftnet_initialize() {
     const int temp_socket = socket(AF_INET, SOCK_DGRAM, 0);
     if (temp_socket < 0) {
-        perror("socket");
+        PRINT_ERROR("Failed to create temp socket");
         exit(EXIT_FAILURE);
     }
 
@@ -46,7 +46,7 @@ void swiftnet_initialize() {
     inet_pton(AF_INET, "8.8.8.8", &remote.sin_addr);
 
     if (connect(temp_socket, (struct sockaddr *)&remote, sizeof(remote)) < 0) {
-        fprintf(stderr, "Failed to connect temp socket\n");
+        PRINT_ERROR("Failed to connect temp socket");
         close(temp_socket);
         exit(EXIT_FAILURE);
     }
@@ -55,7 +55,7 @@ void swiftnet_initialize() {
     socklen_t private_sockaddr_len = sizeof(private_sockaddr);
 
     if(getsockname(temp_socket, &private_sockaddr, &private_sockaddr_len) == -1) {
-        fprintf(stderr, "Failed to get private ip address\n");
+        PRINT_ERROR("Failed to get private ip address");
         close(temp_socket);
         exit(EXIT_FAILURE);
     }
@@ -64,15 +64,15 @@ void swiftnet_initialize() {
 
     const int got_default_interface = get_default_interface_and_mac(default_network_interface, sizeof(default_network_interface), mac_address, temp_socket);
     if(unlikely(got_default_interface != 0)) {
+        PRINT_ERROR("Failed to get the default interface");
         close(temp_socket);
-        fprintf(stderr, "Failed to get the default interface\n");
         exit(EXIT_FAILURE);
     }
 
     maximum_transmission_unit = get_mtu(default_network_interface, temp_socket);
     if(unlikely(maximum_transmission_unit == 0)) {
+        PRINT_ERROR("Failed to get the maximum transmission unit");
         close(temp_socket);
-        fprintf(stderr, "Failed to get the maximum transmission unit\n");
         exit(EXIT_FAILURE);
     }
 

@@ -250,7 +250,7 @@ inline void swiftnet_send_packet(
 
         struct SwiftNetPacketSending* const new_packet_sending = allocator_allocate(packets_sending_memory_allocator);
         if(unlikely(new_packet_sending == NULL)) {
-            fprintf(stderr, "Failed to send a packet: exceeded maximum amount of sending packets at the same time\n");
+            PRINT_ERROR("Failed to send a packet: exceeded maximum amount of sending packets at the same time");
             return;
         }
 

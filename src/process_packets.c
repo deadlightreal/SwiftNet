@@ -644,7 +644,7 @@ static inline void swiftnet_process_packets(
                     const uint32_t lost_chunks_num = return_lost_chunk_indexes(pending_message->chunks_received, packet_info.chunk_amount, chunk_data_size, (uint32_t*)lost_chunks_buffer);
 
                     if (lost_chunks_num != 0) {
-                        fprintf(stderr, "Packet marked as completed, but %d chunks are missing\n", lost_chunks_num);
+                        PRINT_ERROR("Packet marked as completed, but %d chunks are missing", lost_chunks_num);
 
                         for (uint32_t i = 0; i < lost_chunks_num; i++) {
                             printf("chunk index missing: %d\n", *(lost_chunks_buffer + i));  
