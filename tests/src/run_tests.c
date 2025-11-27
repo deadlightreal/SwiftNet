@@ -5,6 +5,7 @@
 
 int main() {
     const struct Test tests[] = {
+        // Loopback tests
         {
             .function = test_sending_packet,
             .args = {.test_sending_packet_args = {
@@ -95,6 +96,103 @@ int main() {
             .args = {.test_making_request_args = {
                 .ip_address = "127.0.0.1",
                 .loopback = true,
+                .receiver = Server,
+                .request_data_len = 100,
+                .response_data_len = 10000
+            }},
+            .test_name = "Test server making large response"
+        },
+        // local default interface test
+        {
+            .function = test_sending_packet,
+            .args = {.test_sending_packet_args = {
+                .client_data_len = 50,
+                .server_data_len = 50,
+                .ip_address = "255.255.255.255",
+                .loopback = false
+            }},
+            .test_name = "Test sending small packets"
+        },
+        {
+            .function = test_sending_packet,
+            .args = {.test_sending_packet_args = {
+                .client_data_len = 0,
+                .server_data_len = 10000,
+                .ip_address = "255.255.255.255",
+                .loopback = false
+            }},
+            .test_name = "Test client sending large packet"
+        },
+        {
+            .function = test_sending_packet,
+            .args = {.test_sending_packet_args = {
+                .client_data_len = 10000,
+                .server_data_len = 10,
+                .ip_address = "255.255.255.255",
+                .loopback = false
+            }},
+            .test_name = "Test server sending large packet"
+        },
+        {
+            .function = test_making_request,
+            .args = {.test_making_request_args = {
+                .ip_address = "255.255.255.255",
+                .loopback = false,
+                .receiver = Server,
+                .request_data_len = 100,
+                .response_data_len = 100
+            }},
+            .test_name = "Test client making small request"
+        },
+        {
+            .function = test_making_request,
+            .args = {.test_making_request_args = {
+                .ip_address = "255.255.255.255",
+                .loopback = false,
+                .receiver = Client,
+                .request_data_len = 100,
+                .response_data_len = 100
+            }},
+            .test_name = "Test server making small request"
+        },
+        {
+            .function = test_making_request,
+            .args = {.test_making_request_args = {
+                .ip_address = "255.255.255.255",
+                .loopback = false,
+                .receiver = Client,
+                .request_data_len = 10000,
+                .response_data_len = 100
+            }},
+            .test_name = "Test server making large request"
+        },
+        {
+            .function = test_making_request,
+            .args = {.test_making_request_args = {
+                .ip_address = "255.255.255.255",
+                .loopback = false,
+                .receiver = Server,
+                .request_data_len = 10000,
+                .response_data_len = 100
+            }},
+            .test_name = "Test client making large request"
+        },
+        {
+            .function = test_making_request,
+            .args = {.test_making_request_args = {
+                .ip_address = "255.255.255.255",
+                .loopback = false,
+                .receiver = Client,
+                .request_data_len = 100,
+                .response_data_len = 10000
+            }},
+            .test_name = "Test client making large response"
+        },
+        {
+            .function = test_making_request,
+            .args = {.test_making_request_args = {
+                .ip_address = "255.255.255.255",
+                .loopback = false,
                 .receiver = Server,
                 .request_data_len = 100,
                 .response_data_len = 10000
