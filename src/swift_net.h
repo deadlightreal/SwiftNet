@@ -24,7 +24,7 @@
     #define SWIFT_NET_REQUESTS
 #endif
 
-#ifndef SWIFT_NET_DISABLE_DEBUGGING
+#ifndef jWIFT_NET_DISABLE_DEBUGGING
     #define SWIFT_NET_DEBUG
 #endif
 
@@ -184,10 +184,14 @@ struct SwiftNetSentSuccessfullyCompletedPacketSignal {
 
 struct SwiftNetMemoryAllocatorStack {
     _Atomic uint32_t size;
+    void* pointers;
     void* data;
     _Atomic(void*) next;
     _Atomic(void*) previous;
     _Atomic uint8_t owner;
+    #ifdef SWIFT_NET_DEBUG
+    uint8_t* ptr_status;
+    #endif
 };
 
 struct SwiftNetChunkStorageManager {
@@ -196,7 +200,6 @@ struct SwiftNetChunkStorageManager {
 };
 
 struct SwiftNetMemoryAllocator {
-    struct SwiftNetChunkStorageManager free_memory_pointers;
     struct SwiftNetChunkStorageManager data;
     uint32_t item_size;
     uint32_t chunk_item_amount;
