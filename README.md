@@ -1,6 +1,6 @@
 # SwiftNet - Networking Library
 
-### SwiftNet is a simple and easy-to-use networking library built using raw sockets. It is designed for developers who value simplicity, readability, and good performance.
+### SwiftNet is a simple and easy-to-use networking library built using pcap. It is designed for developers who value simplicity, readability, and good performance.
 
 ## This library focuses on functionality over speed for now. If you need high performance for a release, consider waiting. We plan to optimize performance once the library is stable and feature-complete.
 
