@@ -191,6 +191,7 @@ struct SwiftNetMemoryAllocatorStack {
     _Atomic uint8_t owner;
     #ifdef SWIFT_NET_DEBUG
     uint8_t* ptr_status;
+    _Atomic bool accessing_ptr_status;
     #endif
 };
 
