@@ -1,5 +1,6 @@
 #include <netinet/in.h>
 #include <stdatomic.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <sys/socket.h>
 #include <time.h>
@@ -10,6 +11,8 @@
 
 #ifdef SWIFT_NET_DEBUG
     struct SwiftNetDebugger debugger = {.flags = 0};
+    uint32_t bytes_leaked = 0;
+    uint32_t items_leaked = 0;
 #endif
 
 uint32_t maximum_transmission_unit = 0x00;
