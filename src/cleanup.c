@@ -1,6 +1,7 @@
 #include "internal/internal.h"
 #include "swift_net.h"
 #include <stdint.h>
+#include <stdio.h>
 
 void swiftnet_cleanup() {
     allocator_destroy(&packet_queue_node_memory_allocator);
@@ -36,4 +37,6 @@ void swiftnet_cleanup() {
     allocator_destroy(&client_connection_memory_allocator);
 
     allocator_destroy(&listener_memory_allocator);
+
+    printf("Bytes leaked: %d\nItems leaked: %d\n", bytes_leaked, items_leaked);
 }
