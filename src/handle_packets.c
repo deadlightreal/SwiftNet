@@ -70,6 +70,8 @@ static inline void swiftnet_handle_packets(const uint16_t source_port, pthread_t
             allocator_free(&packet_buffer_memory_allocator, packet_buffer);
             return;
         }
+    } else {
+        node->sender_address.s_addr = 0;
     }
 
     node->data_read = len;
