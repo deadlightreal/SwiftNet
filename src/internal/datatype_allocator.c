@@ -295,6 +295,10 @@ void allocator_destroy(struct SwiftNetMemoryAllocator* const memory_allocator) {
             for (uint32_t byte = 0; byte < bytes; byte++) {
                 uint8_t mask = current_stack->ptr_status[byte];
 
+                if (mask == 0x00) {
+                    continue;
+                }
+
                 for (uint8_t bit = 0; bit < 8; bit++) {
                     uint32_t idx = byte * 8 + bit;
                     if (idx >= total_items) break;
