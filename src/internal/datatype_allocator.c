@@ -286,18 +286,24 @@ void allocator_destroy(struct SwiftNetMemoryAllocator* const memory_allocator) {
             break;
         }
 
-        free(current_stack);
-
         #ifdef SWIFT_NET_DEBUG
             lock_ptr_status(current_stack);
 
-            for (uint32_t i = 0; i < sizeof(uint8_t) * (memory_allocator->chunk_item_amount / 8) + 1; i++) {
-                if (current_stack->ptr_status + i != 0x00) {
-                    for(uint8_t bit = 0; bit < 8; bit++) {
-                        if((*(current_stack->ptr_status + i) & (1 << bit)) == 0x00) {
-                            bytes_leaked += memory_allocator->item_size;
-                            items_leaked++;
-                        }
+            const uint32_t total_items = memory_allocator->chunk_item_amount;
+            const uint32_t bytes = (total_items / 8) + 1;
+
+            for (uint32_t byte = 0; byte < bytes; byte++) {
+                uint8_t mask = current_stack->ptr_status[byte];
+
+                for (uint8_t bit = 0; bit < 8; bit++) {
+                    uint32_t idx = byte * 8 + bit;
+                    if (idx >= total_items) break;
+
+                    bool allocated = (mask & (1u << bit)) != 0;
+
+                    if (allocated) {
+                        items_leaked++;
+                        bytes_leaked += memory_allocator->item_size;
                     }
                 }
             }
@@ -306,6 +312,8 @@ void allocator_destroy(struct SwiftNetMemoryAllocator* const memory_allocator) {
 
             free(current_stack->ptr_status);
         #endif
+
+        free(current_stack);
 
         current_stack = next_stack;
     }
