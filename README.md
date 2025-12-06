@@ -28,15 +28,11 @@ git clone https://github.com/deadlightreal/SwiftNet
 ```bash
 cd SwiftNet/build
 ```
-3. Generate the build files using CMake:
+3. Compile:
 ```bash
-cmake ../src
+./build_for_release.sh
 ```
-4. Build the project using Make:
-```bash
-make
-```
-5. To use SwiftNet in your project:
+4. To use SwiftNet in your project:
 - Include the SwiftNet.h header from the `src` directory in your main source file (e.g., `main.c`).
 - Link against the static library `libswiftnet.a` using your compiler.
 
