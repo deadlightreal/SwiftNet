@@ -48,8 +48,16 @@ else()
 endif()
 
 add_library(swiftnet STATIC ${SOURCE_FILES})
-target_compile_options(swiftnet PRIVATE -O0)
-target_link_options(swiftnet PRIVATE -O0)
+
+if (SWIFT_NET_INTERNAL_TESTING)
+    add_compile_definitions(SWIFT_NET_INTERNAL_TESTING)
+
+    target_compile_options(swiftnet PRIVATE -O0)
+    target_link_options(swiftnet PRIVATE -O0)
+else()
+    target_compile_options(swiftnet PRIVATE -O3)
+    target_link_options(swiftnet PRIVATE -O3)
+endif()
 
 if(DEFINED ENV{VCPKG_ROOT} AND DEFINED CMAKE_VCPKG_TARGET_TRIPLET)
     set(VCPKG_INCLUDE_DIR "$ENV{VCPKG_ROOT}/installed/${CMAKE_VCPKG_TARGET_TRIPLET}/include")

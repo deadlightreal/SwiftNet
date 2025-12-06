@@ -11,6 +11,9 @@
 
 #ifdef SWIFT_NET_DEBUG
     struct SwiftNetDebugger debugger = {.flags = 0};
+#endif
+
+#ifdef SWIFT_NET_INTERNAL_TESTING
     uint32_t bytes_leaked = 0;
     uint32_t items_leaked = 0;
 #endif
