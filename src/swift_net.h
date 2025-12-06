@@ -24,7 +24,7 @@
     #define SWIFT_NET_REQUESTS
 #endif
 
-#ifndef jWIFT_NET_DISABLE_DEBUGGING
+#ifndef SWIFT_NET_DISABLE_DEBUGGING
     #define SWIFT_NET_DEBUG
 #endif
 
@@ -189,7 +189,7 @@ struct SwiftNetMemoryAllocatorStack {
     _Atomic(void*) next;
     _Atomic(void*) previous;
     _Atomic uint8_t owner;
-    #ifdef SWIFT_NET_DEBUG
+    #ifdef SWIFT_NET_INTERNAL_TESTING 
     uint8_t* ptr_status;
     _Atomic bool accessing_ptr_status;
     #endif

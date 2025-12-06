@@ -142,11 +142,13 @@ extern int swiftnet_pcap_send(pcap_t *pcap, const uint8_t *data, int len);
 
 extern void* check_existing_listener(const char* interface_name, void* const connection, const enum ConnectionType connection_type, const bool loopback);
 
-#ifdef SWIFT_NET_DEBUG
-    extern struct SwiftNetDebugger debugger;
-
+#ifdef SWIFT_NET_INTERNAL_TESTING
     extern uint32_t bytes_leaked;
     extern uint32_t items_leaked;
+#endif
+
+#ifdef SWIFT_NET_DEBUG
+    extern struct SwiftNetDebugger debugger;
 
     static inline bool check_debug_flag(enum SwiftNetDebugFlags flag) {
         return (debugger.flags & flag) != 0;
