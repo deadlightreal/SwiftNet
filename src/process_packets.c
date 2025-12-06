@@ -348,11 +348,6 @@ static inline void swiftnet_process_packets(
 
         atomic_thread_fence(memory_order_acquire);
 
-        if(node->data_read == 0) {
-            allocator_free(&packet_queue_node_memory_allocator, (void*)node);
-            continue;
-        }
-
         uint8_t* const packet_buffer = node->data;
         if(packet_buffer == NULL) {
             goto next_packet;
