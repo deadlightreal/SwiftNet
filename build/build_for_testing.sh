@@ -1,0 +1,2 @@
+cmake ../src -DCMAKE_BUILD_TYPE=Debug -DSANITIZER=thread -DSWIFT_NET_INTERNAL_TESTING
+make -B -j8
