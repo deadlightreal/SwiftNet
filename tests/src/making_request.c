@@ -208,6 +208,7 @@ static void on_server_packet(struct SwiftNetServerPacketData* packet, void* cons
 
             atomic_store_explicit(&g_test_result, -1, memory_order_release);
 
+            swiftnet_server_destroy_packet_data(response, server);
             swiftnet_server_destroy_packet_data(packet, server);
 
             return;
@@ -220,6 +221,7 @@ static void on_server_packet(struct SwiftNetServerPacketData* packet, void* cons
 
                 atomic_store_explicit(&g_test_result, -1, memory_order_release);
 
+                swiftnet_server_destroy_packet_data(response, server);
                 swiftnet_server_destroy_packet_data(packet, server);
 
                 return;
@@ -228,6 +230,7 @@ static void on_server_packet(struct SwiftNetServerPacketData* packet, void* cons
 
         atomic_store_explicit(&g_test_result, 0, memory_order_release);
 
+        swiftnet_server_destroy_packet_data(response, server);
         swiftnet_server_destroy_packet_data(packet, server);
     }
 }
