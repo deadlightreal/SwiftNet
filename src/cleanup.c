@@ -3,19 +3,7 @@
 #include <stdint.h>
 #include <stdio.h>
 
-void swiftnet_cleanup() {
-    allocator_destroy(&packet_queue_node_memory_allocator);
-    allocator_destroy(&packet_callback_queue_node_memory_allocator);
-    allocator_destroy(&server_packet_data_memory_allocator);
-    allocator_destroy(&client_packet_data_memory_allocator);
-    allocator_destroy(&packet_buffer_memory_allocator);
-
-    #ifdef SWIFT_NET_REQUESTS
-        allocator_destroy(&requests_sent_memory_allocator);
-
-        vector_destroy(&requests_sent);
-    #endif
-
+static inline void close_listeners() {
     vector_lock(&listeners);
 
     for (uint16_t i = 0; i < listeners.size; i++) {
@@ -32,7 +20,23 @@ void swiftnet_cleanup() {
     }
 
     vector_destroy(&listeners);
+}
 
+void swiftnet_cleanup() {
+    allocator_destroy(&packet_queue_node_memory_allocator);
+    allocator_destroy(&packet_callback_queue_node_memory_allocator);
+    allocator_destroy(&server_packet_data_memory_allocator);
+    allocator_destroy(&client_packet_data_memory_allocator);
+    allocator_destroy(&packet_buffer_memory_allocator);
+    
+    #ifdef SWIFT_NET_REQUESTS
+        allocator_destroy(&requests_sent_memory_allocator);
+
+        vector_destroy(&requests_sent);
+    #endif
+
+    close_listeners();
+    
     allocator_destroy(&server_memory_allocator);
     allocator_destroy(&client_connection_memory_allocator);
 

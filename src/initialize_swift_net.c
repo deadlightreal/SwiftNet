@@ -39,6 +39,17 @@ struct SwiftNetMemoryAllocator listener_memory_allocator;
 
 struct SwiftNetVector listeners;
 
+static inline void initialize_allocators() {
+    packet_queue_node_memory_allocator = allocator_create(sizeof(struct PacketQueueNode), 100);
+    packet_callback_queue_node_memory_allocator = allocator_create(sizeof(struct PacketCallbackQueueNode), 100);
+    server_packet_data_memory_allocator = allocator_create(sizeof(struct SwiftNetServerPacketData), 100);
+    client_packet_data_memory_allocator = allocator_create(sizeof(struct SwiftNetClientPacketData), 100);
+    packet_buffer_memory_allocator = allocator_create(maximum_transmission_unit + sizeof(struct ether_header), 100);
+    server_memory_allocator = allocator_create(sizeof(struct SwiftNetServer), 10);
+    client_connection_memory_allocator = allocator_create(sizeof(struct SwiftNetClientConnection), 10);
+    listener_memory_allocator = allocator_create(sizeof(struct Listener), 100);
+}
+
 void swiftnet_initialize() {
     const int temp_socket = socket(AF_INET, SOCK_DGRAM, 0);
     if (temp_socket < 0) {
@@ -84,14 +95,7 @@ void swiftnet_initialize() {
 
     close(temp_socket);
 
-    packet_queue_node_memory_allocator = allocator_create(sizeof(struct PacketQueueNode), 100);
-    packet_callback_queue_node_memory_allocator = allocator_create(sizeof(struct PacketCallbackQueueNode), 100);
-    server_packet_data_memory_allocator = allocator_create(sizeof(struct SwiftNetServerPacketData), 100);
-    client_packet_data_memory_allocator = allocator_create(sizeof(struct SwiftNetClientPacketData), 100);
-    packet_buffer_memory_allocator = allocator_create(maximum_transmission_unit + sizeof(struct ether_header), 100);
-    server_memory_allocator = allocator_create(sizeof(struct SwiftNetServer), 10);
-    client_connection_memory_allocator = allocator_create(sizeof(struct SwiftNetClientConnection), 10);
-    listener_memory_allocator = allocator_create(sizeof(struct Listener), 100);
+    initialize_allocators();
 
     #ifdef SWIFT_NET_REQUESTS
         requests_sent_memory_allocator = allocator_create(sizeof(struct RequestSent), 100);
