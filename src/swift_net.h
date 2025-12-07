@@ -141,7 +141,6 @@ struct PacketQueueNode {
     uint8_t* data;
     uint32_t data_read;
     struct in_addr sender_address;
-    socklen_t server_address_length;
 };
 
 struct PacketQueue {
@@ -220,7 +219,6 @@ struct SwiftNetClientConnection {
     struct ether_header eth_header;
     struct SwiftNetPortInfo port_info;
     struct in_addr server_addr;
-    socklen_t server_addr_len;
     _Atomic(void (*)(struct SwiftNetClientPacketData* const, void* const user)) packet_handler;
     _Atomic(void*) packet_handler_user_arg;
     _Atomic bool closing;

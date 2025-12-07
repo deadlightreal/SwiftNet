@@ -210,8 +210,7 @@ static inline void handle_request_response(const uint16_t packet_id, const struc
 
 #endif
 
-static inline void pass_callback_execution(void* const packet_data, struct PacketCallbackQueue* const queue, struct SwiftNetPendingMessage* const pending_message, const uint16_t packet_id
-) {
+static inline void pass_callback_execution(void* const packet_data, struct PacketCallbackQueue* const queue, struct SwiftNetPendingMessage* const pending_message, const uint16_t packet_id) {
     struct PacketCallbackQueueNode* const node = allocator_allocate(&packet_callback_queue_node_memory_allocator);
     node->packet_data = packet_data;
     node->next = NULL;
@@ -312,10 +311,6 @@ static inline bool packet_corrupted(const uint16_t checksum, const uint32_t chun
     return crc16(buffer, chunk_size) != checksum;
 }
 
-static inline void handle_ip_header_ordering(struct ip* ip_hdr) {
-
-}
-
 static inline void swiftnet_process_packets(
     void* _Atomic * packet_handler,
     pcap_t* const pcap,
@@ -397,34 +392,34 @@ static inline void swiftnet_process_packets(
         switch(packet_info.packet_type) {
             case PACKET_TYPE_REQUEST_INFORMATION:
             {
-                    const struct ip send_server_info_ip_header = construct_ip_header(node->sender_address, PACKET_HEADER_SIZE, rand());
+                const struct ip send_server_info_ip_header = construct_ip_header(node->sender_address, PACKET_HEADER_SIZE, rand());
 
-                    const struct SwiftNetPacketInfo packet_info_new = construct_packet_info(
-                        sizeof(struct SwiftNetServerInformation),
-                        PACKET_TYPE_REQUEST_INFORMATION,
-                        1,
-                        0,
-                        (struct SwiftNetPortInfo){
-                            .source_port = source_port,
-                            .destination_port = packet_info.port_info.source_port
-                        }
-                    );
+                const struct SwiftNetPacketInfo packet_info_new = construct_packet_info(
+                    sizeof(struct SwiftNetServerInformation),
+                    PACKET_TYPE_REQUEST_INFORMATION,
+                    1,
+                    0,
+                    (struct SwiftNetPortInfo){
+                        .source_port = source_port,
+                        .destination_port = packet_info.port_info.source_port
+                    }
+                );
 
-                    const struct SwiftNetServerInformation server_info = {
-                        .maximum_transmission_unit = maximum_transmission_unit
-                    };
+                const struct SwiftNetServerInformation server_info = {
+                    .maximum_transmission_unit = maximum_transmission_unit
+                };
 
-                    HANDLE_PACKET_CONSTRUCTION(&send_server_info_ip_header, &packet_info_new, addr_type, &eth_hdr, prepend_size + PACKET_HEADER_SIZE + sizeof(server_info), buffer)
+                HANDLE_PACKET_CONSTRUCTION(&send_server_info_ip_header, &packet_info_new, addr_type, &eth_hdr, prepend_size + PACKET_HEADER_SIZE + sizeof(server_info), buffer)
 
-                    memcpy(buffer + prepend_size + PACKET_HEADER_SIZE, &server_info, sizeof(server_info));
+                memcpy(buffer + prepend_size + PACKET_HEADER_SIZE, &server_info, sizeof(server_info));
 
-                    HANDLE_CHECKSUM(buffer, sizeof(buffer), prepend_size)
-                    
-                    swiftnet_pcap_send(pcap, buffer, sizeof(buffer));
+                HANDLE_CHECKSUM(buffer, sizeof(buffer), prepend_size)
+                
+                swiftnet_pcap_send(pcap, buffer, sizeof(buffer));
 
-                    allocator_free(&packet_buffer_memory_allocator, packet_buffer);
-        
-                    goto next_packet;
+                allocator_free(&packet_buffer_memory_allocator, packet_buffer);
+    
+                goto next_packet;
             }
             case PACKET_TYPE_SEND_LOST_PACKETS_REQUEST:
             {
