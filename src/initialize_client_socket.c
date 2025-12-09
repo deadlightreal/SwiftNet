@@ -127,8 +127,7 @@ struct SwiftNetClientConnection* swiftnet_create_client(const char* const ip_add
 
     pcap_t* const pcap = swiftnet_pcap_open(loopback ? LOOPBACK_INTERFACE_NAME : default_network_interface);
     if (unlikely(pcap == NULL)) {
-        PRINT_ERROR("Failed to open bpf");
-        exit(EXIT_FAILURE);
+        return NULL;
     }
 
     struct SwiftNetClientConnection* const new_connection = construct_client_connection(loopback, port, addr.s_addr, pcap);
