@@ -57,7 +57,7 @@ struct SwiftNetServer* swiftnet_create_server(const uint16_t port, const bool lo
     pcap_t* const pcap = swiftnet_pcap_open(loopback ? LOOPBACK_INTERFACE_NAME : default_network_interface);
     if (unlikely(pcap == NULL)) {
         PRINT_ERROR("Failed to open bpf");
-        exit(EXIT_FAILURE);
+        return NULL;
     }
 
     struct SwiftNetServer* const new_server = construct_server(loopback, port, pcap);
