@@ -106,7 +106,7 @@ install(TARGETS swiftnet
 install(EXPORT swiftnetTargets
     FILE swiftnetTargets.cmake
     NAMESPACE swiftnet::
-    DESTINATION share/deadlightreal-swiftnet
+    DESTINATION share/morcules-swiftnet
     CONFIGURATIONS Release RelWithDebInfo MinSizeRel
 )
 
@@ -115,20 +115,20 @@ include(CMakePackageConfigHelpers)
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/cmake)
 
 configure_package_config_file(
-    ${CMAKE_CURRENT_SOURCE_DIR}/cmake/deadlightreal-swiftnetConfig.cmake.in
-    ${CMAKE_CURRENT_BINARY_DIR}/cmake/deadlightreal-swiftnetConfig.cmake
-    INSTALL_DESTINATION share/deadlightreal-swiftnet
+    ${CMAKE_CURRENT_SOURCE_DIR}/cmake/morcules-swiftnetConfig.cmake.in
+    ${CMAKE_CURRENT_BINARY_DIR}/cmake/morcules-swiftnetConfig.cmake
+    INSTALL_DESTINATION share/morcules-swiftnet
 )
 
 write_basic_package_version_file(
-    ${CMAKE_CURRENT_BINARY_DIR}/cmake/deadlightreal-swiftnetConfigVersion.cmake
+    ${CMAKE_CURRENT_BINARY_DIR}/cmake/morcules-swiftnetConfigVersion.cmake
     VERSION 0.2.0
     COMPATIBILITY AnyNewerVersion
 )
 
 install(FILES
-    ${CMAKE_CURRENT_BINARY_DIR}/cmake/deadlightreal-swiftnetConfig.cmake
-    ${CMAKE_CURRENT_BINARY_DIR}/cmake/deadlightreal-swiftnetConfigVersion.cmake
-    DESTINATION share/deadlightreal-swiftnet
+    ${CMAKE_CURRENT_BINARY_DIR}/cmake/morcules-swiftnetConfig.cmake
+    ${CMAKE_CURRENT_BINARY_DIR}/cmake/morcules-swiftnetConfigVersion.cmake
+    DESTINATION share/morcules-swiftnet
     CONFIGURATIONS Release RelWithDebInfo MinSizeRel
 )
