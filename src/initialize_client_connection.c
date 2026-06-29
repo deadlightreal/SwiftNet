@@ -60,7 +60,7 @@ init_connection_request:
         }
     #endif
 
-    SWIFTNET_SEND_PACKET(request_server_information_args->network_data, request_server_information_args->data, request_server_information_args->size);
+    SWIFTNET_SEND_INTERNAL_PACKET(request_server_information_args->network_data, request_server_information_args->data, request_server_information_args->size);
 
     usleep(250000);
 
@@ -192,7 +192,7 @@ request_initialization:
     if (atomic_load_explicit(&new_connection->initialized, memory_order_acquire) == false) {
         atomic_store_explicit(&new_connection->closing, true, memory_order_release);
 
-        swiftnet_close_connection(&new_connection->network_data);
+        SWIFTNET_CLOSE_CONNECTION(&new_connection->network_data);
 
         allocator_free(&client_connection_memory_allocator, new_connection);
 

@@ -71,7 +71,11 @@ enum RequestLostPacketsReturnType {
 
 // Size of memory allocated before ip header.
 // Memory should contain either an eth hdr or any specific data depending on addr type (loopback or real interface)
+#ifdef SWIFT_NET_BACKEND_DPDK
+#define PACKET_PREPEND_SIZE(addr_type) (((addr_type) == 0) ? 0 : sizeof(struct ether_header))
+#elif defined(SWIFT_NET_BACKEND_PCAP)
 #define PACKET_PREPEND_SIZE(addr_type) ((addr_type == DLT_NULL) ? sizeof(uint32_t) : addr_type == DLT_EN10MB ? sizeof(struct ether_header) : 0)
+#endif
 #define PACKET_HEADER_SIZE (sizeof(struct ip) + sizeof(struct SwiftNetPacketInfo))
 
 #define DEFAULT_MAC_ADDRESS_STRUCT (struct ether_header){.ether_dhost = {0xff,0xff,0xff,0xff,0xff,0xff}, .ether_type = htons(0x0800)}

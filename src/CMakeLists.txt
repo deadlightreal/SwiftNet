@@ -16,7 +16,6 @@ set(SOURCE_FILES
     cleanup_connection.c
     process_packets.c
     execute_packet_callback.c
-    packet_buffer.c
     manipulate_debug_flags.c
     cleanup_swiftnet.c
     make_response.c
@@ -50,8 +49,17 @@ if(BACKEND STREQUAL "pcap")
     add_compile_definitions(SWIFT_NET_BACKEND_PCAP)
 
     list(APPEND SOURCE_FILES
+        internal/pcap/pcap_buffer.c
         internal/pcap/pcap_send.c
         internal/pcap/pcap_open.c
+    )
+elseif(BACKEND STREQUAL "dpdk")
+    add_compile_definitions(SWIFT_NET_BACKEND_DPDK)
+
+    list(APPEND SOURCE_FILES
+        internal/dpdk/dpdk_buffer.c
+        internal/dpdk/dpdk_open.c
+        internal/dpdk/dpdk_send.c
     )
 endif()
 
@@ -141,6 +149,12 @@ if(BACKEND STREQUAL "pcap")
 
         message("using linking option: -lpcap")
     endif()
+elseif(BACKEND STREQUAL "dpdk")
+    # DPDK linking is typically done via pkg-config (pkg-config --libs libdpdk) or dpdk meson build.
+    # Add -I and libs as needed for your DPDK install. Example (adjust paths):
+    # target_include_directories(swiftnet PUBLIC /usr/local/include/dpdk)
+    # target_link_libraries(swiftnet PUBLIC rte_eal rte_ethdev rte_mempool rte_ring rte_mbuf rte_net)
+    message(STATUS "DPDK backend selected - ensure DPDK libraries are linked in your environment")
 endif()
 
 set_target_properties(swiftnet PROPERTIES

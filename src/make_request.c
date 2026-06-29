@@ -35,7 +35,11 @@ struct SwiftNetClientPacketData* swiftnet_client_make_request(struct SwiftNetCli
 
     request_sent = construct_request_sent(client->server_addr);
 
+    #ifdef SWIFT_NET_BACKEND_DPDK
+    packet_length = packet->total_data_size;
+    #else
     packet_length = packet->packet_append_pointer - packet->packet_data_start;
+    #endif
 
     swiftnet_send_packet(client, client->maximum_transmission_unit, client->port_info, packet, packet_length, &client->server_addr, &client->packets_sending, &client->packets_sending_memory_allocator, client->eth_header, client->loopback, client->network_data, request_sent, false, 0);
 
@@ -79,7 +83,11 @@ struct SwiftNetServerPacketData* swiftnet_server_make_request(struct SwiftNetSer
 
     request_sent = construct_request_sent(addr_data.sender_address);
 
+    #ifdef SWIFT_NET_BACKEND_DPDK
+    packet_length = packet->total_data_size;
+    #else
     packet_length = packet->packet_append_pointer - packet->packet_data_start;
+    #endif
 
     port_info = (struct SwiftNetPortInfo){.destination_port = addr_data.port, .source_port = server->server_port};
 

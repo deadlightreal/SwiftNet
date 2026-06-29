@@ -304,7 +304,7 @@ static inline void signal_delay_change(const enum PacketDelayUpdateStatus status
 
     HANDLE_CHECKSUM(buffer, sizeof(buffer), net_data);
     
-    SWIFTNET_SEND_PACKET(net_data, buffer, sizeof(buffer));
+    SWIFTNET_SEND_INTERNAL_PACKET(net_data, buffer, sizeof(buffer));
 }
 
 struct PacketQueueNode* wait_for_next_packet(struct PacketQueue* const packet_queue) {
@@ -493,7 +493,7 @@ process_packet:
 
             HANDLE_CHECKSUM(buffer, sizeof(buffer), &network_data);
             
-            SWIFTNET_SEND_PACKET(&network_data, buffer, sizeof(buffer));
+            SWIFTNET_SEND_INTERNAL_PACKET(&network_data, buffer, sizeof(buffer));
 
             allocator_free(&packet_buffer_memory_allocator, packet_buffer);
 
@@ -538,7 +538,7 @@ process_packet:
 
                     HANDLE_CHECKSUM(buffer, sizeof(buffer), &network_data);
 
-                    SWIFTNET_SEND_PACKET(&network_data, buffer, sizeof(buffer));
+                    SWIFTNET_SEND_INTERNAL_PACKET(&network_data, buffer, sizeof(buffer));
 
                     allocator_free(&packet_buffer_memory_allocator, packet_buffer);
 
@@ -581,7 +581,7 @@ process_packet:
 
             HANDLE_CHECKSUM(buffer, packet_length + prepend_size, &network_data);
 
-            SWIFTNET_SEND_PACKET(&network_data, buffer, packet_length + prepend_size);
+            SWIFTNET_SEND_INTERNAL_PACKET(&network_data, buffer, packet_length + prepend_size);
 
             allocator_free(&packet_buffer_memory_allocator, packet_buffer);
 
@@ -633,6 +633,8 @@ process_packet:
 
                 goto next_packet;
             }
+
+            printf("received packet\n");
 
             atomic_store_explicit(&target_packet_sending->updated, SUCCESSFULLY_RECEIVED, memory_order_release);
 

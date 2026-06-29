@@ -271,6 +271,12 @@ static void pcap_packet_handle(uint8_t* const user, const struct pcap_pkthdr* re
 
     if(handle_correct_receiver(CONNECTION_TYPE_CLIENT, listener, packet, port_info, hdr->caplen) == 0) handle_correct_receiver(CONNECTION_TYPE_SERVER, listener, packet, port_info, hdr->caplen);
 }
+#elif defined(SWIFT_NET_BACKEND_DPDK)
+static void dpdk_packet_handle(struct Listener* const listener, const struct rte_mbuf* const restrict dpdk_buf, const uint8_t* restrict const packet) {
+    struct SwiftNetPortInfo* restrict const port_info = (struct SwiftNetPortInfo*)(packet + PACKET_PREPEND_SIZE(listener->addr_type) + sizeof(struct ip) + offsetof(struct SwiftNetPacketInfo, port_info));
+
+    if(handle_correct_receiver(CONNECTION_TYPE_CLIENT, listener, packet, port_info, dpdk_buf->data_len) == 0) handle_correct_receiver(CONNECTION_TYPE_SERVER, listener, packet, port_info, dpdk_buf->data_len);
+}
 #endif
 
 void* interface_start_listening(void* listener_void) {

@@ -6,28 +6,6 @@
 #include <stdlib.h>
 #include <stdint.h>
 
-// These functions append data to a packet buffer and advance the current pointer by the data size.
-static inline void validate_append_to_packet_args(const void* restrict const data, const uint32_t data_size) {
-    if(unlikely(data == NULL || data_size == 0)) {
-        PRINT_ERROR("Error: Invalid arguments given");
-        exit(EXIT_FAILURE);
-    }
-}
-
-static inline void append_data(uint8_t* restrict * restrict const append_pointer, const void* restrict const data, const uint32_t data_size) {
-    memcpy(*append_pointer, data, data_size);
-
-    (*append_pointer) += data_size;
-}
-
-void swiftnet_append_to_buffer(const void* restrict const data, const uint32_t data_size, struct SwiftNetPacketBuffer* restrict const buffer) {
-    #ifdef SWIFT_NET_ERROR
-        validate_append_to_packet_args(data, data_size);
-    #endif
-
-    append_data(&buffer->packet_append_pointer, data, data_size);
-}
-
 // Set the handler for incoming packets/messages on the server or client
 static inline void swiftnet_validate_new_handler(const void* const new_handler) {
     #ifdef SWIFT_NET_ERROR
