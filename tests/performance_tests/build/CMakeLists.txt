@@ -3,6 +3,8 @@ project(SwiftNetPerformanceTests C)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/../output)
 
+add_compile_definitions(SWIFT_NET_BACKEND_PCAP)
+
 if(SANITIZER STREQUAL "address")
     message(STATUS "Using AddressSanitizer")
     add_compile_options(-fsanitize=address -fno-omit-frame-pointer)

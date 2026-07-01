@@ -18,6 +18,8 @@
 #include "internal/internal.h"
 #include <netinet/in.h>
 
+#define SWIFT_NET_BACKEND_PCAP
+
 static inline enum RequestLostPacketsReturnType request_lost_packets_bitarray(const uint8_t* restrict const raw_data, const uint32_t data_size, const struct SwiftNetNetworkData* restrict const network_data, struct SwiftNetPacketSending* const packet_sending 
 #ifdef SWIFT_NET_BACKEND_DPDK
     , struct rte_mbuf* restrict const internal_mem_buf_raw_data 
@@ -69,7 +71,7 @@ static inline void handle_lost_packets(
     struct SwiftNetHashMap* const packets_sending,
     const bool loopback,
     const struct SwiftNetNetworkData* restrict const network_data,
-    const uint32_t bytes_to_send
+    const uint32_t packet_length
     #ifdef SWIFT_NET_REQUESTS
         , const bool response
         , const uint8_t packet_type
@@ -79,7 +81,6 @@ static inline void handle_lost_packets(
     struct SwiftNetPortInfo port_info;
     struct ip request_lost_packets_ip_header;
     struct SwiftNetPacketInfo request_lost_packets_bit_array;
-    uint32_t packet_length;
     uint32_t chunk_amount;
     enum RequestLostPacketsReturnType request_lost_packets_bitarray_response;
     #ifdef SWIFT_NET_BACKEND_DPDK
@@ -90,6 +91,8 @@ static inline void handle_lost_packets(
     struct SwiftNetPacketInfo resend_chunk_packet_info;
     uint8_t temp_data_buffer[prepend_size + PACKET_HEADER_SIZE];
     #endif
+
+    chunk_amount = (packet_length + (mtu - PACKET_HEADER_SIZE) - 1) / (mtu - PACKET_HEADER_SIZE);
 
 
     port_info = (struct SwiftNetPortInfo){
@@ -113,7 +116,7 @@ static inline void handle_lost_packets(
  
     #ifdef SWIFT_NET_BACKEND_PCAP
     resend_chunk_packet_info = construct_packet_info(
-        bytes_to_send,
+        packet_length,
         #ifdef SWIFT_NET_REQUESTS
         packet_type,
         #else
@@ -163,6 +166,8 @@ static inline void handle_lost_packets(
         for(i = 0; i < packet_sending->lost_chunks_size; i++) {
             lost_chunk_index = packet_sending->lost_chunks[i];
 
+            printf("resending %d\n", lost_chunk_index);
+
             current_offset = lost_chunk_index * (mtu - PACKET_HEADER_SIZE);
 
             current_buffer_header_ptr = packet->packet_data_start + current_offset - prepend_size - PACKET_HEADER_SIZE;
@@ -179,12 +184,12 @@ static inline void handle_lost_packets(
     
             memset(current_buffer_header_ptr + prepend_size + sizeof(struct ip) + offsetof(struct SwiftNetPacketInfo, checksum), 0x00, SIZEOF_FIELD(struct SwiftNetPacketInfo, checksum));
 
-            if(current_offset + mtu - PACKET_HEADER_SIZE >= bytes_to_send) {
+            if(current_offset + mtu - PACKET_HEADER_SIZE >= packet_length) {
                 uint32_t bytes_to_complete;
                 uint16_t new_ip_len;
 
 
-                bytes_to_complete = bytes_to_send - current_offset;
+                bytes_to_complete = packet_length - current_offset;
 
                 new_ip_len = htons(bytes_to_complete + PACKET_HEADER_SIZE);
                 memcpy(current_buffer_header_ptr + offsetof(struct ip, ip_len), &new_ip_len, SIZEOF_FIELD(struct ip, ip_len));
@@ -215,13 +220,13 @@ static inline void handle_lost_packets(
     
             memset(current_buffer_header_ptr + sizeof(struct ether_header) + sizeof(struct ip) + offsetof(struct SwiftNetPacketInfo, checksum), 0x00, SIZEOF_FIELD(struct SwiftNetPacketInfo, checksum));
 
-            if((current_offset + packet->data_len_per_packet) < packet->data_len_per_packet && current_offset + current_buf->data_len != bytes_to_send) {
+            if((current_offset + packet->data_len_per_packet) < packet->data_len_per_packet && current_offset + current_buf->data_len != packet_length) {
                 uint32_t bytes_to_complete;
                 uint16_t new_ip_len;
                 uint32_t old_len;
 
 
-                bytes_to_complete = bytes_to_send - current_offset + PACKET_HEADER_SIZE + sizeof(struct ether_header);
+                bytes_to_complete = packet_length - current_offset + PACKET_HEADER_SIZE + sizeof(struct ether_header);
                 
                 old_len = current_buf->data_len;
 
@@ -413,7 +418,7 @@ inline void swiftnet_send_packet(
 
                 memcpy(buffer_header_location, temp_data_buffer, prepend_size + PACKET_HEADER_SIZE);
 
-                handle_lost_packets(new_packet_sending, mtu, packet, eth_hdr, target_addr, port_info.source_port, port_info.destination_port, packets_sending_memory_allocator, packets_sending, loopback, &network_data, bytes_to_send
+                handle_lost_packets(new_packet_sending, mtu, packet, eth_hdr, target_addr, port_info.source_port, port_info.destination_port, packets_sending_memory_allocator, packets_sending, loopback, &network_data, packet_length
                 #ifdef SWIFT_NET_REQUESTS
                     , response
                     , packet_type

@@ -187,20 +187,22 @@ static inline void handle_request_response(uint16_t packet_id, const struct Swif
 
 #endif
 
-static inline void pass_callback_execution(void* const packet_data, struct PacketCallbackQueue* const queue, struct SwiftNetPendingMessage* restrict const pending_message, const uint16_t packet_id, pthread_mutex_t* const execute_callback_mtx, pthread_cond_t* const execute_callback_cond) {
+static inline void pass_callback_execution(void* const packet_data, struct PacketCallbackQueue* const queue, struct SwiftNetPendingMessage* restrict const pending_message, const uint16_t packet_id, pthread_mutex_t* const execute_callback_mtx, pthread_cond_t* const execute_callback_cond, _Atomic bool* const executing_packets) {
     struct PacketCallbackQueueNode* node;
 
 
     node = allocator_allocate(&packet_callback_queue_node_memory_allocator);
     *node = (struct PacketCallbackQueueNode){.packet_data = packet_data, .next = NULL, .pending_message = pending_message, .packet_id = packet_id};
 
-    pthread_mutex_lock(execute_callback_mtx);
-
     insert_callback_queue_node(node, queue);
 
-    pthread_cond_signal(execute_callback_cond);
+    if (atomic_load_explicit(executing_packets, memory_order_acquire) != true) {
+        pthread_mutex_lock(execute_callback_mtx);
 
-    pthread_mutex_unlock(execute_callback_mtx);
+        pthread_cond_signal(execute_callback_cond);
+
+        pthread_mutex_unlock(execute_callback_mtx);
+    }
 }
 
 static inline bool chunk_already_received(const uint8_t* restrict const chunks_received, const uint32_t index) {
@@ -361,7 +363,8 @@ static inline void swiftnet_process_packets(
     pthread_cond_t* const process_packets_cond,
     pthread_mutex_t* const execute_callback_mtx,
     pthread_cond_t* const execute_callback_cond,
-    _Atomic bool* const processing_packets
+    _Atomic bool* const processing_packets,
+    _Atomic bool* const executing_packets
 ) {
     uint8_t idle_stage;
     struct PacketQueueNode* node;
@@ -391,10 +394,10 @@ process_packet:
     node = wait_for_next_packet(packet_queue);
     if(node == NULL) {
         switch (idle_stage) {
-            case 0: usleep(1000); break;
-            case 1: usleep(2000); break;
-            case 2: usleep(5000); break;
-            case 3: {
+            case 64: usleep(1000); break;
+            case 128: usleep(2000); break;
+            case 194: usleep(5000); break;
+            case 255: {
                 atomic_store_explicit(processing_packets, false, memory_order_release);
 
                 pthread_mutex_lock(process_packets_mtx);
@@ -607,6 +610,8 @@ process_packet:
                 target_packet_sending->lost_chunks = malloc(maximum_transmission_unit - PACKET_HEADER_SIZE);
             }
 
+            printf("receuved response\n");
+
             packets_lost = (packet_info.packet_length) / sizeof(uint32_t);
 
             memcpy((void*)target_packet_sending->lost_chunks, packet_data, packet_info.packet_length);
@@ -731,10 +736,10 @@ process_packet:
                 if (packet_info.packet_type == RESPONSE) {
                     handle_request_response(ip_header.ip_id, NULL, new_packet_data, pending_messages, pending_messages_memory_allocator, connection_type, loopback, packet_info.port_info.source_port);
                 } else {
-                    pass_callback_execution(new_packet_data, packet_callback_queue, NULL, ip_header.ip_id, execute_callback_mtx, execute_callback_cond);
+                    pass_callback_execution(new_packet_data, packet_callback_queue, NULL, ip_header.ip_id, execute_callback_mtx, execute_callback_cond, executing_packets);
                 }
                 #else
-                    pass_callback_execution(new_packet_data, packet_callback_queue, NULL, ip_header.ip_id, execute_callback_mtx, execute_callback_cond);
+                    pass_callback_execution(new_packet_data, packet_callback_queue, NULL, ip_header.ip_id, execute_callback_mtx, execute_callback_cond, executing_packets);
                 #endif
             } else {
                 struct SwiftNetClientPacketData* new_packet_data;
@@ -757,10 +762,10 @@ process_packet:
                 if (packet_info.packet_type == RESPONSE) {
                     handle_request_response(ip_header.ip_id, NULL, new_packet_data, pending_messages, pending_messages_memory_allocator, connection_type, loopback, packet_info.port_info.source_port);
                 } else {
-                    pass_callback_execution(new_packet_data, packet_callback_queue, NULL, ip_header.ip_id, execute_callback_mtx, execute_callback_cond);
+                    pass_callback_execution(new_packet_data, packet_callback_queue, NULL, ip_header.ip_id, execute_callback_mtx, execute_callback_cond, executing_packets);
                 }
                 #else
-                    pass_callback_execution(new_packet_data, packet_callback_queue, NULL, ip_header.ip_id, execute_callback_mtx, execute_callback_cond);
+                    pass_callback_execution(new_packet_data, packet_callback_queue, NULL, ip_header.ip_id, execute_callback_mtx, execute_callback_cond, executing_packets);
                 #endif
             }
 
@@ -835,10 +840,10 @@ process_packet:
                 if (packet_info.packet_type == RESPONSE) {
                     handle_request_response(ip_header.ip_id, pending_message, server_packet_data, pending_messages, pending_messages_memory_allocator, connection_type, loopback, packet_info.port_info.source_port);
                 } else {
-                    pass_callback_execution(server_packet_data, packet_callback_queue, pending_message, ip_header.ip_id, execute_callback_mtx, execute_callback_cond);
+                    pass_callback_execution(server_packet_data, packet_callback_queue, pending_message, ip_header.ip_id, execute_callback_mtx, execute_callback_cond, executing_packets);
                 }
                 #else
-                    pass_callback_execution(server_packet_data, packet_callback_queue, pending_message, ip_header.ip_id, execute_callback_mtx, execute_callback_cond);
+                    pass_callback_execution(server_packet_data, packet_callback_queue, pending_message, ip_header.ip_id, execute_callback_mtx, execute_callback_cond, executing_packets);
                 #endif
             } else {
                 uint8_t* ptr;
@@ -864,10 +869,10 @@ process_packet:
                 if (packet_info.packet_type == RESPONSE) {
                     handle_request_response(ip_header.ip_id, pending_message, client_packet_data, pending_messages, pending_messages_memory_allocator, connection_type, loopback, packet_info.port_info.source_port);
                 } else {
-                    pass_callback_execution(client_packet_data, packet_callback_queue, pending_message, ip_header.ip_id, execute_callback_mtx, execute_callback_cond);
+                    pass_callback_execution(client_packet_data, packet_callback_queue, pending_message, ip_header.ip_id, execute_callback_mtx, execute_callback_cond, executing_packets);
                 }
                 #else
-                    pass_callback_execution(client_packet_data, packet_callback_queue, pending_message, ip_header.ip_id, execute_callback_mtx, execute_callback_cond);
+                    pass_callback_execution(client_packet_data, packet_callback_queue, pending_message, ip_header.ip_id, execute_callback_mtx, execute_callback_cond, executing_packets);
                 #endif
             }
 
@@ -925,7 +930,7 @@ void* swiftnet_server_process_packets(void* const void_server) {
 
     server = void_server;
 
-    swiftnet_process_packets((void*)&server->packet_handler, server->eth_header, server->server_port, server->loopback, server->network_data, &server->packets_sending, &server->packets_sending_memory_allocator, &server->pending_messages, &server->pending_messages_memory_allocator, &server->packets_completed, &server->packets_completed_memory_allocator, CONNECTION_TYPE_SERVER, &server->packet_queue, &server->packet_callback_queue, server, &server->closing, &server->process_packets_mtx, &server->process_packets_cond, &server->execute_callback_mtx, &server->execute_callback_cond, &server->processing_packets);
+    swiftnet_process_packets((void*)&server->packet_handler, server->eth_header, server->server_port, server->loopback, server->network_data, &server->packets_sending, &server->packets_sending_memory_allocator, &server->pending_messages, &server->pending_messages_memory_allocator, &server->packets_completed, &server->packets_completed_memory_allocator, CONNECTION_TYPE_SERVER, &server->packet_queue, &server->packet_callback_queue, server, &server->closing, &server->process_packets_mtx, &server->process_packets_cond, &server->execute_callback_mtx, &server->execute_callback_cond, &server->processing_packets, &server->executing_packets);
 
     return NULL;
 }
@@ -936,7 +941,7 @@ void* swiftnet_client_process_packets(void* const void_client) {
 
     client = (struct SwiftNetClientConnection*)void_client;
 
-    swiftnet_process_packets((void*)&client->packet_handler, client->eth_header, client->port_info.source_port, client->loopback, client->network_data, &client->packets_sending, &client->packets_sending_memory_allocator, &client->pending_messages, &client->pending_messages_memory_allocator, &client->packets_completed, &client->packets_completed_memory_allocator, CONNECTION_TYPE_CLIENT, &client->packet_queue, &client->packet_callback_queue, client, &client->closing, &client->process_packets_mtx, &client->process_packets_cond, &client->execute_callback_mtx, &client->execute_callback_cond, &client->processing_packets);
+    swiftnet_process_packets((void*)&client->packet_handler, client->eth_header, client->port_info.source_port, client->loopback, client->network_data, &client->packets_sending, &client->packets_sending_memory_allocator, &client->pending_messages, &client->pending_messages_memory_allocator, &client->packets_completed, &client->packets_completed_memory_allocator, CONNECTION_TYPE_CLIENT, &client->packet_queue, &client->packet_callback_queue, client, &client->closing, &client->process_packets_mtx, &client->process_packets_cond, &client->execute_callback_mtx, &client->execute_callback_cond, &client->processing_packets, &client->executing_packets);
 
     return NULL;
 }

@@ -311,6 +311,7 @@ struct SwiftNetClientConnection {
     struct in_addr server_addr;
     bool loopback;
     _Atomic bool processing_packets;
+    _Atomic bool executing_packets;
     _Atomic bool closing;
     _Atomic bool initialized;
 };
@@ -337,6 +338,7 @@ struct SwiftNetServer {
     uint16_t server_port;        
     bool loopback;
     _Atomic bool processing_packets;
+    _Atomic bool executing_packets;
     _Atomic bool closing;
 } SWIFT_NET_ALIGNED(8);
 
