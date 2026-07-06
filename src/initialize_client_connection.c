@@ -27,6 +27,9 @@ struct RequestServerInformationArgs {
     uint32_t timeout_ms;
     void* restrict data;
     struct SwiftNetClientConnection* connection;
+    #ifdef SWIFT_NET_BACKEND_DPDK
+    struct rte_mbuf* data_internal_mem_buf;
+    #endif
 };
 
 void* request_server_information(void* restrict const request_server_information_args_void) {
@@ -71,7 +74,7 @@ exit:
     return NULL;
 }
 
-static inline struct SwiftNetClientConnection* const construct_client_connection(const bool loopback, const uint16_t destination_port, const in_addr_t server_address, struct SwiftNetNetworkData* const network_data) {
+static inline struct SwiftNetClientConnection* const construct_client_connection(const bool loopback, const uint16_t destination_port, const in_addr_t server_address) {
     struct SwiftNetClientConnection* const new_connection = allocator_allocate(&client_connection_memory_allocator);
 
     struct ether_header eth_header = {
@@ -88,7 +91,6 @@ static inline struct SwiftNetClientConnection* const construct_client_connection
         .server_addr.s_addr = server_address,
         .packet_handler = NULL,
         .loopback = loopback,
-        .network_data = *network_data,
         .pending_messages_memory_allocator = allocator_create(sizeof(struct SwiftNetPendingMessage), 40 * SWIFT_NET_MEMORY_USAGE),
         .packets_sending_memory_allocator = allocator_create(sizeof(struct SwiftNetPacketSending), 40 * SWIFT_NET_MEMORY_USAGE),
         .packets_completed_memory_allocator = allocator_create(sizeof(struct SwiftNetPacketCompleted), 40 * SWIFT_NET_MEMORY_USAGE),
@@ -134,7 +136,6 @@ struct SwiftNetClientConnection* swiftnet_create_client(const char* const ip_add
     struct RequestServerInformationArgs thread_args;
     struct Listener* listener;
     struct SwiftNetNetworkData net_data;
-    struct SwiftNetNetworkData null_net_data;
 
 
     goto init_connection;
@@ -147,14 +148,15 @@ init_connection:
 
     loopback = (ip >> 24) == 127;
 
-    net_data = swiftnet_initialize_networking(loopback ? LOOPBACK_INTERFACE_NAME : default_network_interface);
+    printf("loopback: %d\n", loopback);
 
-    memset(&null_net_data, 0, sizeof(null_net_data));
-    if (unlikely(memcmp(&null_net_data, &net_data, sizeof(net_data))) == 0) {
-        return NULL;
-    }
+    new_connection = construct_client_connection(loopback, port, addr.s_addr);
 
-    new_connection = construct_client_connection(loopback, port, addr.s_addr, &net_data);
+    listener = check_existing_listener(loopback ? LOOPBACK_INTERFACE_NAME : default_network_interface, new_connection, CONNECTION_TYPE_CLIENT, loopback);
+    
+    net_data = listener->network_data;
+
+    new_connection->network_data = net_data;
 
     goto request_initialization;
 
@@ -170,7 +172,7 @@ request_initialization:
     );
 
     request_server_info_ip_header = construct_ip_header(new_connection->server_addr, PACKET_HEADER_SIZE, rand());
-    
+
     HANDLE_PACKET_CONSTRUCTION(&request_server_info_ip_header, &request_server_information_packet_info, &net_data, &new_connection->eth_header, PACKET_HEADER_SIZE + GET_PREPEND_SIZE(&new_connection->network_data), request_server_info_buffer);
 
     HANDLE_CHECKSUM(request_server_info_buffer, sizeof(request_server_info_buffer), &net_data);
@@ -182,9 +184,10 @@ request_initialization:
         .server_addr = addr,
         .timeout_ms = timeout_ms,
         .connection = new_connection
+        #ifdef SWIFT_NET_BACKEND_DPDK
+        , .data_internal_mem_buf = request_server_info_buffer_internal_mem_buf
+        #endif
     };
-
-    listener = check_existing_listener(loopback ? LOOPBACK_INTERFACE_NAME : default_network_interface, new_connection, CONNECTION_TYPE_CLIENT, loopback);
 
     pthread_create(&send_request_thread, NULL, request_server_information, (void*)&thread_args);
 

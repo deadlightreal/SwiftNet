@@ -686,7 +686,7 @@ process_packet:
         .port = packet_info.port_info.source_port,
     };
 
-    if (addr_type == DLT_EN10MB) {
+    if (addr_type != 0) {
         memcpy(&sender.mac_address, eth_hdr.ether_shost, sizeof(sender.mac_address));
     }
 
@@ -782,7 +782,7 @@ process_packet:
 
         bytes_to_write = (packet_info.chunk_index + 1) >= packet_info.chunk_amount ? packet_info.packet_length % chunk_data_size : chunk_data_size;
 
-        if (GET_ADDR_TYPE(&network_data) == DLT_EN10MB) {
+        if (GET_ADDR_TYPE(&network_data) != 0) {
             memcpy(&sender.mac_address, eth_hdr.ether_shost, sizeof(sender.mac_address));
         }
 

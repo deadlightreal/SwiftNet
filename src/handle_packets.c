@@ -108,7 +108,7 @@ static inline void swiftnet_handle_packets(
 get_sender_addr:
     sender_address = 0;
 
-    if (addr_type == DLT_EN10MB) {
+    if (addr_type != 0) {
         if (ntohs(((struct ether_header *)packet_buffer)->ether_type) == ETHERTYPE_IP) {
             sender_address = ((struct ip *)(packet_buffer + sizeof(struct ether_header)))->ip_src.s_addr;
             
@@ -153,6 +153,8 @@ static void handle_client_init(struct SwiftNetClientConnection* const client_con
     prepend_size = GET_PREPEND_SIZE(&client_connection->network_data);
     addr_type = GET_ADDR_TYPE(&client_connection->network_data);
 
+    printf("got client init\n");
+
     goto check_closing;
 
 
@@ -178,7 +180,7 @@ validate_packet_size:
     goto handle_mac_address;
 
 handle_mac_address:
-    if (addr_type == DLT_EN10MB) {
+    if (addr_type != 0) {
         memcpy(client_connection->eth_header.ether_dhost, ((struct ether_header*)buffer)->ether_shost, sizeof(client_connection->eth_header.ether_dhost));
     }
 
@@ -226,6 +228,8 @@ exit:
 }
 
 static inline uint8_t handle_correct_receiver(const enum ConnectionType connection_type, struct Listener* const listener, const uint8_t* restrict const packet, const struct SwiftNetPortInfo* restrict const port_info, const uint32_t packet_len) {
+    printf("handlilng receiver\n");
+
     if (connection_type == CONNECTION_TYPE_CLIENT) {
         struct SwiftNetClientConnection* client_connection;
 
@@ -235,6 +239,7 @@ static inline uint8_t handle_correct_receiver(const enum ConnectionType connecti
         UNLOCK_ATOMIC_DATA_TYPE(&listener->client_connections.atomic_lock);
 
         if (client_connection == NULL) {
+            printf("no client connection\n");
             return 0;
         }
 
@@ -266,6 +271,8 @@ static inline uint8_t handle_correct_receiver(const enum ConnectionType connecti
 
 #ifdef SWIFT_NET_BACKEND_PCAP
 static void pcap_packet_handle(uint8_t* const user, const struct pcap_pkthdr* restrict const hdr, const uint8_t* restrict const packet) {
+    printf("got packet\n");
+
     struct Listener* const listener = (struct Listener*)user;
     struct SwiftNetPortInfo* restrict const port_info = (struct SwiftNetPortInfo*)(packet + PACKET_PREPEND_SIZE(listener->addr_type) + sizeof(struct ip) + offsetof(struct SwiftNetPacketInfo, port_info));
 

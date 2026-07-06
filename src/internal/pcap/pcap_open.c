@@ -33,5 +33,6 @@ pcap_t* swiftnet_pcap_open(const char* const restrict interface) {
         PRINT_ERROR("Unable to set filter: %s", pcap_geterr(p));
     }
 
+
     return p;
 }

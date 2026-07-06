@@ -78,8 +78,10 @@ enum PacketDelayUpdateStatus {
 
 #define PACKET_INFO_ID_NONE 0xFFFF
 
+#ifndef likely
 #define unlikely(x) __builtin_expect((x), 0x00)
 #define likely(x) __builtin_expect((x), 0x01)
+#endif
 
 extern uint32_t maximum_transmission_unit;
 
@@ -369,7 +371,7 @@ extern void swiftnet_client_cleanup(struct SwiftNetClientConnection* const clien
 extern void swiftnet_server_cleanup(struct SwiftNetServer* const server);
 
 // Initialize the SwiftNet library.
-extern void swiftnet_initialize();
+extern void swiftnet_initialize(char** const argv, const int argc);
 
 // Send a packet from the client to its connected server.
 extern void swiftnet_client_send_packet(

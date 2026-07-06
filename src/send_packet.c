@@ -18,11 +18,9 @@
 #include "internal/internal.h"
 #include <netinet/in.h>
 
-#define SWIFT_NET_BACKEND_PCAP
-
 static inline enum RequestLostPacketsReturnType request_lost_packets_bitarray(const uint8_t* restrict const raw_data, const uint32_t data_size, const struct SwiftNetNetworkData* restrict const network_data, struct SwiftNetPacketSending* const packet_sending 
 #ifdef SWIFT_NET_BACKEND_DPDK
-    , struct rte_mbuf* restrict const internal_mem_buf_raw_data 
+    , struct rte_mbuf* restrict const raw_data_internal_mem_buf
 #endif 
         ) {
     uint8_t times_checked;
@@ -141,7 +139,7 @@ static inline void handle_lost_packets(
 
         request_lost_packets_bitarray_response = request_lost_packets_bitarray(request_lost_packets_buffer, PACKET_HEADER_SIZE + prepend_size, network_data, packet_sending
             #ifdef SWIFT_NET_BACKEND_DPDK
-                , internal_mem_buf_request_lost_packets_buffer
+                , request_lost_packets_buffer_internal_mem_buf
             #endif
         );
 

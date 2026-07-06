@@ -1,3 +1,5 @@
+#define SWIFT_NET_BACKEND_PCAP
+
 #include "internal.h"
 #include "networking.h"
 #include <stdint.h>
