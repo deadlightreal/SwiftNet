@@ -9,7 +9,7 @@
 #include <sys/socket.h>
 #include <sys/ioctl.h>
 
-const uint32_t get_mtu(const char* restrict const interface, const int sockfd) {
+uint32_t get_mtu(const char* restrict const interface, const int sockfd) {
     struct ifreq ifr;
 
 

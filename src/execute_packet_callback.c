@@ -7,7 +7,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-static struct PacketCallbackQueueNode* const wait_for_next_packet_callback(struct PacketCallbackQueue* const packet_queue) {
+static struct PacketCallbackQueueNode* wait_for_next_packet_callback(struct PacketCallbackQueue* const packet_queue) {
     struct PacketCallbackQueueNode* restrict node_to_process;
 
 
@@ -51,7 +51,6 @@ void execute_packet_callback(
     struct PacketCallbackQueue* const queue,
     void (*const _Atomic * const packet_handler)(void *const, void *const),
     const enum ConnectionType connection_type,
-    struct SwiftNetMemoryAllocator* const pending_message_memory_allocator,
     const _Atomic bool * const closing,
     void * const connection,
     struct SwiftNetHashMap* const pending_messages,
@@ -149,7 +148,6 @@ void* execute_packet_callback_client(void* const void_client) {
         &client->packet_callback_queue, 
         (void *)&client->packet_handler,
         CONNECTION_TYPE_CLIENT, 
-        &client->pending_messages_memory_allocator,
         &client->closing, void_client,
         &client->pending_messages,
         &client->packet_handler_user_arg,
@@ -168,7 +166,6 @@ void* execute_packet_callback_server(void* const void_server) {
         &server->packet_callback_queue,
         (void *)&server->packet_handler,
         CONNECTION_TYPE_SERVER,
-        &server->pending_messages_memory_allocator,
         &server->closing,
         void_server, &server->pending_messages,
         &server->packet_handler_user_arg,

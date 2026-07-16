@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/time.h>
 #include <unistd.h>
 
 static inline void cleanup_packets_completed(struct SwiftNetHashMap* const packets_completed, struct SwiftNetMemoryAllocator* const packets_completed_allocator) {
@@ -42,10 +43,12 @@ static inline void handle_listener(struct Listener* const current_listener) {
     UNLOCK_ATOMIC_DATA_TYPE(&client_connections->atomic_lock);
 }
 
-void* memory_cleanup_background_service() {
+void* memory_cleanup_background_service(MAYBE_UNUSED void* user) {
     struct timeval start, end;
     int64_t elapsed_us;
     uint64_t target_us = (uint64_t)PACKET_HISTORY_STORE_TIME * 1000000ULL;
+
+    goto start_loop;
 
 
 start_loop:

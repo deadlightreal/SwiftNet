@@ -14,7 +14,7 @@
 #include "internal/networking.h"
 #include "swift_net.h"
 
-static inline struct SwiftNetServer* const construct_server(const bool loopback, const uint16_t server_port) {
+static inline struct SwiftNetServer* construct_server(const bool loopback, const uint16_t server_port) {
     struct SwiftNetServer* restrict new_server;
     struct ether_header eth_header;
 

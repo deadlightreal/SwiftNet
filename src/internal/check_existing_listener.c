@@ -1,5 +1,3 @@
-#define SWIFT_NET_BACKEND_PCAP
-
 #include "internal.h"
 #include "networking.h"
 #include <stdint.h>
@@ -72,6 +70,10 @@ void* check_existing_listener(const char* restrict const interface_name, void* c
     }
 
     listener_key = malloc(interface_len);
+    if(unlikely(listener_key == NULL)) {
+        PRINT_ERROR("Failed malloc");
+        exit(EXIT_FAILURE);
+    }
 
     memcpy(listener_key, interface_name, interface_len);
 

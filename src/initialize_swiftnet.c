@@ -80,7 +80,7 @@ static inline void initialize_memory_cleanup_thread() {
     pthread_create(&memory_cleanup_thread, NULL, memory_cleanup_background_service, NULL);
 }
 
-void swiftnet_initialize(char** const argv, const int argc) {
+void swiftnet_initialize(MAYBE_UNUSED char** const argv, MAYBE_UNUSED const int argc) {
     #ifdef SWIFT_NET_BACKEND_DPDK
     if (rte_eal_init(argc, argv) < 0) rte_exit(EXIT_FAILURE, "EAL init failed\n");
     #endif

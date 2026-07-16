@@ -140,7 +140,7 @@ static inline bool is_already_free(struct SwiftNetMemoryAllocator* const memory_
 #endif
 
 // Type is either 0/1 - 1 = allocation - 0 = freeing
-struct SwiftNetMemoryAllocatorStack* const find_free_pointer_stack(struct SwiftNetMemoryAllocator* const allocator, const uint8_t type) {
+struct SwiftNetMemoryAllocatorStack* find_free_pointer_stack(struct SwiftNetMemoryAllocator* const allocator, const uint8_t type) {
     uint16_t stacks_allocated;
     uint64_t bitmap;
     uint16_t first_free;
@@ -185,7 +185,7 @@ find_free_stack:
 process_stack:
     stack_size = atomic_load_explicit(&stack->size, memory_order_acquire);
 
-    valid_size = type == 0 ? (stack_size < allocator->chunk_item_amount && stack_size >= 0) : (stack_size <= allocator->chunk_item_amount && stack_size > 0);
+    valid_size = type == 0 ? (stack_size < allocator->chunk_item_amount) : (stack_size <= allocator->chunk_item_amount && stack_size > 0);
 
     if(valid_size) {
         return stack;

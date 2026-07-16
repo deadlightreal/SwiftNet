@@ -4,7 +4,7 @@ project(swiftnet C CXX)
 include(GNUInstallDirs)
 include(../build/profile.cmake)
 
-set(CMAKE_C_STANDARD 99)
+set(CMAKE_C_STANDARD 23)
 
 set(SOURCE_FILES
     initialize_swiftnet.c

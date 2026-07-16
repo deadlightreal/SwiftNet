@@ -7,7 +7,7 @@
 #include <stdint.h>
 
 // Set the handler for incoming packets/messages on the server or client
-static inline void swiftnet_validate_new_handler(const void* const new_handler) {
+static inline void swiftnet_validate_new_handler(void(*new_handler)(void)) {
     #ifdef SWIFT_NET_ERROR
         if(unlikely(new_handler == NULL)) {
             PRINT_ERROR("Error: Invalid arguments given");
@@ -16,15 +16,15 @@ static inline void swiftnet_validate_new_handler(const void* const new_handler) 
     #endif
 }
 
-void swiftnet_client_set_message_handler(struct SwiftNetClientConnection* const client, void (* const new_handler)(struct SwiftNetClientPacketData* const, void* const), void* const user_arg) {
-    swiftnet_validate_new_handler(new_handler);
+void swiftnet_client_set_message_handler(struct SwiftNetClientConnection* const client, void (*new_handler)(struct SwiftNetClientPacketData* const, void* const), void* const user_arg) {
+    swiftnet_validate_new_handler((void(*)(void))new_handler);
 
     atomic_store_explicit(&client->packet_handler, new_handler, memory_order_release);
     atomic_store_explicit(&client->packet_handler_user_arg, user_arg, memory_order_release);
 }
 
 void swiftnet_server_set_message_handler(struct SwiftNetServer* const server, void (* const new_handler)(struct SwiftNetServerPacketData* const, void* const), void* const user_arg) {
-    swiftnet_validate_new_handler(new_handler);
+    swiftnet_validate_new_handler((void(*)(void))new_handler);
 
     atomic_store_explicit(&server->packet_handler, new_handler, memory_order_release);
     atomic_store_explicit(&server->packet_handler_user_arg, user_arg, memory_order_release);

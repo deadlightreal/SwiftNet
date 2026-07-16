@@ -14,7 +14,7 @@ pcap_t* swiftnet_pcap_open(const char* const restrict interface) {
     p = pcap_open_live(
         interface,
         65535,
-        0,
+        1,
         25,
         errbuf
     );

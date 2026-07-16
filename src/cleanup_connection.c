@@ -1,6 +1,6 @@
+#include "swift_net.h"
 #include "internal/internal.h"
 #include "internal/networking.h"
-#include "swift_net.h"
 #include <stdatomic.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -79,7 +79,7 @@ static inline void remove_listener(const enum ConnectionType connection_type, ch
     UNLOCK_ATOMIC_DATA_TYPE(&listeners.atomic_lock);
 }
 
-static inline const char* get_interface_name(const bool loopback) {
+static inline char* get_interface_name(const bool loopback) {
     return loopback ? LOOPBACK_INTERFACE_NAME : default_network_interface;
 }
 
@@ -130,7 +130,7 @@ static inline void close_threads(const enum ConnectionType connection_type, void
 }
 
 void swiftnet_client_cleanup(struct SwiftNetClientConnection* const client) {
-    const char* restrict interface_name;
+    char* restrict interface_name;
 
     cleanup_connection_resources(CONNECTION_TYPE_CLIENT, client);
     
@@ -144,7 +144,8 @@ void swiftnet_client_cleanup(struct SwiftNetClientConnection* const client) {
 }
 
 void swiftnet_server_cleanup(struct SwiftNetServer* const server) {
-    const char* restrict interface_name;
+    char* restrict interface_name;
+
 
     cleanup_connection_resources(CONNECTION_TYPE_SERVER, server);
     

@@ -149,6 +149,4 @@
 
     #define SWIFTNET_SEND_PACKET(network_data, buffer, len) \
         swiftnet_dpdk_send((network_data)->port, buffer##_internal_mem_buf);
-    
-    new_connection
 #endif

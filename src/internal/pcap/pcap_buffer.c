@@ -15,17 +15,17 @@ static inline struct SwiftNetPacketBuffer create_packet_buffer(const uint32_t bu
     };
 }
 
-struct SwiftNetPacketBuffer swiftnet_client_create_packet_buffer(const uint32_t buffer_size, const struct SwiftNetClientConnection* const client_connection) {
+struct SwiftNetPacketBuffer swiftnet_client_create_packet_buffer(const uint32_t buffer_size, MAYBE_UNUSED const struct SwiftNetClientConnection* const client_connection) {
     return create_packet_buffer(buffer_size);
 }
 
-struct SwiftNetPacketBuffer swiftnet_server_create_packet_buffer(const uint32_t buffer_size, const struct SwiftNetServer* const server) {
+struct SwiftNetPacketBuffer swiftnet_server_create_packet_buffer(const uint32_t buffer_size, MAYBE_UNUSED const struct SwiftNetServer* const server) {
     return create_packet_buffer(buffer_size);
 }
 
 static inline void resize_packet_buffer(uint32_t new_buffer_size, struct SwiftNetPacketBuffer* restrict const packet_buffer) {
-    void* new_ptr;
-    void* data_start; 
+    uint8_t* new_ptr;
+    uint8_t* data_start; 
 
     const uint32_t current_offset = packet_buffer->packet_append_pointer - packet_buffer->packet_data_start;
 
@@ -47,11 +47,11 @@ static inline void resize_packet_buffer(uint32_t new_buffer_size, struct SwiftNe
     };
 }
 
-void swiftnet_client_resize_packet_buffer(uint32_t new_buffer_size, struct SwiftNetPacketBuffer* restrict const packet_buffer, const struct SwiftNetClientConnection* const client_connection) {
+void swiftnet_client_resize_packet_buffer(uint32_t new_buffer_size, struct SwiftNetPacketBuffer* restrict const packet_buffer, MAYBE_UNUSED const struct SwiftNetClientConnection* const client_connection) {
     resize_packet_buffer(new_buffer_size, packet_buffer);
 }
 
-void swiftnet_server_resize_packet_buffer(uint32_t new_buffer_size, struct SwiftNetPacketBuffer* restrict const packet_buffer, const struct SwiftNetServer* const server) {
+void swiftnet_server_resize_packet_buffer(uint32_t new_buffer_size, struct SwiftNetPacketBuffer* restrict const packet_buffer, MAYBE_UNUSED const struct SwiftNetServer* const server) {
     resize_packet_buffer(new_buffer_size, packet_buffer);
 }
 
@@ -59,11 +59,11 @@ static inline void write_packet_buffer(const uint32_t byte_offset, struct SwiftN
     memcpy(packet_buffer->packet_data_start + byte_offset, data, data_size);
 }
 
-void swiftnet_client_write_packet_buffer(const uint32_t byte_offset, struct SwiftNetPacketBuffer* restrict const packet_buffer, void* restrict const data, const uint32_t data_size, const struct SwiftNetClientConnection* const client_connection) {
+void swiftnet_client_write_packet_buffer(const uint32_t byte_offset, struct SwiftNetPacketBuffer* restrict const packet_buffer, void* restrict const data, const uint32_t data_size, MAYBE_UNUSED const struct SwiftNetClientConnection* const client_connection) {
     write_packet_buffer(byte_offset, packet_buffer, data, data_size);
 }
 
-void swiftnet_server_write_packet_buffer(const uint32_t byte_offset, struct SwiftNetPacketBuffer* restrict const packet_buffer, void* restrict const data, const uint32_t data_size, const struct SwiftNetServer* const server) {
+void swiftnet_server_write_packet_buffer(const uint32_t byte_offset, struct SwiftNetPacketBuffer* restrict const packet_buffer, void* restrict const data, const uint32_t data_size, MAYBE_UNUSED const struct SwiftNetServer* const server) {
     write_packet_buffer(byte_offset, packet_buffer, data, data_size);
 }
 
@@ -93,10 +93,10 @@ static inline void destroy_packet_buffer(const struct SwiftNetPacketBuffer* rest
     free(packet->packet_buffer_start);
 }
 
-void swiftnet_client_destroy_packet_buffer(const struct SwiftNetPacketBuffer* restrict const packet, const struct SwiftNetClientConnection* const client_connection) {
+void swiftnet_client_destroy_packet_buffer(const struct SwiftNetPacketBuffer* restrict const packet, MAYBE_UNUSED const struct SwiftNetClientConnection* const client_connection) {
     destroy_packet_buffer(packet);
 }
 
-void swiftnet_server_destroy_packet_buffer(const struct SwiftNetPacketBuffer* restrict const packet, const struct SwiftNetServer* const server) {
+void swiftnet_server_destroy_packet_buffer(const struct SwiftNetPacketBuffer* restrict const packet, MAYBE_UNUSED const struct SwiftNetServer* const server) {
     destroy_packet_buffer(packet);
 }

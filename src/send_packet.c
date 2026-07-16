@@ -18,9 +18,12 @@
 #include "internal/internal.h"
 #include <netinet/in.h>
 
-static inline enum RequestLostPacketsReturnType request_lost_packets_bitarray(const uint8_t* restrict const raw_data, const uint32_t data_size, const struct SwiftNetNetworkData* restrict const network_data, struct SwiftNetPacketSending* const packet_sending 
+static inline enum RequestLostPacketsReturnType request_lost_packets_bitarray(const struct SwiftNetNetworkData* restrict const network_data, struct SwiftNetPacketSending* const packet_sending 
 #ifdef SWIFT_NET_BACKEND_DPDK
     , struct rte_mbuf* restrict const raw_data_internal_mem_buf
+#elif defined(SWIFT_NET_BACKEND_PCAP)
+    , const uint8_t* restrict const raw_data
+    , const uint32_t data_size
 #endif 
         ) {
     uint8_t times_checked;
@@ -67,11 +70,12 @@ static inline void handle_lost_packets(
     const uint16_t destination_port,
     struct SwiftNetMemoryAllocator* const packets_sending_memory_allocator,
     struct SwiftNetHashMap* const packets_sending,
-    const bool loopback,
     const struct SwiftNetNetworkData* restrict const network_data,
     const uint32_t packet_length
+    #ifdef SWIFT_NET_BACKEND_PCAP
+        , uint32_t chunk_amount
+    #endif
     #ifdef SWIFT_NET_REQUESTS
-        , const bool response
         , const uint8_t packet_type
     #endif
 ) {
@@ -79,7 +83,6 @@ static inline void handle_lost_packets(
     struct SwiftNetPortInfo port_info;
     struct ip request_lost_packets_ip_header;
     struct SwiftNetPacketInfo request_lost_packets_bit_array;
-    uint32_t chunk_amount;
     enum RequestLostPacketsReturnType request_lost_packets_bitarray_response;
     #ifdef SWIFT_NET_BACKEND_DPDK
     struct rte_mbuf* restrict current_buf;
@@ -89,8 +92,6 @@ static inline void handle_lost_packets(
     struct SwiftNetPacketInfo resend_chunk_packet_info;
     uint8_t temp_data_buffer[prepend_size + PACKET_HEADER_SIZE];
     #endif
-
-    chunk_amount = (packet_length + (mtu - PACKET_HEADER_SIZE) - 1) / (mtu - PACKET_HEADER_SIZE);
 
 
     port_info = (struct SwiftNetPortInfo){
@@ -137,9 +138,12 @@ static inline void handle_lost_packets(
         uint8_t* restrict current_buffer_header_ptr;
 
 
-        request_lost_packets_bitarray_response = request_lost_packets_bitarray(request_lost_packets_buffer, PACKET_HEADER_SIZE + prepend_size, network_data, packet_sending
+        request_lost_packets_bitarray_response = request_lost_packets_bitarray(network_data, packet_sending
             #ifdef SWIFT_NET_BACKEND_DPDK
                 , request_lost_packets_buffer_internal_mem_buf
+            #elif defined(SWIFT_NET_BACKEND_PCAP)
+                , request_lost_packets_buffer
+                , PACKET_HEADER_SIZE + prepend_size
             #endif
         );
 
@@ -253,7 +257,6 @@ static inline void handle_lost_packets(
 }
 
 inline void swiftnet_send_packet(
-    const void* const connection,
     const uint32_t target_maximum_transmission_unit,
     const struct SwiftNetPortInfo port_info,
     const struct SwiftNetPacketBuffer* const packet,
@@ -262,7 +265,6 @@ inline void swiftnet_send_packet(
     struct SwiftNetHashMap* const packets_sending,
     struct SwiftNetMemoryAllocator* const packets_sending_memory_allocator,
     const struct ether_header eth_hdr,
-    const bool loopback,
     const struct SwiftNetNetworkData network_data
     #ifdef SWIFT_NET_REQUESTS
         , struct RequestSent* const request_sent
@@ -416,9 +418,11 @@ inline void swiftnet_send_packet(
 
                 memcpy(buffer_header_location, temp_data_buffer, prepend_size + PACKET_HEADER_SIZE);
 
-                handle_lost_packets(new_packet_sending, mtu, packet, eth_hdr, target_addr, port_info.source_port, port_info.destination_port, packets_sending_memory_allocator, packets_sending, loopback, &network_data, packet_length
+                handle_lost_packets(new_packet_sending, mtu, packet, eth_hdr, target_addr, port_info.source_port, port_info.destination_port, packets_sending_memory_allocator, packets_sending, &network_data, packet_length
+                #ifdef SWIFT_NET_BACKEND_PCAP
+                    , chunk_amount
+                #endif
                 #ifdef SWIFT_NET_REQUESTS
-                    , response
                     , packet_type
                 #endif
                 );
@@ -438,6 +442,8 @@ inline void swiftnet_send_packet(
         }
         #elif defined(SWIFT_NET_BACKEND_DPDK)
             for (uint32_t i = 0; i < packet->buf_amount; i++) {
+                current_offset = i * packet->data_len_per_packet;
+
                 if(current_offset == packet_length) break;
 
                 #ifdef SWIFT_NET_DEBUG
@@ -558,7 +564,7 @@ inline void swiftnet_send_packet(
 }
 
 void swiftnet_client_send_packet(struct SwiftNetClientConnection* const client, struct SwiftNetPacketBuffer* restrict const packet, const uint32_t bytes_to_send) {
-    swiftnet_send_packet(client, client->maximum_transmission_unit, client->port_info, packet, bytes_to_send, &client->server_addr, &client->packets_sending, &client->packets_sending_memory_allocator, client->eth_header, client->loopback, client->network_data
+    swiftnet_send_packet(client->maximum_transmission_unit, client->port_info, packet, bytes_to_send, &client->server_addr, &client->packets_sending, &client->packets_sending_memory_allocator, client->eth_header, client->network_data
     #ifdef SWIFT_NET_REQUESTS
         , NULL, false, 0
     #endif
@@ -577,7 +583,7 @@ void swiftnet_server_send_packet(struct SwiftNetServer* const server, struct Swi
     memcpy(&eth_hdr, &server->eth_header, sizeof(eth_hdr));
     memcpy(&eth_hdr.ether_dhost, &target.mac_address, sizeof(eth_hdr.ether_dhost));
 
-    swiftnet_send_packet(server, target.maximum_transmission_unit, port_info, packet, bytes_to_send, &target.sender_address, &server->packets_sending, &server->packets_sending_memory_allocator, eth_hdr, server->loopback, server->network_data
+    swiftnet_send_packet(target.maximum_transmission_unit, port_info, packet, bytes_to_send, &target.sender_address, &server->packets_sending, &server->packets_sending_memory_allocator, eth_hdr, server->network_data
     #ifdef SWIFT_NET_REQUESTS
         , NULL, false, 0
     #endif

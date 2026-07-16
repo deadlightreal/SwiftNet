@@ -1,0 +1,4 @@
+CompileFlags:
+    Add:
+        - "-L../build"
+        - "-lswift_net"

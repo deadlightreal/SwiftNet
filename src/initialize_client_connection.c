@@ -74,7 +74,7 @@ exit:
     return NULL;
 }
 
-static inline struct SwiftNetClientConnection* const construct_client_connection(const bool loopback, const uint16_t destination_port, const in_addr_t server_address) {
+static inline struct SwiftNetClientConnection* construct_client_connection(const bool loopback, const uint16_t destination_port, const in_addr_t server_address) {
     struct SwiftNetClientConnection* const new_connection = allocator_allocate(&client_connection_memory_allocator);
 
     struct ether_header eth_header = {

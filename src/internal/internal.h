@@ -19,6 +19,9 @@
     #include <endian.h>
 #endif
 
+#define ALWAYS_INLINE __attribute__((always_inline))
+#define MAYBE_UNUSED [[maybe_unused]]
+
 #ifdef __linux__
 #define LOOPBACK_INTERFACE_NAME "lo\0"
 #elif defined(__APPLE__)
@@ -90,26 +93,28 @@ enum RequestLostPacketsReturnType {
 #define PACKET_HISTORY_STORE_TIME 5
 
 #define PRINT_ERROR(fmt, ...) \
-    do { fprintf(stderr, fmt " | function: %s | line: %d\n", ##__VA_ARGS__, __FUNCTION__, __LINE__); } while (0)
+    do { fprintf(stderr, fmt " | function: %s | line: %d\n", ##__VA_ARGS__, __func__, __LINE__); } while (0)
 
 #define MIN(one, two) (one > two ? two : one)
 
-static inline void* swiftnet_allocate_memory(const uint32_t size) {
+/*
+inline void* swiftnet_allocate_memory(const uint32_t size) {
     // Future
     return NULL;
 }
 
-static inline void swiftnet_free_memory(const uint32_t size, const void* restrict const ptr) {
+inline void swiftnet_free_memory(const uint32_t size, const void* restrict const ptr) {
     // Future
     return;
 }
 
-static inline void swiftnet_reallocate_memory(const uint32_t new_size, const void* restrict const ptr) {
+inline void swiftnet_reallocate_memory(const uint32_t new_size, const void* restrict const ptr) {
     // Future
     return;
 }
+*/
 
-static inline uint32_t crc32(const uint8_t* const data, const uint32_t length) {
+static inline ALWAYS_INLINE uint32_t crc32(const uint8_t* const data, const uint32_t length) {
     const uint8_t* ptr = data;
     uint32_t remaining = length;
     uint32_t crc = 0xFFFFFFFF;
@@ -169,10 +174,10 @@ extern struct SwiftNetMemoryAllocator packet_completed_key_allocator;
 extern pthread_t memory_cleanup_thread;
 extern _Atomic bool swiftnet_closing;
 
-extern void* memory_cleanup_background_service();
+extern void* memory_cleanup_background_service(void* user);
 
 extern int get_default_interface_and_mac(char* restrict interface_name, const uint32_t interface_name_length, uint8_t* restrict mac_out, const int sockfd);
-extern const uint32_t get_mtu(const char* restrict const interface, const int sockfd);
+extern uint32_t get_mtu(const char* restrict const interface, const int sockfd);
 
 extern void* swiftnet_server_process_packets(void* const void_server);
 extern void* swiftnet_client_process_packets(void* const void_client);
@@ -194,20 +199,18 @@ extern uint32_t items_leaked;
 #ifdef SWIFT_NET_DEBUG
 extern struct SwiftNetDebugger debugger;
 
-static inline bool check_debug_flag(const SwiftNetDebugFlags flag) {
+static inline ALWAYS_INLINE bool check_debug_flag(const SwiftNetDebugFlags flag) {
     return (debugger.flags & flag) != 0;
 }
 
-static inline void send_debug_message(const char* restrict const message, ...) {
+MAYBE_UNUSED static void send_debug_message(const char* restrict const message, ...) {
     va_list args;
-    char* prefix;
     uint32_t prefix_length;
     uint32_t message_length;
+    char prefix[] = "[DEBUG] ";
 
 
     va_start(args, message);
-
-    prefix = "[DEBUG] ";
 
     prefix_length = strlen(prefix);
     message_length = strlen(message);
@@ -282,7 +285,6 @@ extern struct SwiftNetHashMap requests_sent;
 #endif
 
 extern void swiftnet_send_packet(
-    const void* const connection,
     const uint32_t target_maximum_transmission_unit,
     const struct SwiftNetPortInfo port_info,
     const struct SwiftNetPacketBuffer* const packet,
@@ -291,7 +293,6 @@ extern void swiftnet_send_packet(
     struct SwiftNetHashMap* const packets_sending,
     struct SwiftNetMemoryAllocator* const packets_sending_memory_allocator,
     const struct ether_header eth_hdr,
-    const bool loopback,
     const struct SwiftNetNetworkData network_data
     #ifdef SWIFT_NET_REQUESTS
     , struct RequestSent* const request_sent
@@ -300,31 +301,31 @@ extern void swiftnet_send_packet(
     #endif
 );
 
-static inline struct SwiftNetPacketInfo construct_packet_info(const uint32_t packet_length, const uint8_t packet_type, const uint32_t chunk_amount, const uint32_t chunk_index, const struct SwiftNetPortInfo port_info) {
+static inline ALWAYS_INLINE struct SwiftNetPacketInfo construct_packet_info(const uint32_t packet_length, const uint8_t packet_type, const uint32_t chunk_amount, const uint32_t chunk_index, const struct SwiftNetPortInfo port_info) {
     return (struct SwiftNetPacketInfo){
         .packet_length = packet_length,
-        .packet_type = packet_type,
         .chunk_amount = chunk_amount,
         .chunk_index = chunk_index,
         .maximum_transmission_unit = maximum_transmission_unit,
+        .checksum = 0x00,
         .port_info = port_info,
-        .checksum = 0x00
+        .packet_type = packet_type
     };
 }
 
-static struct ip construct_ip_header(const struct in_addr destination_addr, const uint32_t packet_size, const uint16_t packet_id) {
+static inline ALWAYS_INLINE struct ip construct_ip_header(const struct in_addr destination_addr, const uint32_t packet_size, const uint16_t packet_id) {
     struct ip ip_header;
 
 
     ip_header = (struct ip){
-        .ip_v = 4,
         .ip_hl = 5,
+        .ip_v = 4,
         .ip_tos = 0,
-        .ip_p = PROT_NUMBER,
         .ip_len = htons(packet_size),
         .ip_id = htons(packet_id),
         .ip_off = htons(0),
         .ip_ttl = 64,
+        .ip_p = PROT_NUMBER,
         .ip_sum = htons(0),
         .ip_src = private_ip_address,
         .ip_dst = destination_addr
