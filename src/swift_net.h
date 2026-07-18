@@ -50,6 +50,7 @@ struct SwiftNetNetworkData {
     uint16_t port;
     uint16_t addr_type;
     uint8_t prepend_size;
+    _Atomic bool closing;
     #endif
     #ifdef SWIFT_NET_BACKEND_PCAP
     pcap_t* pcap;
@@ -83,7 +84,7 @@ enum PacketDelayUpdateStatus {
 #define likely(x) __builtin_expect((x), 0x01)
 #endif
 
-extern uint32_t maximum_transmission_unit;
+extern uint16_t maximum_transmission_unit;
 
 #ifdef SWIFT_NET_DEBUG
 #define SWIFTNET_DEBUG_FLAGS(num) ((SwiftNetDebugFlags)(num))
@@ -106,7 +107,7 @@ struct SwiftNetPortInfo {
 } SWIFT_NET_ALIGNED(4);
 
 struct SwiftNetClientAddrData {
-    uint32_t maximum_transmission_unit;
+    uint16_t maximum_transmission_unit;
     struct in_addr sender_address;   
     uint16_t port;
     uint8_t mac_address[6];
@@ -125,9 +126,9 @@ struct SwiftNetPacketInfo {
     uint32_t packet_length;
     uint32_t chunk_amount;
     uint32_t chunk_index;
-    uint32_t maximum_transmission_unit;
     uint32_t checksum;
     struct SwiftNetPortInfo port_info;
+    uint16_t maximum_transmission_unit;
     uint8_t packet_type;
 } SWIFT_NET_ALIGNED(4);
 
@@ -155,7 +156,7 @@ struct SwiftNetPacketServerMetadata {
 } SWIFT_NET_ALIGNED(4);
 
 struct SwiftNetServerInformation {
-    uint32_t maximum_transmission_unit;
+    uint16_t maximum_transmission_unit;
 } SWIFT_NET_ALIGNED(4);
 
 enum PacketSendingUpdated {
@@ -183,7 +184,7 @@ struct SwiftNetPacketBuffer {
     struct rte_mbuf** dpdk_buffers;
     uint32_t total_data_size; // Only counting data stored not eth, ip headers or packet info
     uint32_t buf_amount;
-    uint32_t data_len_per_packet;
+    uint16_t data_len_per_packet;
     uint32_t append_offset;
     #elif defined(SWIFT_NET_BACKEND_PCAP)
     uint8_t* packet_buffer_start;   // Start of the allocated buffer
@@ -309,7 +310,7 @@ struct SwiftNetClientConnection {
     pthread_t execute_callback_thread;
     struct SwiftNetPortInfo port_info;
     struct ether_header eth_header; 
-    uint32_t maximum_transmission_unit;
+    uint16_t maximum_transmission_unit;
     struct in_addr server_addr;
     bool loopback;
     _Atomic bool processing_packets;

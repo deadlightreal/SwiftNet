@@ -41,7 +41,7 @@ void* request_server_information(void* restrict const request_server_information
 
     gettimeofday(&tv, NULL);
 
-    start = (uint32_t)tv.tv_sec * 1000 + tv.tv_usec / 1000;
+    start = (uint32_t)tv.tv_sec * 1000 + (uint32_t)tv.tv_usec / 1000;
 
     goto init_connection_request;
 
@@ -87,7 +87,7 @@ static inline struct SwiftNetClientConnection* construct_client_connection(const
 
     *new_connection = (struct SwiftNetClientConnection){
         .eth_header = eth_header,
-        .port_info = (struct SwiftNetPortInfo){.source_port = rand(), .destination_port = destination_port},
+        .port_info = (struct SwiftNetPortInfo){.source_port = (uint16_t)rand(), .destination_port = destination_port},
         .server_addr.s_addr = server_address,
         .packet_handler = NULL,
         .loopback = loopback,
@@ -148,11 +148,9 @@ init_connection:
 
     loopback = (ip >> 24) == 127;
 
-    printf("loopback: %d\n", loopback);
-
     new_connection = construct_client_connection(loopback, port, addr.s_addr);
 
-    listener = check_existing_listener(loopback ? LOOPBACK_INTERFACE_NAME : default_network_interface, new_connection, CONNECTION_TYPE_CLIENT, loopback);
+    listener = check_existing_listener(loopback ? CLIENT_LOOPBACK_INTERFACE_NAME : default_network_interface, new_connection, CONNECTION_TYPE_CLIENT, loopback);
     
     net_data = listener->network_data;
 
@@ -171,16 +169,16 @@ request_initialization:
         new_connection->port_info
     );
 
-    request_server_info_ip_header = construct_ip_header(new_connection->server_addr, PACKET_HEADER_SIZE, rand());
+    request_server_info_ip_header = construct_ip_header(new_connection->server_addr, PACKET_HEADER_SIZE, (uint16_t)rand());
 
     HANDLE_PACKET_CONSTRUCTION(&request_server_info_ip_header, &request_server_information_packet_info, &net_data, &new_connection->eth_header, PACKET_HEADER_SIZE + GET_PREPEND_SIZE(&new_connection->network_data), request_server_info_buffer);
 
-    HANDLE_CHECKSUM(request_server_info_buffer, sizeof(request_server_info_buffer), &net_data);
+    HANDLE_CHECKSUM(request_server_info_buffer, (uint32_t)sizeof(request_server_info_buffer), &net_data);
 
     thread_args = (struct RequestServerInformationArgs){
         .network_data = &net_data,
         .data = request_server_info_buffer,
-        .size = sizeof(request_server_info_buffer),
+        .size = (uint32_t)sizeof(request_server_info_buffer),
         .server_addr = addr,
         .timeout_ms = timeout_ms,
         .connection = new_connection

@@ -58,5 +58,21 @@ void swiftnet_cleanup() {
     printf("Bytes leaked: %d\nItems leaked: %d\n", bytes_leaked, items_leaked);
     #endif
 
+    #ifdef SWIFT_NET_BACKEND_DPDK
+    uint16_t port_id;
+    uint16_t count;
+
+    count = rte_eth_dev_count_avail();
+
+    for (port_id = 0; port_id < count; port_id++) {
+        if (!rte_eth_dev_is_valid_port(port_id))
+            continue;
+
+        rte_eth_dev_close(port_id);
+    }
+
+    rte_eal_cleanup();
+    #endif
+
     close_background_service();
 }

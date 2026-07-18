@@ -67,7 +67,7 @@ static inline void set_memory_status(struct SwiftNetMemoryAllocator* const memor
             &&
             casted_memory_loc < casted_data + (memory_allocator->item_size * memory_allocator->chunk_item_amount)
         ) {
-            offset = casted_memory_loc - casted_data;
+            offset = (uint32_t)(casted_memory_loc - casted_data);
             index = offset / memory_allocator->item_size;
 
             byte = index / 8;
@@ -115,7 +115,7 @@ static inline bool is_already_free(struct SwiftNetMemoryAllocator* const memory_
             &&
             casted_memory_loc < casted_data + (memory_allocator->item_size * memory_allocator->chunk_item_amount)
         ) {
-            offset = casted_memory_loc - casted_data;
+            offset = (uint32_t)(casted_memory_loc - casted_data);
             index = offset / memory_allocator->item_size;
 
             byte = index / 8;
@@ -164,7 +164,7 @@ find_free_stack:
     if((bitmap | invalid_bitmap) == UINT64_MAX) {
         return NULL;
     } else {
-        first_free = __builtin_ctzll(~(bitmap | invalid_bitmap));
+        first_free = (uint16_t)__builtin_ctzll(~(bitmap | invalid_bitmap));
     }
 
     if(first_free >= stacks_allocated) {
@@ -355,7 +355,10 @@ void* allocator_allocate(struct SwiftNetMemoryAllocator* const memory_allocator)
 void allocator_free(struct SwiftNetMemoryAllocator* const memory_allocator, void* const memory_location) {
     struct SwiftNetMemoryAllocatorStack* free_stack;
     uint32_t size;
+    #ifdef SWIFT_NET_INTERNAL_TESTING
     bool already_free;
+    #endif
+
 
 
     #ifdef SWIFT_NET_INTERNAL_TESTING

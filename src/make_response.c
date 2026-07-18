@@ -7,7 +7,7 @@ void swiftnet_client_make_response(struct SwiftNetClientConnection* const client
     #ifdef SWIFT_NET_BACKEND_DPDK
     const uint32_t packet_length = buffer->total_data_size;
     #else
-    const uint32_t packet_length = buffer->packet_append_pointer - buffer->packet_data_start;
+    const uint32_t packet_length = (uint32_t)(buffer->packet_append_pointer - buffer->packet_data_start);
     #endif
 
     swiftnet_send_packet(client->maximum_transmission_unit, client->port_info, buffer, packet_length, &client->server_addr, &client->packets_sending, &client->packets_sending_memory_allocator, client->eth_header, client->network_data, NULL, true, packet_data->metadata.packet_id);
@@ -17,7 +17,7 @@ void swiftnet_server_make_response(struct SwiftNetServer* const server, struct S
     #ifdef SWIFT_NET_BACKEND_DPDK
     const uint32_t packet_length = buffer->total_data_size;
     #else
-    const uint32_t packet_length = buffer->packet_append_pointer - buffer->packet_data_start;
+    const uint32_t packet_length = (uint32_t)(buffer->packet_append_pointer - buffer->packet_data_start);
     #endif
     const struct SwiftNetPortInfo port_info = {.source_port = server->server_port, .destination_port = packet_data->metadata.port_info.source_port};
 

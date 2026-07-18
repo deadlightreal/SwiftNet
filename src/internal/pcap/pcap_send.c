@@ -2,11 +2,11 @@
 #include <errno.h>
 #include <pcap/pcap.h>
 
-int swiftnet_pcap_send(pcap_t* const pcap, const uint8_t* restrict const data, const int len) {
+int swiftnet_pcap_send(pcap_t* const pcap, const uint8_t* restrict const data, const uint32_t len) {
     int ret;
 
 
-    ret = pcap_inject(pcap, data, len);
+    ret = pcap_inject(pcap, data, (size_t)len);
 
     if(ret == -1) {
         if(errno == ENOBUFS) {

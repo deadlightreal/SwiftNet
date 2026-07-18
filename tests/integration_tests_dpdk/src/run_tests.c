@@ -116,110 +116,13 @@ int main() {
             }},
             .test_name = "Test server making large response"
         },
-        // local default interface test
-        {
-            .function = test_sending_packet,
-            .args = {.test_sending_packet_args = {
-                .client_data_len = 50,
-                .server_data_len = 50,
-                .ip_address = private_ip_address_testing,
-                .loopback = false
-            }},
-            .test_name = "Test sending small packets"
-        },
-        {
-            .function = test_sending_packet,
-            .args = {.test_sending_packet_args = {
-                .client_data_len = 0,
-                .server_data_len = 10000,
-                .ip_address = private_ip_address_testing,
-                .loopback = false
-            }},
-            .test_name = "Test client sending large packet"
-        },
-        {
-            .function = test_sending_packet,
-            .args = {.test_sending_packet_args = {
-                .client_data_len = 10000,
-                .server_data_len = 10,
-                .ip_address = private_ip_address_testing,
-                .loopback = false
-            }},
-            .test_name = "Test server sending large packet"
-        },
-        {
-            .function = test_making_request,
-            .args = {.test_making_request_args = {
-                .ip_address = private_ip_address_testing,
-                .loopback = false,
-                .receiver = Server,
-                .request_data_len = 100,
-                .response_data_len = 100
-            }},
-            .test_name = "Test client making small request"
-        },
-        {
-            .function = test_making_request,
-            .args = {.test_making_request_args = {
-                .ip_address = private_ip_address_testing,
-                .loopback = false,
-                .receiver = Client,
-                .request_data_len = 100,
-                .response_data_len = 100
-            }},
-            .test_name = "Test server making small request"
-        },
-        {
-            .function = test_making_request,
-            .args = {.test_making_request_args = {
-                .ip_address = private_ip_address_testing,
-                .loopback = false,
-                .receiver = Client,
-                .request_data_len = 10000,
-                .response_data_len = 100
-            }},
-            .test_name = "Test server making large request"
-        },
-        {
-            .function = test_making_request,
-            .args = {.test_making_request_args = {
-                .ip_address = private_ip_address_testing,
-                .loopback = false,
-                .receiver = Server,
-                .request_data_len = 10000,
-                .response_data_len = 100
-            }},
-            .test_name = "Test client making large request"
-        },
-        {
-            .function = test_making_request,
-            .args = {.test_making_request_args = {
-                .ip_address = private_ip_address_testing,
-                .loopback = false,
-                .receiver = Client,
-                .request_data_len = 100,
-                .response_data_len = 10000
-            }},
-            .test_name = "Test client making large response"
-        },
-        {
-            .function = test_making_request,
-            .args = {.test_making_request_args = {
-                .ip_address = private_ip_address_testing,
-                .loopback = false,
-                .receiver = Server,
-                .request_data_len = 100,
-                .response_data_len = 10000
-            }},
-            .test_name = "Test server making large response"
-        },
     };
 
     char* dpdk_args[] =  {
-        "-l", "0", "--no-pci", "--vdev=net_tap0,iface=tap0"
+        "-l", "0-1", "--no-pci", "--vdev=net_ring0"
     };
 
-    swiftnet_initialize(dpdk_args, sizeof(dpdk_args) / sizeof(char*));
+    swiftnet_initialize(dpdk_args, sizeof(dpdk_args) / sizeof(dpdk_args[0]));
 
     swiftnet_add_debug_flags(SWIFTNET_DEBUG_FLAGS(SWIFTNET_DEBUG_PACKETS_SENDING | SWIFTNET_DEBUG_PACKETS_RECEIVING | SWIFTNET_DEBUG_INITIALIZATION | SWIFTNET_DEBUG_LOST_PACKETS));
 

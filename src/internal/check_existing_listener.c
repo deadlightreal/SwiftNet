@@ -3,6 +3,10 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+
+#ifdef SWIFT_NET_BACKEND_DPDK
+uint8_t current_lcore = 1;
+#endif
            
 void* check_existing_listener(const char* restrict const interface_name, void* const connection, const enum ConnectionType connection_type, const bool loopback) {
     uint32_t interface_len;
@@ -14,7 +18,7 @@ void* check_existing_listener(const char* restrict const interface_name, void* c
 
     LOCK_ATOMIC_DATA_TYPE(&listeners.atomic_lock);
 
-    interface_len = strlen(interface_name);
+    interface_len = (uint32_t)(strlen(interface_name));
 
     existing_listener = hashmap_get(interface_name, interface_len, &listeners);
 
@@ -81,7 +85,11 @@ void* check_existing_listener(const char* restrict const interface_name, void* c
 
     UNLOCK_ATOMIC_DATA_TYPE(&listeners.atomic_lock);
 
-    pthread_create(&new_listener->listener_thread, NULL, interface_start_listening, new_listener);
+    #ifdef SWIFT_NET_BACKEND_PCAP
+    pthread_create(&new_listener->listener_thread, NULL, interface_start_listening_pcap, new_listener);
+    #elif defined(SWIFT_NET_BACKEND_DPDK)
+    rte_eal_remote_launch(interface_start_listening_dpdk, new_listener, current_lcore);
+    #endif
 
     return new_listener;
 }

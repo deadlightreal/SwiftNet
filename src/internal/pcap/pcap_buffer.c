@@ -27,7 +27,7 @@ static inline void resize_packet_buffer(uint32_t new_buffer_size, struct SwiftNe
     uint8_t* new_ptr;
     uint8_t* data_start; 
 
-    const uint32_t current_offset = packet_buffer->packet_append_pointer - packet_buffer->packet_data_start;
+    const uint32_t current_offset = (uint32_t)(packet_buffer->packet_append_pointer - packet_buffer->packet_data_start);
 
 
     new_buffer_size += PACKET_HEADER_SIZE + sizeof(struct ether_header);

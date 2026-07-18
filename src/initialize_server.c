@@ -66,7 +66,7 @@ struct SwiftNetServer* swiftnet_create_server(const uint16_t port, const bool lo
     }
 
     // Create a new thread that will handle all packets received
-    struct Listener* const new_listener = check_existing_listener(loopback ? LOOPBACK_INTERFACE_NAME : default_network_interface, new_server, CONNECTION_TYPE_SERVER, loopback);
+    struct Listener* const new_listener = check_existing_listener(loopback ? SERVER_LOOPBACK_INTERFACE_NAME : default_network_interface, new_server, CONNECTION_TYPE_SERVER, loopback);
 
     new_server->network_data = new_listener->network_data;
 

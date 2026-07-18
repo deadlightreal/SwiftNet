@@ -20,7 +20,7 @@
 
 uint32_t semaphore_counter = 0x00;
 
-uint32_t maximum_transmission_unit = 0x00;
+uint16_t maximum_transmission_unit = 0x00;
 struct in_addr private_ip_address;
 uint8_t mac_address[6];
 char default_network_interface[SIZEOF_FIELD(struct ifreq, ifr_name)];
@@ -80,7 +80,7 @@ static inline void initialize_memory_cleanup_thread() {
     pthread_create(&memory_cleanup_thread, NULL, memory_cleanup_background_service, NULL);
 }
 
-void swiftnet_initialize(MAYBE_UNUSED char** const argv, MAYBE_UNUSED const int argc) {
+void swiftnet_initialize(DPDK_ONLY char** const argv, DPDK_ONLY const int argc) {
     #ifdef SWIFT_NET_BACKEND_DPDK
     if (rte_eal_init(argc, argv) < 0) rte_exit(EXIT_FAILURE, "EAL init failed\n");
     #endif
@@ -90,7 +90,7 @@ void swiftnet_initialize(MAYBE_UNUSED char** const argv, MAYBE_UNUSED const int 
     struct sockaddr private_sockaddr;
     socklen_t private_sockaddr_len = sizeof(private_sockaddr);
 
-    seed = rand();
+    seed = (uint64_t)rand();
 
     atomic_store_explicit(&swiftnet_closing, false, memory_order_release);
 

@@ -64,7 +64,9 @@ elseif(BACKEND STREQUAL "dpdk")
 endif()
 
 
-add_compile_options(-march=native)
+if(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64")
+    add_compile_options(-march=armv8-a+crc)
+endif()
 
 add_library(swiftnet STATIC ${SOURCE_FILES})
 add_library(swiftnet_shared SHARED ${SOURCE_FILES})
@@ -86,7 +88,7 @@ else()
 
     target_compile_options(swiftnet PRIVATE
         -O3
-        -march=native
+
         -flto=auto
         -funroll-loops
         -fomit-frame-pointer
@@ -104,7 +106,6 @@ else()
 
     target_compile_options(swiftnet_shared PRIVATE
         -O3
-        -march=native
         -flto=auto
         -funroll-loops
         -fomit-frame-pointer
@@ -150,11 +151,14 @@ if(BACKEND STREQUAL "pcap")
         message("using linking option: -lpcap")
     endif()
 elseif(BACKEND STREQUAL "dpdk")
-    # DPDK linking is typically done via pkg-config (pkg-config --libs libdpdk) or dpdk meson build.
-    # Add -I and libs as needed for your DPDK install. Example (adjust paths):
-    # target_include_directories(swiftnet PUBLIC /usr/local/include/dpdk)
-    # target_link_libraries(swiftnet PUBLIC rte_eal rte_ethdev rte_mempool rte_ring rte_mbuf rte_net)
-    message(STATUS "DPDK backend selected - ensure DPDK libraries are linked in your environment")
+    find_package(PkgConfig REQUIRED)
+    pkg_check_modules(DPDK REQUIRED libdpdk)
+
+    target_include_directories(swiftnet PUBLIC ${DPDK_INCLUDE_DIRS})
+    target_include_directories(swiftnet_shared PUBLIC ${DPDK_INCLUDE_DIRS})
+    target_link_libraries(swiftnet PUBLIC -static ${DPDK_LIBRARIES})
+    target_link_libraries(swiftnet_shared PUBLIC ${DPDK_LIBRARIES})
+    message(STATUS "DPDK backend selected")
 endif()
 
 set_target_properties(swiftnet PROPERTIES

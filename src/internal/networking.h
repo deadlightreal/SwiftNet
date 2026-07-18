@@ -11,8 +11,10 @@
 #include <pcap/pcap.h>
     // Simple crc16 call with proper memory order
     #define HANDLE_CHECKSUM(buffer, size, network_data) \
+        { \
         const uint32_t checksum = crc32(buffer, size); \
-        memcpy(buffer + (network_data)->prepend_size + sizeof(struct ip) + offsetof(struct SwiftNetPacketInfo, checksum), &checksum, sizeof(checksum));
+        memcpy(buffer + (network_data)->prepend_size + sizeof(struct ip) + offsetof(struct SwiftNetPacketInfo, checksum), &checksum, sizeof(checksum)); \
+        }
 
     #define GET_ADDR_TYPE(network_data) (network_data)->addr_type
     #define GET_PREPEND_SIZE(network_data) (network_data)->prepend_size
@@ -33,11 +35,9 @@
     #define FREE_PACKET_CONSTRUCTION(buffer_name, network_data)
 
     extern pcap_t* swiftnet_pcap_open(const char* const restrict interface);
-    extern int swiftnet_pcap_send(pcap_t *pcap, const uint8_t *data, int len);
+    extern int swiftnet_pcap_send(pcap_t *pcap, const uint8_t *data, const uint32_t len);
 
     inline static struct SwiftNetNetworkData swiftnet_initialize_networking(const char* const restrict interface) {
-        printf("Openning interface %s\n", interface);
-
         pcap_t* pcap = swiftnet_pcap_open(interface);
         if (unlikely(pcap == NULL)) {
             PRINT_ERROR("Failed to open pcap");
@@ -48,7 +48,7 @@
             return net_data_null;
         }
 
-        const uint8_t addr_type = pcap_datalink(pcap);
+        const uint8_t addr_type = (uint8_t)pcap_datalink(pcap);
         
         struct SwiftNetNetworkData network_data = {
             .pcap = pcap,
@@ -79,17 +79,25 @@
     }
 #elif defined(SWIFT_NET_BACKEND_DPDK)
     #include <rte_ethdev.h>
+    #include <rte_mbuf.h>
 
     #define HANDLE_CHECKSUM(buffer, size, network_data) \
+        { \
         const uint32_t checksum = crc32(buffer, size); \
-        memcpy(buffer + (network_data)->prepend_size + sizeof(struct ip) + offsetof(struct SwiftNetPacketInfo, checksum), &checksum, sizeof(checksum));
+        memcpy((uint8_t*)buffer + (network_data)->prepend_size + sizeof(struct ip) + offsetof(struct SwiftNetPacketInfo, checksum), &checksum, sizeof(checksum)); \
+        }
 
     #define GET_ADDR_TYPE(network_data) (network_data)->addr_type
     #define GET_PREPEND_SIZE(network_data) (network_data)->prepend_size
 
     #define HANDLE_PACKET_CONSTRUCTION(ip_header, packet_info, network_data, eth_hdr, buffer_size, buffer_name) \
         struct rte_mbuf* buffer_name##_internal_mem_buf = rte_pktmbuf_alloc((network_data)->mem_pool); \
+        if(unlikely(buffer_name##_internal_mem_buf == NULL)) { \
+            PRINT_ERROR("Failed to alloc pktmbuf"); \
+            exit(EXIT_FAILURE); \
+        } \
         uint8_t* restrict const buffer_name = (uint8_t*)rte_pktmbuf_append(buffer_name##_internal_mem_buf, buffer_size); \
+        ASSUME(buffer_name != NULL); \
         buffer_name##_internal_mem_buf->data_len = buffer_size; \
         buffer_name##_internal_mem_buf->pkt_len = buffer_size; \
         if((network_data)->addr_type == 0) { \
@@ -102,7 +110,7 @@
         }
 
     #define SWIFTNET_LOOP_PACKETS(network_data, listener) \
-        while(1) { \
+        while(atomic_load_explicit(&(network_data)->closing, memory_order_acquire) == false) { \
             struct rte_mbuf* buffers[DPDK_BURST_SIZE]; \
             uint16_t nb_rx = rte_eth_rx_burst((network_data)->port, 0, buffers, DPDK_BURST_SIZE); \
             if (likely(nb_rx > 0)) { \
@@ -120,33 +128,45 @@
     #define FREE_PACKET_CONSTRUCTION(buffer_name, network_data) \
         rte_pktmbuf_free(buffer_name##_internal_mem_buf);
 
-    void swiftnet_dpdk_open_port(const uint16_t port, struct SwiftNetNetworkData* restrict const);
-    extern int swiftnet_dpdk_send(const uint16_t port, struct rte_mbuf* buf);
+    #define SWIFTNET_BREAK_RECEIVER_LOOP(network_data) \
+        atomic_store_explicit(&(network_data)->closing, true, memory_order_release);
+
+    extern void swiftnet_dpdk_open_port(const uint16_t port, struct SwiftNetNetworkData* restrict const);
+    extern int swiftnet_dpdk_send(const struct SwiftNetNetworkData* const network_data, struct rte_mbuf* buf);
 
     inline static struct SwiftNetNetworkData swiftnet_initialize_networking(const char* const restrict interface) {
         struct SwiftNetNetworkData network_data;
         uint16_t interface_port;
+        int ret;
 
-        interface_port = rte_eth_dev_get_port_by_name(interface, &interface_port);
+        ret = rte_eth_dev_get_port_by_name(interface, &interface_port);
 
-        swiftnet_dpdk_open_port(interface_port, &network_data);
+        if(ret < 0) {
+            PRINT_ERROR("Failed to get dpdk port id on interface: %s err = %d", interface, ret);
+            exit(EXIT_FAILURE);
+        }
 
-        network_data = (struct SwiftNetNetworkData){
+        network_data = (struct SwiftNetNetworkData) {
             .port = interface_port,
             .addr_type = 1,
             .prepend_size = sizeof(struct ether_header)
         };
+
+        swiftnet_dpdk_open_port(interface_port, &network_data);
+
+        atomic_store_explicit(&network_data.closing, false, memory_order_release);
 
         return network_data;
     }
 
 
     #define SWIFTNET_CLOSE_CONNECTION(network_data) \
-        rte_eth_dev_stop((network_data)->port);
+        rte_eth_dev_stop((network_data)->port); \
+        rte_mempool_free((network_data)->mem_pool);
 
     #define SWIFTNET_SEND_INTERNAL_PACKET(network_data, buffer, len) \
-        swiftnet_dpdk_send((network_data)->port, buffer##_internal_mem_buf);
+        swiftnet_dpdk_send((network_data), buffer##_internal_mem_buf);
 
     #define SWIFTNET_SEND_PACKET(network_data, buffer, len) \
-        swiftnet_dpdk_send((network_data)->port, buffer##_internal_mem_buf);
+        swiftnet_dpdk_send((network_data), buffer##_internal_mem_buf);
 #endif

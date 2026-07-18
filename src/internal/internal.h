@@ -19,13 +19,29 @@
     #include <endian.h>
 #endif
 
+#define ASSUME(cond) __builtin_assume(cond)
 #define ALWAYS_INLINE __attribute__((always_inline))
 #define MAYBE_UNUSED [[maybe_unused]]
 
+#ifdef SWIFT_NET_BACKEND_PCAP
+    #define PCAP_ONLY
+    #define DPDK_ONLY MAYBE_UNUSED
+#elif defined(SWIFT_NET_BACKEND_DPDK)
+    #define PCAP_ONLY MAYBE_UNUSED
+    #define DPDK_ONLY
+#endif
+
+#ifdef SWIFT_NET_BACKEND_PCAP
 #ifdef __linux__
-#define LOOPBACK_INTERFACE_NAME "lo\0"
+#define CLIENT_LOOPBACK_INTERFACE_NAME "lo\0"
+#define SERVER_LOOPBACK_INTERFACE_NAME "lo\0"
 #elif defined(__APPLE__)
-#define LOOPBACK_INTERFACE_NAME "lo0\0"
+#define CLIENT_LOOPBACK_INTERFACE_NAME "lo0\0"
+#define SERVER_LOOPBACK_INTERFACE_NAME "lo0\0"
+#endif
+#elif defined(SWIFT_NET_BACKEND_DPDK)
+#define CLIENT_LOOPBACK_INTERFACE_NAME "net_ring0\0"
+#define SERVER_LOOPBACK_INTERFACE_NAME "net_ring0\0"
 #endif
 
 #ifdef SWIFT_NET_INTERNAL_TESTING
@@ -52,7 +68,7 @@ enum RequestLostPacketsReturnType {
         } \
         uint32_t inverted = ~(current_index); \
         while(inverted != UINT32_MAX) { \
-            uint32_t bit_index = __builtin_ctz(inverted); \
+            uint32_t bit_index = (uint32_t)(__builtin_ctzl(inverted)); \
             inverted |= 1 << bit_index; \
             for(struct SwiftNetHashMapItem* hashmap_item = (hashmap)->items + ((i * 32) + bit_index); hashmap_item != NULL; hashmap_item = hashmap_item->next) { \
                 void* const hashmap_data = hashmap_item->value; \
@@ -75,7 +91,7 @@ enum RequestLostPacketsReturnType {
 // Size of memory allocated before ip header.
 // Memory should contain either an eth hdr or any specific data depending on addr type (loopback or real interface)
 #ifdef SWIFT_NET_BACKEND_DPDK
-#define PACKET_PREPEND_SIZE(addr_type) (((addr_type) == 0) ? 0 : sizeof(struct ether_header))
+#define PACKET_PREPEND_SIZE(addr_type) sizeof(struct ether_header)
 #elif defined(SWIFT_NET_BACKEND_PCAP)
 #define PACKET_PREPEND_SIZE(addr_type) ((addr_type == DLT_NULL) ? sizeof(uint32_t) : addr_type == DLT_EN10MB ? sizeof(struct ether_header) : 0)
 #endif
@@ -92,8 +108,11 @@ enum RequestLostPacketsReturnType {
 // How many seconds between each memory cleanup.
 #define PACKET_HISTORY_STORE_TIME 5
 
-#define PRINT_ERROR(fmt, ...) \
-    do { fprintf(stderr, fmt " | function: %s | line: %d\n", ##__VA_ARGS__, __func__, __LINE__); } while (0)
+#define PRINT_ERROR(...) \
+    do { \
+        fprintf(stderr, __VA_ARGS__); \
+        fprintf(stderr, " | function: %s | line: %d\n", __func__, __LINE__); \
+    } while (0)
 
 #define MIN(one, two) (one > two ? two : one)
 
@@ -177,7 +196,7 @@ extern _Atomic bool swiftnet_closing;
 extern void* memory_cleanup_background_service(void* user);
 
 extern int get_default_interface_and_mac(char* restrict interface_name, const uint32_t interface_name_length, uint8_t* restrict mac_out, const int sockfd);
-extern uint32_t get_mtu(const char* restrict const interface, const int sockfd);
+extern uint16_t get_mtu(const char* restrict const interface, const int sockfd);
 
 extern void* swiftnet_server_process_packets(void* const void_server);
 extern void* swiftnet_client_process_packets(void* const void_client);
@@ -203,25 +222,13 @@ static inline ALWAYS_INLINE bool check_debug_flag(const SwiftNetDebugFlags flag)
     return (debugger.flags & flag) != 0;
 }
 
-MAYBE_UNUSED static void send_debug_message(const char* restrict const message, ...) {
+MAYBE_UNUSED __attribute__((format(printf, 1, 2))) static inline ALWAYS_INLINE void send_debug_message(const char *restrict const message, ...) {
     va_list args;
-    uint32_t prefix_length;
-    uint32_t message_length;
-    char prefix[] = "[DEBUG] ";
-
 
     va_start(args, message);
 
-    prefix_length = strlen(prefix);
-    message_length = strlen(message);
-
-    char full_message[prefix_length + message_length + 1];
-
-    memcpy(full_message, prefix, prefix_length);
-    memcpy(full_message + prefix_length, message, message_length);
-    full_message[prefix_length + message_length] = '\0';
-
-    vprintf(full_message, args);
+    printf("[DEBUG] ");
+    vprintf(message, args);
 
     va_end(args);
 }
@@ -256,7 +263,8 @@ extern struct SwiftNetMemoryAllocator client_connection_memory_allocator;
 extern struct SwiftNetMemoryAllocator listener_memory_allocator;
 extern struct SwiftNetMemoryAllocator hashmap_item_memory_allocator;
 
-extern void* interface_start_listening(void* const listener_void);
+extern void* interface_start_listening_pcap(void* const listener_void);
+extern int interface_start_listening_dpdk(void* const listener_void);
 
 extern void* vector_get(struct SwiftNetVector* const vector, const uint32_t index);
 extern void vector_remove(struct SwiftNetVector* const vector, const uint32_t index);
@@ -285,7 +293,7 @@ extern struct SwiftNetHashMap requests_sent;
 #endif
 
 extern void swiftnet_send_packet(
-    const uint32_t target_maximum_transmission_unit,
+    const uint16_t target_maximum_transmission_unit,
     const struct SwiftNetPortInfo port_info,
     const struct SwiftNetPacketBuffer* const packet,
     const uint32_t packet_length,
@@ -313,7 +321,7 @@ static inline ALWAYS_INLINE struct SwiftNetPacketInfo construct_packet_info(cons
     };
 }
 
-static inline ALWAYS_INLINE struct ip construct_ip_header(const struct in_addr destination_addr, const uint32_t packet_size, const uint16_t packet_id) {
+static inline ALWAYS_INLINE struct ip construct_ip_header(const struct in_addr destination_addr, const uint16_t packet_size, const uint16_t packet_id) {
     struct ip ip_header;
 
 

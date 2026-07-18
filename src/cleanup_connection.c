@@ -36,7 +36,7 @@ static inline void remove_listener(const enum ConnectionType connection_type, ch
     struct Listener* listener;
 
 
-    interface_len = strlen(interface_name);
+    interface_len = (uint32_t)strlen(interface_name);
 
     LOCK_ATOMIC_DATA_TYPE(&listeners.atomic_lock);
 
@@ -67,7 +67,11 @@ static inline void remove_listener(const enum ConnectionType connection_type, ch
 
         SWIFTNET_BREAK_RECEIVER_LOOP(&listener->network_data);
 
+        #ifdef SWIFT_NET_BACKEND_PCAP
         pthread_join(listener->listener_thread, NULL);
+        #elif defined(SWIFT_NET_BACKEND_DPDK)
+        rte_eal_wait_lcore(1);
+        #endif
 
         SWIFTNET_CLOSE_CONNECTION(&listener->network_data);
 
@@ -79,8 +83,8 @@ static inline void remove_listener(const enum ConnectionType connection_type, ch
     UNLOCK_ATOMIC_DATA_TYPE(&listeners.atomic_lock);
 }
 
-static inline char* get_interface_name(const bool loopback) {
-    return loopback ? LOOPBACK_INTERFACE_NAME : default_network_interface;
+static inline char* get_interface_name(const bool loopback, const enum ConnectionType con_type) {
+    return loopback ? con_type == CONNECTION_TYPE_CLIENT ? CLIENT_LOOPBACK_INTERFACE_NAME : SERVER_LOOPBACK_INTERFACE_NAME : default_network_interface;
 }
 
 static inline void close_threads(const enum ConnectionType connection_type, void* const connection) {
@@ -134,7 +138,7 @@ void swiftnet_client_cleanup(struct SwiftNetClientConnection* const client) {
 
     cleanup_connection_resources(CONNECTION_TYPE_CLIENT, client);
     
-    interface_name = get_interface_name(client->loopback);
+    interface_name = get_interface_name(client->loopback, CONNECTION_TYPE_CLIENT);
 
     remove_listener(CONNECTION_TYPE_CLIENT, interface_name, client);
 
@@ -149,7 +153,7 @@ void swiftnet_server_cleanup(struct SwiftNetServer* const server) {
 
     cleanup_connection_resources(CONNECTION_TYPE_SERVER, server);
     
-    interface_name = get_interface_name(server->loopback);
+    interface_name = get_interface_name(server->loopback, CONNECTION_TYPE_SERVER);
 
     remove_listener(CONNECTION_TYPE_SERVER, interface_name, server);
 

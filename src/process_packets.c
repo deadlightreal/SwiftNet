@@ -294,9 +294,9 @@ static inline void signal_delay_change(const enum PacketDelayUpdateStatus status
 
     memcpy(buffer + prepend_size + PACKET_HEADER_SIZE, &status, sizeof(status));
 
-    HANDLE_CHECKSUM(buffer, sizeof(buffer), net_data);
+    HANDLE_CHECKSUM(buffer, (uint32_t)sizeof(buffer), net_data);
     
-    SWIFTNET_SEND_INTERNAL_PACKET(net_data, buffer, sizeof(buffer));
+    SWIFTNET_SEND_INTERNAL_PACKET(net_data, buffer, (uint32_t)sizeof(buffer));
 }
 
 struct PacketQueueNode* wait_for_next_packet(struct PacketQueue* const packet_queue) {
@@ -360,7 +360,7 @@ static inline void swiftnet_process_packets(
     struct SwiftNetPacketInfo packet_info;
     uint32_t checksum_received;
     struct SwiftNetClientAddrData sender;
-    uint32_t mtu;
+    uint16_t mtu;
     uint32_t chunk_data_size;
     struct SwiftNetPendingMessage* pending_message;
     uint16_t prepend_size;
@@ -459,7 +459,7 @@ process_packet:
             struct SwiftNetServerInformation server_info;
 
 
-            send_server_info_ip_header = construct_ip_header(ip_header.ip_src, PACKET_HEADER_SIZE, rand());
+            send_server_info_ip_header = construct_ip_header(ip_header.ip_src, PACKET_HEADER_SIZE, (uint16_t)rand());
 
             packet_info_new = construct_packet_info(
                 sizeof(struct SwiftNetServerInformation),
@@ -480,9 +480,9 @@ process_packet:
 
             memcpy(buffer + prepend_size + PACKET_HEADER_SIZE, &server_info, sizeof(server_info));
 
-            HANDLE_CHECKSUM(buffer, sizeof(buffer), &network_data);
+            HANDLE_CHECKSUM(buffer, (uint32_t)sizeof(buffer), &network_data);
             
-            SWIFTNET_SEND_INTERNAL_PACKET(&network_data, buffer, sizeof(buffer));
+            SWIFTNET_SEND_INTERNAL_PACKET(&network_data, buffer, (uint32_t)sizeof(buffer));
 
             allocator_free(&packet_buffer_memory_allocator, packet_buffer);
 
@@ -490,7 +490,7 @@ process_packet:
         }
         case SEND_LOST_PACKETS_REQUEST:
         {
-            uint32_t case_mtu;
+            uint16_t case_mtu;
             struct SwiftNetPendingMessage* case_pending_message;
             bool packet_already_completed;
             struct ip send_packet_ip_header;
@@ -525,9 +525,9 @@ process_packet:
 
                     HANDLE_PACKET_CONSTRUCTION(&send_packet_ip_header, &send_packet_info, &network_data, &eth_hdr, prepend_size + PACKET_HEADER_SIZE, buffer);
 
-                    HANDLE_CHECKSUM(buffer, sizeof(buffer), &network_data);
+                    HANDLE_CHECKSUM(buffer, (uint32_t)sizeof(buffer), &network_data);
 
-                    SWIFTNET_SEND_INTERNAL_PACKET(&network_data, buffer, sizeof(buffer));
+                    SWIFTNET_SEND_INTERNAL_PACKET(&network_data, buffer, (uint32_t)sizeof(buffer));
 
                     allocator_free(&packet_buffer_memory_allocator, packet_buffer);
 
@@ -599,8 +599,6 @@ process_packet:
                 }
             }
 
-            printf("receuved response\n");
-
             memcpy((void*)target_packet_sending->lost_chunks, packet_data, packet_info.packet_length);
 
             target_packet_sending->lost_chunks_size = packet_info.packet_length / 4;
@@ -625,8 +623,6 @@ process_packet:
 
                 goto next_packet;
             }
-
-            printf("received packet\n");
 
             atomic_store_explicit(&target_packet_sending->updated, SUCCESSFULLY_RECEIVED, memory_order_release);
 
@@ -878,7 +874,7 @@ process_packet:
             if (pending_message->sending_lost_packets == false) {
                 if (new_packets > 50) {
                     ratio = (float)new_packets_validated / (float)new_packets;
-                    if (ratio > 0.95) {
+                    if (ratio > 0.95f) {
                         signal_delay_change(LOWER_DELAY, &ip_header, source_port, packet_info.port_info.source_port, &eth_hdr, &network_data);
                     } else {
                         signal_delay_change(INCREASE_DELAY, &ip_header, source_port, packet_info.port_info.source_port, &eth_hdr, &network_data);
@@ -901,9 +897,10 @@ process_packet:
         }
     }
 
-    goto next_packet;
-
 next_packet:
+    #ifdef SWIFT_NET_BACKEND_DPDK
+    #endif
+
     allocator_free(&packet_queue_node_memory_allocator, (void*)node);
 
     goto process_packet;

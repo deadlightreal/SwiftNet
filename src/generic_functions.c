@@ -32,7 +32,7 @@ void swiftnet_server_set_message_handler(struct SwiftNetServer* const server, vo
 
 // Read packet data into buffers
 void* swiftnet_client_read_packet(struct SwiftNetClientPacketData* restrict const packet_data, const uint32_t data_size) {
-    const uint32_t data_already_read = (packet_data->current_pointer - packet_data->data) + data_size;
+    const uint32_t data_already_read = (uint32_t)(packet_data->current_pointer - packet_data->data) + data_size;
     if (data_already_read > packet_data->metadata.data_length) {
         PRINT_ERROR("Error: Tried to read more data than there actually is");
         return NULL;
@@ -46,7 +46,7 @@ void* swiftnet_client_read_packet(struct SwiftNetClientPacketData* restrict cons
 }
 
 void* swiftnet_server_read_packet(struct SwiftNetServerPacketData* restrict const packet_data, const uint32_t data_size) {
-    const uint32_t data_already_read = (packet_data->current_pointer - packet_data->data) + data_size;
+    const uint32_t data_already_read = (uint32_t)(packet_data->current_pointer - packet_data->data) + data_size;
     if (data_already_read > packet_data->metadata.data_length) {
         PRINT_ERROR("Error: Tried to read more data than there actually is");
         return NULL;

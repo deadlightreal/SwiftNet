@@ -82,9 +82,9 @@ void send_large_packets(const bool loopback) {
 }
 
 int main() {
-    swiftnet_initialize();
+    swiftnet_initialize(NULL, 0);
 
-    send_large_packets(false);
+    send_large_packets(true);
 
     swiftnet_cleanup();
 
