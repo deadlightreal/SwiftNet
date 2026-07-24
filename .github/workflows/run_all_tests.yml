@@ -20,7 +20,7 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
-    - name: pcap_integration_tests
+    - name: build
       run: |
         cp profiles/pcap_profile.cmake profile.cmake
         ./build.sh
@@ -28,8 +28,8 @@ jobs:
     - name: build_integration_tests
       run: |
         ./build_tests.sh
-      working-directory: tests/integration_tests/build
+      working-directory: tests/integration_tests_pcap/build
     - name: run_integration_tests
       run: |
         sudo ./run_tests
-      working-directory: tests/integration_tests/output
+      working-directory: tests/integration_tests_pcap/output
