@@ -1,3 +1,4 @@
+#define SWIFT_NET_BACKEND_PCAP
 #include <stdatomic.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -6,7 +7,6 @@
 #include <string.h>
 #include "../../../src/swift_net.h"
 #include "../../shared.h"
-
 
 //#define PACKET_SIZE 1000000 // 1 MILLION BYTES
 //#define PACKETS_TO_SEND 50 // HOW MANY PACKETS TO SEND
@@ -53,21 +53,21 @@ void send_large_packets(const bool loopback) {
         exit(EXIT_FAILURE);
     }
 
-    struct SwiftNetPacketBuffer buffer = swiftnet_create_packet_buffer(PACKET_SIZE);
+    struct SwiftNetPacketBuffer buffer = swiftnet_client_create_packet_buffer(PACKET_SIZE, client);
 
     buffer.packet_append_pointer += PACKET_SIZE;
 
     clock_gettime(CLOCK_MONOTONIC, &start);;
 
     for (uint32_t i = 0; i < PACKETS_TO_SEND; i++) {
-        swiftnet_client_send_packet(client, &buffer);
+        swiftnet_client_send_packet(client, &buffer, PACKET_SIZE);
     }
 
     while (atomic_load_explicit(&finished, memory_order_acquire) == false) {
         continue;
     }
 
-    swiftnet_destroy_packet_buffer(&buffer);
+    swiftnet_client_destroy_packet_buffer(&buffer, client);
 
     clock_gettime(CLOCK_MONOTONIC, &end);;
 
@@ -82,9 +82,9 @@ void send_large_packets(const bool loopback) {
 }
 
 int main() {
-    swiftnet_initialize();
+    swiftnet_initialize(NULL, 0);
 
-    send_large_packets(false);
+    send_large_packets(true);
 
     swiftnet_cleanup();
 

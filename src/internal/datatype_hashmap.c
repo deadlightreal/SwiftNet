@@ -28,7 +28,7 @@ static inline uint64_t hash64(const uint8_t* const data, const uint32_t data_siz
 static inline uint32_t get_key(const void* const key_data, const uint32_t data_size, struct SwiftNetHashMap* const hashmap) {
     // Mapping to max value of items allocated
     // Must rehash when scalling hashmap
-    return ((__uint128_t)hash64(key_data, data_size) * hashmap->capacity) >> 64;
+    return (uint32_t)(((__uint128_t)hash64(key_data, data_size) * hashmap->capacity) >> 64);
 }
 
 // Must rehash every key. Takes many cpu cycles.
@@ -77,8 +77,8 @@ static inline void hashmap_resize(struct SwiftNetHashMap* const hashmap) {
 
             new_mem_hashmap_item = hashmap->items + new_key;
 
-            byte = new_key / 32;
-            bit = new_key % 32;
+            byte = (uint32_t)(new_key / 32);
+            bit = (uint8_t)(new_key % 32);
 
             *(hashmap->item_occupation + byte) |= 1 << bit;
 
@@ -184,10 +184,10 @@ void hashmap_insert(void* const key_data, const uint32_t data_size, void* const 
 
     hashmap->size++;
 
-    byte = key / 32;
-    bit = key % 32;
+    byte = (uint32_t)(key / 32);
+    bit = (uint8_t)(key % 32);
 
-    *(hashmap->item_occupation + byte) |= 0 << bit;
+    *(hashmap->item_occupation + byte) |= (uint32_t)(0 << bit);
 
     if(hashmap->size >= hashmap->capacity) {
         hashmap_resize(hashmap);
@@ -217,10 +217,10 @@ void hashmap_remove(void* const key_data, const uint32_t data_size, struct Swift
     current_target_item = hashmap->items + key;
 
     if(current_target_item->next == NULL) {
-        byte = key / 32;
-        bit = key % 32;
+        byte = (uint32_t)(key / 32);
+        bit = (uint8_t)(key % 32);
 
-        *(hashmap->item_occupation + byte) &= ~(0 << bit);
+        *(hashmap->item_occupation + byte) &= (uint32_t)(~(0 << bit));
     }
 
     goto find_item;

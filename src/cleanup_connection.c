@@ -1,6 +1,6 @@
+#include "swift_net.h"
 #include "internal/internal.h"
 #include "internal/networking.h"
-#include "swift_net.h"
 #include <stdatomic.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -31,11 +31,12 @@ static inline void cleanup_connection_resources(const enum ConnectionType connec
     }
 }
 
-static inline void remove_listener(const enum ConnectionType connection_type, const char* const restrict interface_name, void* const connection) {
+static inline void remove_listener(const enum ConnectionType connection_type, char* const restrict interface_name, void* const connection) {
     uint32_t interface_len;
     struct Listener* listener;
 
-    interface_len = strlen(interface_name);
+
+    interface_len = (uint32_t)strlen(interface_name);
 
     LOCK_ATOMIC_DATA_TYPE(&listeners.atomic_lock);
 
@@ -60,11 +61,32 @@ static inline void remove_listener(const enum ConnectionType connection_type, co
         UNLOCK_ATOMIC_DATA_TYPE(&listener->servers.atomic_lock);
     }
 
+    if(listener->servers.size + listener->client_connections.size == 0) {
+        hashmap_destroy(&listener->servers);
+        hashmap_destroy(&listener->client_connections);
+
+        SWIFTNET_BREAK_RECEIVER_LOOP(&listener->network_data);
+
+        #ifdef SWIFT_NET_BACKEND_PCAP
+        pthread_join(listener->listener_thread, NULL);
+        #elif defined(SWIFT_NET_BACKEND_DPDK)
+        rte_eal_wait_lcore(listener->lcore);
+
+        lcores_used[listener->lcore_internal_index] = listener->lcore;
+        #endif
+
+        SWIFTNET_CLOSE_CONNECTION(&listener->network_data);
+
+        allocator_free(&listener_memory_allocator, listener);
+
+        hashmap_remove(interface_name, interface_len, &listeners);
+    }
+
     UNLOCK_ATOMIC_DATA_TYPE(&listeners.atomic_lock);
 }
 
-static inline const char* get_interface_name(const bool loopback) {
-    return loopback ? LOOPBACK_INTERFACE_NAME : default_network_interface;
+static inline char* get_interface_name(const bool loopback, const enum ConnectionType con_type) {
+    return loopback ? con_type == CONNECTION_TYPE_CLIENT ? CLIENT_LOOPBACK_INTERFACE_NAME : SERVER_LOOPBACK_INTERFACE_NAME : default_network_interface;
 }
 
 static inline void close_threads(const enum ConnectionType connection_type, void* const connection) {
@@ -114,33 +136,30 @@ static inline void close_threads(const enum ConnectionType connection_type, void
 }
 
 void swiftnet_client_cleanup(struct SwiftNetClientConnection* const client) {
-    const char* restrict interface_name;
+    char* restrict interface_name;
 
     cleanup_connection_resources(CONNECTION_TYPE_CLIENT, client);
     
-    interface_name = get_interface_name(client->loopback);
+    interface_name = get_interface_name(client->loopback, CONNECTION_TYPE_CLIENT);
 
     remove_listener(CONNECTION_TYPE_CLIENT, interface_name, client);
 
     close_threads(CONNECTION_TYPE_CLIENT, client);
 
-    SWIFTNET_CLOSE_CONNECTION(&client->network_data);
-
     allocator_free(&client_connection_memory_allocator, client);
 }
 
 void swiftnet_server_cleanup(struct SwiftNetServer* const server) {
-    const char* restrict interface_name;
+    char* restrict interface_name;
+
 
     cleanup_connection_resources(CONNECTION_TYPE_SERVER, server);
     
-    interface_name = get_interface_name(server->loopback);
+    interface_name = get_interface_name(server->loopback, CONNECTION_TYPE_SERVER);
 
     remove_listener(CONNECTION_TYPE_SERVER, interface_name, server);
 
     close_threads(CONNECTION_TYPE_SERVER, server);
-
-    SWIFTNET_CLOSE_CONNECTION(&server->network_data);
 
     allocator_free(&server_memory_allocator, server);
 }

@@ -13,7 +13,7 @@ static inline void close_listeners() {
 
         SWIFTNET_BREAK_RECEIVER_LOOP(&current_listener->network_data);
 
-        pthread_join(current_listener->listener_thread, NULL);
+        WAIT_LISTENER_THREAD(current_listener);
 
         SWIFTNET_CLOSE_CONNECTION(&current_listener->network_data);
 
@@ -56,6 +56,22 @@ void swiftnet_cleanup() {
 
     #ifdef SWIFT_NET_INTERNAL_TESTING
     printf("Bytes leaked: %d\nItems leaked: %d\n", bytes_leaked, items_leaked);
+    #endif
+
+    #ifdef SWIFT_NET_BACKEND_DPDK
+    uint16_t port_id;
+    uint16_t count;
+
+    count = rte_eth_dev_count_avail();
+
+    for (port_id = 0; port_id < count; port_id++) {
+        if (!rte_eth_dev_is_valid_port(port_id))
+            continue;
+
+        rte_eth_dev_close(port_id);
+    }
+
+    rte_eal_cleanup();
     #endif
 
     close_background_service();

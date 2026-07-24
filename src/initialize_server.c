@@ -14,18 +14,9 @@
 #include "internal/networking.h"
 #include "swift_net.h"
 
-static inline struct SwiftNetServer* const construct_server(const bool loopback, const uint16_t server_port) {
+static inline struct SwiftNetServer* construct_server(const bool loopback, const uint16_t server_port) {
     struct SwiftNetServer* restrict new_server;
     struct ether_header eth_header;
-    struct SwiftNetNetworkData null_net_data;
-
-
-    memset(&null_net_data, 0x00, sizeof(null_net_data));
-
-    struct SwiftNetNetworkData net_data = swiftnet_initialize_networking(loopback ? LOOPBACK_INTERFACE_NAME : default_network_interface);
-    if (unlikely(memcmp(&net_data, &null_net_data, sizeof(struct SwiftNetNetworkData)) == 0)) {
-        return NULL;
-    }
 
     new_server = allocator_allocate(&server_memory_allocator);
     eth_header = DEFAULT_MAC_ADDRESS_STRUCT;
@@ -33,7 +24,6 @@ static inline struct SwiftNetServer* const construct_server(const bool loopback,
     memcpy(eth_header.ether_shost, mac_address, sizeof(eth_header.ether_shost));
 
     *new_server = (struct SwiftNetServer){
-        .network_data = net_data,
         .eth_header = eth_header,
         .server_port = server_port,
         .loopback = loopback,
@@ -49,6 +39,7 @@ static inline struct SwiftNetServer* const construct_server(const bool loopback,
     UNLOCK_ATOMIC_DATA_TYPE(&new_server->packet_callback_queue.locked);
 
     atomic_store_explicit(&new_server->processing_packets, true, memory_order_release);
+    atomic_store_explicit(&new_server->executing_packets, true, memory_order_release);
     atomic_store_explicit(&new_server->packet_handler, NULL, memory_order_release);
     atomic_store_explicit(&new_server->packet_handler_user_arg, NULL, memory_order_release);
     atomic_store_explicit(&new_server->closing, false, memory_order_release);
@@ -75,7 +66,9 @@ struct SwiftNetServer* swiftnet_create_server(const uint16_t port, const bool lo
     }
 
     // Create a new thread that will handle all packets received
-    check_existing_listener(loopback ? LOOPBACK_INTERFACE_NAME : default_network_interface, new_server, CONNECTION_TYPE_SERVER, loopback);
+    struct Listener* const new_listener = check_existing_listener(loopback ? SERVER_LOOPBACK_INTERFACE_NAME : default_network_interface, new_server, CONNECTION_TYPE_SERVER, loopback);
+
+    new_server->network_data = new_listener->network_data;
 
     pthread_create(&new_server->process_packets_thread, NULL, swiftnet_server_process_packets, new_server);
     pthread_create(&new_server->execute_callback_thread, NULL, execute_packet_callback_server, new_server);

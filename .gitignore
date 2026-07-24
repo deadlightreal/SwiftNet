@@ -9,6 +9,7 @@ Makefile
 *.cmake
 *.cache
 !/build/profile_template.cmake
+!/build/profiles/*
 
 !/build/cmake
 

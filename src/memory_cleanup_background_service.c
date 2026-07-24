@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/time.h>
 #include <unistd.h>
 
 static inline void cleanup_packets_completed(struct SwiftNetHashMap* const packets_completed, struct SwiftNetMemoryAllocator* const packets_completed_allocator) {
@@ -42,10 +43,12 @@ static inline void handle_listener(struct Listener* const current_listener) {
     UNLOCK_ATOMIC_DATA_TYPE(&client_connections->atomic_lock);
 }
 
-void* memory_cleanup_background_service() {
+void* memory_cleanup_background_service(MAYBE_UNUSED void* user) {
     struct timeval start, end;
-    int64_t elapsed_us;
-    uint64_t target_us = (uint64_t)PACKET_HISTORY_STORE_TIME * 1000000ULL;
+    suseconds_t elapsed_us;
+    suseconds_t target_us = (suseconds_t)(PACKET_HISTORY_STORE_TIME * 1000000ULL);
+
+    goto start_loop;
 
 
 start_loop:
@@ -63,12 +66,10 @@ start_loop:
 
     gettimeofday(&end, NULL);
 
-    elapsed_us = (int64_t)(end.tv_sec - start.tv_sec) * 1000000LL + (end.tv_usec - start.tv_usec);
+    elapsed_us = (suseconds_t)((end.tv_sec - start.tv_sec) * 1000000LL) + (end.tv_usec - start.tv_usec);
 
-    if (elapsed_us < 0) elapsed_us = 0;
-
-    if ((uint64_t)elapsed_us < target_us) {
-        usleep(target_us - (uint64_t)elapsed_us);
+    if (elapsed_us < target_us) {
+        usleep((useconds_t)(target_us - elapsed_us));
     }
 
     goto start_loop;

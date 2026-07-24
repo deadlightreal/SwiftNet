@@ -22,14 +22,14 @@ jobs:
     - uses: actions/checkout@v4
     - name: build
       run: |
-        cp profile_template.cmake profile.cmake
+        cp profiles/pcap_profile.cmake profile.cmake
         ./build.sh
       working-directory: build
     - name: build_integration_tests
       run: |
         ./build_tests.sh
-      working-directory: tests/integration_tests/build
+      working-directory: tests/integration_tests_pcap/build
     - name: run_integration_tests
       run: |
         sudo ./run_tests
-      working-directory: tests/integration_tests/output
+      working-directory: tests/integration_tests_pcap/output

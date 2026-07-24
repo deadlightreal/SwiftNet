@@ -69,3 +69,4 @@ void* vector_get(struct SwiftNetVector* const vector, const uint32_t index) {
 
     return *data_ptr;
 }
+

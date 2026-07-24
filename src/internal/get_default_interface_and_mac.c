@@ -124,3 +124,4 @@ int get_default_interface_and_mac(char* restrict interface_name, const uint32_t 
 
     return 0;
 }
+

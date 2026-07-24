@@ -120,10 +120,10 @@ static void on_server_packet(struct SwiftNetServerPacketData* packet, void* cons
         uint32_t size = atomic_load_explicit(&g_client_data_len, memory_order_acquire);
         uint8_t* send_data = atomic_load_explicit(&g_client_data, memory_order_acquire);
 
-        struct SwiftNetPacketBuffer buf = swiftnet_create_packet_buffer(size);
+        struct SwiftNetPacketBuffer buf = swiftnet_server_create_packet_buffer(size, server);
         swiftnet_append_to_buffer(send_data, size, &buf);
-        swiftnet_server_send_packet(atomic_load_explicit(&g_server, memory_order_acquire), &buf, packet->metadata.sender);
-        swiftnet_destroy_packet_buffer(&buf);
+        swiftnet_server_send_packet(atomic_load_explicit(&g_server, memory_order_acquire), &buf, packet->metadata.sender, size);
+        swiftnet_server_destroy_packet_buffer(&buf, server);
 
         swiftnet_server_destroy_packet_data(packet, server);
 
@@ -146,7 +146,7 @@ int test_sending_packet(const union Args* args_ptr) {
 
     swiftnet_server_set_message_handler(server, on_server_packet, NULL);
 
-    struct SwiftNetClientConnection* const client_conn = swiftnet_create_client(args.ip_address, 8080, 1000);
+    struct SwiftNetClientConnection* const client_conn = swiftnet_create_client(args.ip_address, 8080, 10000);
     if (client_conn == NULL) {
         PRINT_ERROR("Failed to create client connection");
         return -1;
@@ -182,10 +182,10 @@ int test_sending_packet(const union Args* args_ptr) {
         atomic_store_explicit(&g_server_data, s_data, memory_order_release);
     }
 
-    struct SwiftNetPacketBuffer buf = swiftnet_create_packet_buffer(args.server_data_len);
+    struct SwiftNetPacketBuffer buf = swiftnet_client_create_packet_buffer(args.server_data_len, client_conn);
     swiftnet_append_to_buffer(atomic_load_explicit(&g_server_data, memory_order_acquire), args.server_data_len, &buf);
-    swiftnet_client_send_packet(client_conn, &buf);
-    swiftnet_destroy_packet_buffer(&buf);
+    swiftnet_client_send_packet(client_conn, &buf, args.server_data_len);
+    swiftnet_client_destroy_packet_buffer(&buf, client_conn);
 
     atomic_store_explicit(&g_server_send_done, true, memory_order_release);
 

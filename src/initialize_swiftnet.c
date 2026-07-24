@@ -20,7 +20,7 @@
 
 uint32_t semaphore_counter = 0x00;
 
-uint32_t maximum_transmission_unit = 0x00;
+uint16_t maximum_transmission_unit = 0x00;
 struct in_addr private_ip_address;
 uint8_t mac_address[6];
 char default_network_interface[SIZEOF_FIELD(struct ifreq, ifr_name)];
@@ -66,7 +66,6 @@ static inline void initialize_allocators() {
     #ifdef SWIFT_NET_REQUESTS
     requests_sent_memory_allocator = allocator_create(sizeof(struct RequestSent), 40 * SWIFT_NET_MEMORY_USAGE);
     #endif
-
 }
 
 static inline void initialize_vectors() {
@@ -82,12 +81,43 @@ static inline void initialize_memory_cleanup_thread() {
 }
 
 void swiftnet_initialize() {
+    #ifdef SWIFT_NET_BACKEND_DPDK
+    char dpdk_args[1024];
+    char* argv[32];
+    char* current_dpdk_arg_ptr = dpdk_args;
+    #ifdef DPDK_EXTRA_ARGS
+    char* extra_args[] = DPDK_EXTRA_ARGS;
+    #endif
+
+    static int argc = 0;
+
+    argv[argc] = current_dpdk_arg_ptr;
+    current_dpdk_arg_ptr = current_dpdk_arg_ptr + snprintf(current_dpdk_arg_ptr, sizeof(dpdk_args), "%s", "-l") + 1;
+    argc++;
+
+    argv[argc] = current_dpdk_arg_ptr;
+    current_dpdk_arg_ptr = current_dpdk_arg_ptr + snprintf(current_dpdk_arg_ptr, sizeof(dpdk_args), "%s", TOSTRING(DPDK_LCORES)) + 1;
+    argc++;
+
+    for(uint32_t i = 0; i < (sizeof(extra_args) / sizeof(char*)) - 1; i++) {
+        argv[argc] = current_dpdk_arg_ptr;
+        current_dpdk_arg_ptr = current_dpdk_arg_ptr + snprintf(current_dpdk_arg_ptr, sizeof(dpdk_args), "%s", extra_args[i]) + 1;
+        argc++;
+    }
+
+    for (int i = 0; i < argc; i++) {
+        printf("argv[%d] = '%s'\n", i, argv[i]);
+    }
+
+    if (rte_eal_init(argc, argv) < 0) rte_exit(EXIT_FAILURE, "EAL init failed\n");
+    #endif
+
     int temp_socket;
     struct sockaddr_in remote = {0};
     struct sockaddr private_sockaddr;
     socklen_t private_sockaddr_len = sizeof(private_sockaddr);
 
-    seed = rand();
+    seed = (uint64_t)rand();
 
     atomic_store_explicit(&swiftnet_closing, false, memory_order_release);
 

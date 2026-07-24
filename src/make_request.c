@@ -18,7 +18,7 @@ static inline void delete_request_sent(struct RequestSent* restrict const reques
     allocator_free(&requests_sent_memory_allocator, request_sent);
 }
 
-static inline struct RequestSent* const construct_request_sent(const struct in_addr address) {
+static inline struct RequestSent* construct_request_sent(const struct in_addr address) {
     struct RequestSent* const request_sent = allocator_allocate(&requests_sent_memory_allocator);
 
     *request_sent = (struct RequestSent){.address = address, .packet_data = NULL};
@@ -35,20 +35,24 @@ struct SwiftNetClientPacketData* swiftnet_client_make_request(struct SwiftNetCli
 
     request_sent = construct_request_sent(client->server_addr);
 
-    packet_length = packet->packet_append_pointer - packet->packet_data_start;
+    #ifdef SWIFT_NET_BACKEND_DPDK
+    packet_length = packet->total_data_size;
+    #else
+    packet_length = (uint32_t)(packet->packet_append_pointer - packet->packet_data_start);
+    #endif
 
-    swiftnet_send_packet(client, client->maximum_transmission_unit, client->port_info, packet, packet_length, &client->server_addr, &client->packets_sending, &client->packets_sending_memory_allocator, client->eth_header, client->loopback, client->network_data, request_sent, false, 0);
+    swiftnet_send_packet(client->maximum_transmission_unit, client->port_info, packet, packet_length, &client->server_addr, &client->packets_sending, &client->packets_sending_memory_allocator, client->eth_header, client->network_data, request_sent, false, 0);
 
 
     gettimeofday(&tv, NULL);
-    start = (uint32_t)tv.tv_sec * 1000 + tv.tv_usec / 1000;
+    start = (uint32_t)(tv.tv_sec * 1000 + tv.tv_usec / 1000);
 
     goto check_response;
 
 
 check_response:
     gettimeofday(&tv, NULL);
-    end = (uint32_t)tv.tv_sec * 1000 + tv.tv_usec / 1000;
+    end = (uint32_t)(tv.tv_sec * 1000 + tv.tv_usec / 1000);
 
     if (start + timeout_ms < end) {
         delete_request_sent(request_sent);
@@ -79,21 +83,25 @@ struct SwiftNetServerPacketData* swiftnet_server_make_request(struct SwiftNetSer
 
     request_sent = construct_request_sent(addr_data.sender_address);
 
-    packet_length = packet->packet_append_pointer - packet->packet_data_start;
+    #ifdef SWIFT_NET_BACKEND_DPDK
+    packet_length = packet->total_data_size;
+    #else
+    packet_length = (uint32_t)(packet->packet_append_pointer - packet->packet_data_start);
+    #endif
 
     port_info = (struct SwiftNetPortInfo){.destination_port = addr_data.port, .source_port = server->server_port};
 
-    swiftnet_send_packet(server, addr_data.maximum_transmission_unit, port_info, packet, packet_length, &addr_data.sender_address, &server->packets_sending, &server->packets_sending_memory_allocator, server->eth_header, server->loopback, server->network_data, request_sent, false, 0);
+    swiftnet_send_packet(addr_data.maximum_transmission_unit, port_info, packet, packet_length, &addr_data.sender_address, &server->packets_sending, &server->packets_sending_memory_allocator, server->eth_header, server->network_data, request_sent, false, 0);
 
     gettimeofday(&tv, NULL);
-    start = (uint32_t)tv.tv_sec * 1000 + tv.tv_usec / 1000;
+    start = (uint32_t)(tv.tv_sec * 1000 + tv.tv_usec / 1000);
 
     goto check_response;
 
 
 check_response:
     gettimeofday(&tv, NULL);
-    end = (uint32_t)tv.tv_sec * 1000 + tv.tv_usec / 1000;
+    end = (uint32_t)(tv.tv_sec * 1000 + tv.tv_usec / 1000);
 
     if (start + timeout_ms < end) {
         delete_request_sent(request_sent);

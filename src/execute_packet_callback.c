@@ -7,7 +7,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-static struct PacketCallbackQueueNode *const wait_for_next_packet_callback(struct PacketCallbackQueue* const packet_queue) {
+static struct PacketCallbackQueueNode* wait_for_next_packet_callback(struct PacketCallbackQueue* const packet_queue) {
     struct PacketCallbackQueueNode* restrict node_to_process;
 
 
@@ -51,18 +51,22 @@ void execute_packet_callback(
     struct PacketCallbackQueue* const queue,
     void (*const _Atomic * const packet_handler)(void *const, void *const),
     const enum ConnectionType connection_type,
-    struct SwiftNetMemoryAllocator* const pending_message_memory_allocator,
     const _Atomic bool * const closing,
     void * const connection,
     struct SwiftNetHashMap* const pending_messages,
     _Atomic(void *) * const user_data,
     pthread_mutex_t* const execute_callback_mtx,
-    pthread_cond_t* const execute_callback_cond
+    pthread_cond_t* const execute_callback_cond,
+    _Atomic bool* const executing_packets
 ) {
     void (*packet_handler_loaded)(void *const, void *const);
 
     struct PacketCallbackQueueNode* restrict current_node;
 
+    uint8_t idle_stage;
+
+
+    idle_stage = 0;
 
     goto check_packet;
 
@@ -72,18 +76,35 @@ check_packet:
         return;
     }
 
-    pthread_mutex_lock(execute_callback_mtx);
-
     current_node = wait_for_next_packet_callback(queue);
     if (current_node == NULL) {
-        pthread_cond_wait(execute_callback_cond, execute_callback_mtx);
+        switch (idle_stage) {
+            case 64: usleep(1000); break;
+            case 128: usleep(2000); break;
+            case 194: usleep(5000); break;
+            case 255: {
+                atomic_store_explicit(executing_packets, false, memory_order_release);
 
-        pthread_mutex_unlock(execute_callback_mtx);
+                pthread_mutex_lock(execute_callback_mtx);
+
+                pthread_cond_wait(execute_callback_cond, execute_callback_mtx);
+
+                pthread_mutex_unlock(execute_callback_mtx);
+
+                atomic_store_explicit(executing_packets, true, memory_order_release);
+
+                idle_stage = 0;
+
+                goto check_packet;
+            }
+        }
+
+        idle_stage++;
 
         goto check_packet;
     }
 
-    pthread_mutex_unlock(execute_callback_mtx);
+    idle_stage = 0;
 
     packet_handler_loaded = atomic_load_explicit(packet_handler, memory_order_acquire);
 
@@ -127,12 +148,12 @@ void* execute_packet_callback_client(void* const void_client) {
         &client->packet_callback_queue, 
         (void *)&client->packet_handler,
         CONNECTION_TYPE_CLIENT, 
-        &client->pending_messages_memory_allocator,
         &client->closing, void_client,
         &client->pending_messages,
         &client->packet_handler_user_arg,
         &client->execute_callback_mtx,
-        &client->execute_callback_cond
+        &client->execute_callback_cond,
+        &client->executing_packets
     );
 
     return NULL;
@@ -145,12 +166,12 @@ void* execute_packet_callback_server(void* const void_server) {
         &server->packet_callback_queue,
         (void *)&server->packet_handler,
         CONNECTION_TYPE_SERVER,
-        &server->pending_messages_memory_allocator,
         &server->closing,
         void_server, &server->pending_messages,
         &server->packet_handler_user_arg,
         &server->execute_callback_mtx,
-        &server->execute_callback_cond
+        &server->execute_callback_cond,
+        &server->executing_packets
     );
 
     return NULL;

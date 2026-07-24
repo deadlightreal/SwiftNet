@@ -4,7 +4,7 @@ project(swiftnet C CXX)
 include(GNUInstallDirs)
 include(../build/profile.cmake)
 
-set(CMAKE_C_STANDARD 99)
+set(CMAKE_C_STANDARD 23)
 
 set(SOURCE_FILES
     initialize_swiftnet.c
@@ -16,7 +16,6 @@ set(SOURCE_FILES
     cleanup_connection.c
     process_packets.c
     execute_packet_callback.c
-    packet_buffer.c
     manipulate_debug_flags.c
     cleanup_swiftnet.c
     make_response.c
@@ -50,13 +49,24 @@ if(BACKEND STREQUAL "pcap")
     add_compile_definitions(SWIFT_NET_BACKEND_PCAP)
 
     list(APPEND SOURCE_FILES
+        internal/pcap/pcap_buffer.c
         internal/pcap/pcap_send.c
         internal/pcap/pcap_open.c
+    )
+elseif(BACKEND STREQUAL "dpdk")
+    add_compile_definitions(SWIFT_NET_BACKEND_DPDK)
+
+    list(APPEND SOURCE_FILES
+        internal/dpdk/dpdk_buffer.c
+        internal/dpdk/dpdk_open.c
+        internal/dpdk/dpdk_send.c
     )
 endif()
 
 
-add_compile_options(-march=native)
+if(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64")
+    add_compile_options(-march=armv8-a+crc)
+endif()
 
 add_library(swiftnet STATIC ${SOURCE_FILES})
 add_library(swiftnet_shared SHARED ${SOURCE_FILES})
@@ -78,7 +88,7 @@ else()
 
     target_compile_options(swiftnet PRIVATE
         -O3
-        -march=native
+
         -flto=auto
         -funroll-loops
         -fomit-frame-pointer
@@ -96,7 +106,6 @@ else()
 
     target_compile_options(swiftnet_shared PRIVATE
         -O3
-        -march=native
         -flto=auto
         -funroll-loops
         -fomit-frame-pointer
@@ -141,6 +150,24 @@ if(BACKEND STREQUAL "pcap")
 
         message("using linking option: -lpcap")
     endif()
+elseif(BACKEND STREQUAL "dpdk")
+    find_package(PkgConfig REQUIRED)
+    pkg_check_modules(DPDK REQUIRED libdpdk)
+
+    string(REPLACE " " "" DPDK_EXTRA_ARGS_STRIPPED "${DPDK_EXTRA_ARGS}")
+    string(REPLACE "," ";" DPDK_EXTRA_ARGS_REPLACED "${DPDK_EXTRA_ARGS_STRIPPED}")
+
+    list(JOIN DPDK_EXTRA_ARGS_REPLACED "\", \"" DPDK_EXTRA_ARGS_JOINED)
+
+    set(DPDK_EXTRA_ARGS_PARSED "{\"${DPDK_EXTRA_ARGS_JOINED}\", NULL};")
+
+    add_compile_definitions(DPDK_EXTRA_ARGS=${DPDK_EXTRA_ARGS_PARSED})
+
+    target_include_directories(swiftnet PUBLIC ${DPDK_INCLUDE_DIRS})
+    target_include_directories(swiftnet_shared PUBLIC ${DPDK_INCLUDE_DIRS})
+    target_link_libraries(swiftnet PUBLIC -static ${DPDK_LIBRARIES})
+    target_link_libraries(swiftnet_shared PUBLIC ${DPDK_LIBRARIES})
+    message(STATUS "DPDK backend selected")
 endif()
 
 set_target_properties(swiftnet PROPERTIES
