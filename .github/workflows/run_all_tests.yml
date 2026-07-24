@@ -20,9 +20,9 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
-    - name: build
+    - name: pcap_integration_tests
       run: |
-        cp profile_template.cmake profile.cmake
+        cp profiles/pcap_profile.cmake profile.cmake
         ./build.sh
       working-directory: build
     - name: build_integration_tests
