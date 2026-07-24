@@ -493,7 +493,9 @@ void swiftnet_send_packet(
 
                 SWIFTNET_SEND_PACKET(&network_data, current_buffer);
 
+                #ifndef DISABLE_DYNAMIC_RATE_LIMITING
                 usleep(atomic_load_explicit(&new_packet_sending->current_send_delay, memory_order_acquire));
+                #endif
             }
         #endif
     } else {
