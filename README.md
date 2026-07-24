@@ -32,19 +32,12 @@
 - **Compile time feature choosing** Compile only specific features of the library.
 - **Lightweight** Static library build is under 1MB.
 - **Future-proof** Designed to scale with optional features enabled at compile time.
-- **Server side performance** The main focus is to make linux servers easily scalable, by enabling AF DXP, DPDK or other ways of accelerating packets without operating system involvement.
+- **Server side performance** The main focus is to make linux servers easily scalable, by enabling DPDK or other ways of accelerating packets without operating system involvement.
 
 ## Future Version Goals
-- **0.5.0:** Performance improvements in critical paths, ready for some real world usage
+- **0.7.0:** Performance improvements, more safety fixes, linux testing, dpdk tested on real interfaces
 
 ## Goals
-
-### Upcoming goals
-- Optimize the most obvious parts of the codebase
-- Stabilize the API to avoid breaking changes in future releases
-- AF_XDP Linux support
-
-- Long-term: optional hardware acceleration (FPGA/ASIC) with external NIC to bypass OS overhead for server side processing
 
 ## Performance
 
@@ -81,7 +74,7 @@
 ## Installation
 Follow these steps to install SwiftNet:
 
-## VCPKG
+## VCPKG - Last version uploaded: 0.4.0
 ```
 vcpkg install morcules-swiftnet
 ```
@@ -95,9 +88,13 @@ git clone https://github.com/morcules/SwiftNet
 ```bash
 cd SwiftNet/build
 ```
+3. Copy profile:
+```bash
+cp profiles/x_profile.cmake profile.cmake
+```
 3. Compile:
 ```bash
-./build_for_release.sh
+./build.sh
 ```
 4. To use SwiftNet in your project:
 - Include `swift_net.h` in your main source file (e.g., `main.c`).
