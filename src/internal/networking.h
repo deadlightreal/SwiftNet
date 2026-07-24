@@ -9,6 +9,9 @@
 
 #include <sched.h>
 #include <pcap/pcap.h>
+    #define WAIT_LISTENER_THREAD(listener) \
+        pthread_join((listener)->listener_thread, NULL);
+
     // Simple crc16 call with proper memory order
     #define HANDLE_CHECKSUM(buffer, size, network_data) \
         { \
@@ -81,6 +84,9 @@
     #include <rte_ethdev.h>
     #include <rte_mbuf.h>
 
+    #define WAIT_LISTENER_THREAD(listener) \
+        rte_eal_wait_lcore((listener)->lcore);
+
     #define HANDLE_CHECKSUM(buffer, size, network_data) \
         { \
         const uint32_t checksum = crc32(buffer, size); \
@@ -118,7 +124,6 @@
                     struct rte_mbuf* buffer = buffers[i]; \
                     uint8_t* const raw_data_ptr = rte_pktmbuf_mtod(buffer, uint8_t*); \
                     dpdk_packet_handle(listener, buffer, raw_data_ptr); \
-                    rte_pktmbuf_free(buffer); \
                 } \
             } else { \
                 rte_pause(); \
@@ -167,6 +172,6 @@
     #define SWIFTNET_SEND_INTERNAL_PACKET(network_data, buffer, len) \
         swiftnet_dpdk_send((network_data), buffer##_internal_mem_buf);
 
-    #define SWIFTNET_SEND_PACKET(network_data, buffer, len) \
-        swiftnet_dpdk_send((network_data), buffer##_internal_mem_buf);
+    #define SWIFTNET_SEND_PACKET(network_data, buffer) \
+        swiftnet_dpdk_send((network_data), buffer);
 #endif

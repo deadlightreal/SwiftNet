@@ -5,7 +5,7 @@
 #include <string.h>
 
 #ifdef SWIFT_NET_BACKEND_DPDK
-uint8_t current_lcore = 1;
+uint32_t lcores_used[] = {DPDK_LCORES};
 #endif
            
 void* check_existing_listener(const char* restrict const interface_name, void* const connection, const enum ConnectionType connection_type, const bool loopback) {
@@ -88,7 +88,22 @@ void* check_existing_listener(const char* restrict const interface_name, void* c
     #ifdef SWIFT_NET_BACKEND_PCAP
     pthread_create(&new_listener->listener_thread, NULL, interface_start_listening_pcap, new_listener);
     #elif defined(SWIFT_NET_BACKEND_DPDK)
-    rte_eal_remote_launch(interface_start_listening_dpdk, new_listener, current_lcore);
+    for(uint16_t i = 0; i < sizeof(lcores_used) / sizeof(lcores_used[0]); i++) {
+        uint32_t* current_lcore;
+
+        current_lcore = &lcores_used[i];
+
+        if(((*current_lcore >> 31) & 1u) == 1u) continue;
+
+        rte_eal_remote_launch(interface_start_listening_dpdk, new_listener, *current_lcore);
+        
+        new_listener->lcore = *current_lcore;
+        new_listener->lcore_internal_index = i;
+
+        *current_lcore |= (1u << 31);
+
+        break;
+    }
     #endif
 
     return new_listener;

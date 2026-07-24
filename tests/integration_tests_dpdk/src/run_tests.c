@@ -118,11 +118,7 @@ int main() {
         },
     };
 
-    char* dpdk_args[] =  {
-        "-l", "0-1", "--no-pci", "--vdev=net_ring0"
-    };
-
-    swiftnet_initialize(dpdk_args, sizeof(dpdk_args) / sizeof(dpdk_args[0]));
+    swiftnet_initialize();
 
     swiftnet_add_debug_flags(SWIFTNET_DEBUG_FLAGS(SWIFTNET_DEBUG_PACKETS_SENDING | SWIFTNET_DEBUG_PACKETS_RECEIVING | SWIFTNET_DEBUG_INITIALIZATION | SWIFTNET_DEBUG_LOST_PACKETS));
 

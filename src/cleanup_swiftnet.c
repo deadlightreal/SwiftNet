@@ -13,7 +13,7 @@ static inline void close_listeners() {
 
         SWIFTNET_BREAK_RECEIVER_LOOP(&current_listener->network_data);
 
-        pthread_join(current_listener->listener_thread, NULL);
+        WAIT_LISTENER_THREAD(current_listener);
 
         SWIFTNET_CLOSE_CONNECTION(&current_listener->network_data);
 

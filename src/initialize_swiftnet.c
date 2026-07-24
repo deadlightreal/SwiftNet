@@ -80,8 +80,35 @@ static inline void initialize_memory_cleanup_thread() {
     pthread_create(&memory_cleanup_thread, NULL, memory_cleanup_background_service, NULL);
 }
 
-void swiftnet_initialize(DPDK_ONLY char** const argv, DPDK_ONLY const int argc) {
+void swiftnet_initialize() {
     #ifdef SWIFT_NET_BACKEND_DPDK
+    char dpdk_args[1024];
+    char* argv[32];
+    char* current_dpdk_arg_ptr = dpdk_args;
+    #ifdef DPDK_EXTRA_ARGS
+    char* extra_args[] = DPDK_EXTRA_ARGS;
+    #endif
+
+    static int argc = 0;
+
+    argv[argc] = current_dpdk_arg_ptr;
+    current_dpdk_arg_ptr = current_dpdk_arg_ptr + snprintf(current_dpdk_arg_ptr, sizeof(dpdk_args), "%s", "-l") + 1;
+    argc++;
+
+    argv[argc] = current_dpdk_arg_ptr;
+    current_dpdk_arg_ptr = current_dpdk_arg_ptr + snprintf(current_dpdk_arg_ptr, sizeof(dpdk_args), "%s", TOSTRING(DPDK_LCORES)) + 1;
+    argc++;
+
+    for(uint32_t i = 0; i < (sizeof(extra_args) / sizeof(char*)) - 1; i++) {
+        argv[argc] = current_dpdk_arg_ptr;
+        current_dpdk_arg_ptr = current_dpdk_arg_ptr + snprintf(current_dpdk_arg_ptr, sizeof(dpdk_args), "%s", extra_args[i]) + 1;
+        argc++;
+    }
+
+    for (int i = 0; i < argc; i++) {
+        printf("argv[%d] = '%s'\n", i, argv[i]);
+    }
+
     if (rte_eal_init(argc, argv) < 0) rte_exit(EXIT_FAILURE, "EAL init failed\n");
     #endif
 

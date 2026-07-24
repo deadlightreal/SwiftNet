@@ -215,7 +215,7 @@ int main() {
         },
     };
 
-    swiftnet_initialize(0x00, 0);
+    swiftnet_initialize();
 
     swiftnet_add_debug_flags(SWIFTNET_DEBUG_FLAGS(SWIFTNET_DEBUG_PACKETS_SENDING | SWIFTNET_DEBUG_PACKETS_RECEIVING | SWIFTNET_DEBUG_INITIALIZATION | SWIFTNET_DEBUG_LOST_PACKETS));
 

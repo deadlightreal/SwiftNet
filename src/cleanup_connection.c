@@ -70,7 +70,9 @@ static inline void remove_listener(const enum ConnectionType connection_type, ch
         #ifdef SWIFT_NET_BACKEND_PCAP
         pthread_join(listener->listener_thread, NULL);
         #elif defined(SWIFT_NET_BACKEND_DPDK)
-        rte_eal_wait_lcore(1);
+        rte_eal_wait_lcore(listener->lcore);
+
+        lcores_used[listener->lcore_internal_index] = listener->lcore;
         #endif
 
         SWIFTNET_CLOSE_CONNECTION(&listener->network_data);

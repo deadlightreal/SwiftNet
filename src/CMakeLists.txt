@@ -154,6 +154,15 @@ elseif(BACKEND STREQUAL "dpdk")
     find_package(PkgConfig REQUIRED)
     pkg_check_modules(DPDK REQUIRED libdpdk)
 
+    string(REPLACE " " "" DPDK_EXTRA_ARGS_STRIPPED "${DPDK_EXTRA_ARGS}")
+    string(REPLACE "," ";" DPDK_EXTRA_ARGS_REPLACED "${DPDK_EXTRA_ARGS_STRIPPED}")
+
+    list(JOIN DPDK_EXTRA_ARGS_REPLACED "\", \"" DPDK_EXTRA_ARGS_JOINED)
+
+    set(DPDK_EXTRA_ARGS_PARSED "{\"${DPDK_EXTRA_ARGS_JOINED}\", NULL};")
+
+    add_compile_definitions(DPDK_EXTRA_ARGS=${DPDK_EXTRA_ARGS_PARSED})
+
     target_include_directories(swiftnet PUBLIC ${DPDK_INCLUDE_DIRS})
     target_include_directories(swiftnet_shared PUBLIC ${DPDK_INCLUDE_DIRS})
     target_link_libraries(swiftnet PUBLIC -static ${DPDK_LIBRARIES})

@@ -66,12 +66,11 @@ exit:
 
 static inline void swiftnet_handle_packets(
 	struct PacketQueue* const packet_queue,
-	const uint8_t* restrict const packet,
     pthread_mutex_t* const process_packets_mtx,
     pthread_cond_t* const process_packets_cond,
     _Atomic bool *const processing_packets,
     struct SwiftNetNetworkData network_data,
-    const uint32_t packet_len
+    struct ReceiverPacketData* restrict const packet_data
 ) {
     uint16_t addr_type;
 
@@ -81,17 +80,16 @@ static inline void swiftnet_handle_packets(
 
     addr_type = GET_ADDR_TYPE(&network_data);
 
+    if (unlikely(packet_data->data_len == 0)) {
+        goto exit;
+    }
+
     packet_buffer = allocator_allocate(&packet_buffer_memory_allocator);
     if (unlikely(packet_buffer == NULL)) {
         goto exit;
     }
 
-    memcpy(packet_buffer, packet, packet_len);
-
-    if (unlikely(packet_len == 0)) {
-        allocator_free(&packet_buffer_memory_allocator, packet_buffer);
-        return;
-    }
+    memcpy(packet_buffer, packet_data->data, packet_data->data_len);
 
     goto get_sender_addr;
 
@@ -113,7 +111,7 @@ get_sender_addr:
 
 
 insert_node:
-    insert_queue_node(construct_node(packet_len, packet_buffer, sender_address), packet_queue);
+    insert_queue_node(construct_node(packet_data->data_len, packet_buffer, sender_address), packet_queue);
 
     goto unlock_processing_thread;
 
@@ -131,18 +129,27 @@ unlock_processing_thread:
 
 
 exit:
+    #ifdef SWIFT_NET_BACKEND_DPDK
+        rte_pktmbuf_free(packet_data->dpdk_buf);
+    #endif
+
     return;
 }
 
-static void handle_client_init(struct SwiftNetClientConnection* const client_connection, const uint8_t* restrict const buffer, const uint32_t bytes_received) {
+static void handle_client_init(struct SwiftNetClientConnection* const client_connection, struct ReceiverPacketData* const restrict packet_data) {
     struct SwiftNetPacketInfo* restrict packet_info;
     struct SwiftNetServerInformation* restrict server_information;
+
+    uint8_t* buffer;
+    uint32_t bytes_received;
 
     uint8_t prepend_size;
     uint16_t addr_type;
 
     prepend_size = GET_PREPEND_SIZE(&client_connection->network_data);
     addr_type = GET_ADDR_TYPE(&client_connection->network_data);
+    buffer = (uint8_t*)packet_data->data;
+    bytes_received = packet_data->data_len;
 
     goto check_closing;
 
@@ -213,10 +220,14 @@ finalize_initialization:
 
 
 exit:
+    #ifdef SWIFT_NET_BACKEND_DPDK
+        rte_pktmbuf_free(packet_data->dpdk_buf);
+    #endif
+
     return;
 }
 
-static inline uint8_t handle_correct_receiver(const enum ConnectionType connection_type, struct Listener* const listener, const uint8_t* restrict const packet, const struct SwiftNetPortInfo* restrict const port_info, const uint32_t packet_len) {
+static inline uint8_t handle_correct_receiver(const enum ConnectionType connection_type, struct Listener* const listener, const struct SwiftNetPortInfo* restrict const port_info, struct ReceiverPacketData* const restrict packet_data) {
     if (connection_type == CONNECTION_TYPE_CLIENT) {
         struct SwiftNetClientConnection* client_connection;
 
@@ -230,9 +241,9 @@ static inline uint8_t handle_correct_receiver(const enum ConnectionType connecti
         }
 
         if (atomic_load_explicit(&client_connection->initialized, memory_order_acquire) == false) {
-            handle_client_init(client_connection, packet, packet_len);
+            handle_client_init(client_connection, packet_data);
         } else {
-            swiftnet_handle_packets(&client_connection->packet_queue, packet, &client_connection->process_packets_mtx, &client_connection->process_packets_cond, &client_connection->processing_packets, client_connection->network_data, packet_len);
+            swiftnet_handle_packets(&client_connection->packet_queue, &client_connection->process_packets_mtx, &client_connection->process_packets_cond, &client_connection->processing_packets, client_connection->network_data, packet_data);
         }
 
         return 1;
@@ -249,24 +260,26 @@ static inline uint8_t handle_correct_receiver(const enum ConnectionType connecti
             return 0;
         }
 
-        swiftnet_handle_packets(&server->packet_queue, packet, &server->process_packets_mtx, &server->process_packets_cond, &server->processing_packets, server->network_data, packet_len);
+        swiftnet_handle_packets(&server->packet_queue, &server->process_packets_mtx, &server->process_packets_cond, &server->processing_packets, server->network_data, packet_data);
 
         return 1;
     }
 }
 
 #ifdef SWIFT_NET_BACKEND_PCAP
-static void pcap_packet_handle(uint8_t* const user, const struct pcap_pkthdr* restrict const hdr, const uint8_t* restrict const packet) {
+static void pcap_packet_handle(uint8_t* const user, const struct pcap_pkthdr* restrict const hdr, const uint8_t* const packet) {
     struct Listener* const listener = (struct Listener*)user;
     struct SwiftNetPortInfo* restrict const port_info = (struct SwiftNetPortInfo*)(packet + PACKET_PREPEND_SIZE(listener->addr_type) + sizeof(struct ip) + offsetof(struct SwiftNetPacketInfo, port_info));
+    struct ReceiverPacketData packet_data = (struct ReceiverPacketData){.data = packet, .data_len = hdr->caplen};
 
-    if(handle_correct_receiver(CONNECTION_TYPE_CLIENT, listener, packet, port_info, hdr->caplen) == 0) handle_correct_receiver(CONNECTION_TYPE_SERVER, listener, packet, port_info, hdr->caplen);
+    if(handle_correct_receiver(CONNECTION_TYPE_CLIENT, listener, port_info, &packet_data) == 0) handle_correct_receiver(CONNECTION_TYPE_SERVER, listener, port_info, &packet_data);
 }
 #elif defined(SWIFT_NET_BACKEND_DPDK)
-static void dpdk_packet_handle(struct Listener* const listener, const struct rte_mbuf* const restrict dpdk_buf, const uint8_t* restrict const packet) {
+static void dpdk_packet_handle(struct Listener* const listener, struct rte_mbuf* const restrict dpdk_buf, uint8_t* restrict const packet) {
     struct SwiftNetPortInfo* restrict const port_info = (struct SwiftNetPortInfo*)(packet + PACKET_PREPEND_SIZE(listener->addr_type) + sizeof(struct ip) + offsetof(struct SwiftNetPacketInfo, port_info));
+    struct ReceiverPacketData packet_data = (struct ReceiverPacketData){.data = packet, .data_len = dpdk_buf->data_len, .dpdk_buf = dpdk_buf};
 
-    if(handle_correct_receiver(CONNECTION_TYPE_CLIENT, listener, packet, port_info, dpdk_buf->data_len) == 0) handle_correct_receiver(CONNECTION_TYPE_SERVER, listener, packet, port_info, dpdk_buf->data_len);
+    if(handle_correct_receiver(CONNECTION_TYPE_CLIENT, listener, port_info, &packet_data) == 0) handle_correct_receiver(CONNECTION_TYPE_SERVER, listener, port_info, &packet_data);
 }
 #endif
 

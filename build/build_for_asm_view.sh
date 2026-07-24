@@ -1,3 +1,6 @@
 #!/bin/bash
-cmake --build . --config RelWithDebInfo --target swiftnet_debug -j 1
+
+cmake -DCMAKE_C_COMPILER=clang .
+cmake --build . --config RelWithDebInfo --target swiftnet_debug
+
 exit 0

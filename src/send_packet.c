@@ -237,14 +237,14 @@ static inline ALWAYS_INLINE void handle_lost_packets(
                 
                 HANDLE_CHECKSUM(buf_data, bytes_to_complete, network_data);
     
-                swiftnet_dpdk_send(network_data, current_buf);
+                SWIFTNET_SEND_PACKET(network_data, current_buf);
 
                 current_buf->data_len = old_len;
                 current_buf->pkt_len = old_len;
             } else {
                 HANDLE_CHECKSUM(buf_data, current_buf->data_len, network_data);
 
-                swiftnet_dpdk_send(network_data, current_buf);
+                SWIFTNET_SEND_PACKET(network_data, current_buf);
             }
         }
         #endif
@@ -470,7 +470,7 @@ void swiftnet_send_packet(
 
                     HANDLE_CHECKSUM(buf_addr, current_buffer->data_len, &network_data);
 
-                    swiftnet_dpdk_send(&network_data, current_buffer);
+                    SWIFTNET_SEND_PACKET(&network_data, current_buffer);
 
                     current_buffer->data_len = old_len;
                     current_buffer->pkt_len = old_len;
@@ -487,7 +487,9 @@ void swiftnet_send_packet(
 
                 HANDLE_CHECKSUM(buf_addr, current_buffer->data_len, &network_data);
 
-                swiftnet_dpdk_send(&network_data, current_buffer);
+                SWIFTNET_SEND_PACKET(&network_data, current_buffer);
+
+                usleep(atomic_load_explicit(&new_packet_sending->current_send_delay, memory_order_acquire));
             }
         #endif
     } else {
@@ -558,12 +560,12 @@ void swiftnet_send_packet(
                 buffer->pkt_len = final_packet_size;
                 buffer->data_len = final_packet_size;
 
-                swiftnet_dpdk_send(&network_data, buffer);
+                SWIFTNET_SEND_PACKET(&network_data, buffer);
 
                 buffer->pkt_len = old_len;
                 buffer->data_len = old_len;
             } else {
-                swiftnet_dpdk_send(&network_data, buffer);
+                SWIFTNET_SEND_PACKET(&network_data, buffer);
             }
         #endif
     }

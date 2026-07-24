@@ -19,6 +19,9 @@
     #include <endian.h>
 #endif
 
+#define STRINGIFY(...) #__VA_ARGS__
+#define TOSTRING(...) STRINGIFY(__VA_ARGS__)
+
 #define ASSUME(cond) __builtin_assume(cond)
 #define ALWAYS_INLINE __attribute__((always_inline))
 #define MAYBE_UNUSED [[maybe_unused]]
@@ -29,6 +32,10 @@
 #elif defined(SWIFT_NET_BACKEND_DPDK)
     #define PCAP_ONLY MAYBE_UNUSED
     #define DPDK_ONLY
+#endif
+
+#ifdef SWIFT_NET_BACKEND_DPDK
+extern uint32_t lcores_used[];
 #endif
 
 #ifdef SWIFT_NET_BACKEND_PCAP
@@ -55,6 +62,12 @@
 enum RequestLostPacketsReturnType {
     REQUEST_LOST_PACKETS_RETURN_UPDATED_BIT_ARRAY = 0x00,
     REQUEST_LOST_PACKETS_RETURN_COMPLETED_PACKET  = 0x01
+};
+
+struct ReceiverPacketData {
+    const uint8_t* const data;
+    DPDK_ONLY struct rte_mbuf* dpdk_buf;
+    uint32_t data_len;
 };
 
 // in body use variables "hashmap_item" and "hashmap_data"
@@ -170,7 +183,12 @@ struct PacketCompletedKey {
 
 struct Listener {
     struct SwiftNetNetworkData network_data;
+    #ifdef SWIFT_NET_BACKEND_PCAP
     pthread_t listener_thread;
+    #elif defined(SWIFT_NET_BACKEND_DPDK)
+    uint32_t lcore;
+    uint16_t lcore_internal_index;
+    #endif
     struct SwiftNetHashMap servers;
     struct SwiftNetHashMap client_connections;
     char interface_name[IFNAMSIZ];
