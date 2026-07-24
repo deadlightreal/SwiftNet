@@ -90,7 +90,6 @@ enum PacketDelayUpdateStatus {
 
 extern uint16_t maximum_transmission_unit;
 
-#ifdef SWIFT_NET_DEBUG
 #define SWIFTNET_DEBUG_FLAGS(num) ((SwiftNetDebugFlags)(num))
 
 typedef uint8_t SwiftNetDebugFlags;
@@ -103,7 +102,6 @@ typedef uint8_t SwiftNetDebugFlags;
 struct SwiftNetDebugger {
     int flags;
 } SWIFT_NET_ALIGNED(8);
-#endif
 
 struct SwiftNetPortInfo {
     uint16_t destination_port;

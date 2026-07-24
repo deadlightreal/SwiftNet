@@ -308,7 +308,7 @@ void swiftnet_send_packet(
             UNLOCK_ATOMIC_DATA_TYPE(&requests_sent.atomic_lock);
         }
     #else
-        packet_id = rand();
+        packet_id = (uint16_t)rand();
     #endif
 
     #ifdef SWIFT_NET_REQUESTS

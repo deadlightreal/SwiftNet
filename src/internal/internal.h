@@ -250,6 +250,14 @@ MAYBE_UNUSED __attribute__((format(printf, 1, 2))) static inline ALWAYS_INLINE v
 
     va_end(args);
 }
+#else
+static inline ALWAYS_INLINE bool check_debug_flag(MAYBE_UNUSED const SwiftNetDebugFlags flag) {
+    return true;
+}
+
+MAYBE_UNUSED __attribute__((format(printf, 1, 2))) static inline ALWAYS_INLINE void send_debug_message(MAYBE_UNUSED const char *restrict const message, ...) {
+
+}
 #endif
 
 #define STACK_CREATING_LOCKED 0
