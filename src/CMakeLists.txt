@@ -89,7 +89,6 @@ else()
     target_compile_options(swiftnet PRIVATE
         -O3
 
-        -flto=auto
         -funroll-loops
         -fomit-frame-pointer
 
@@ -106,7 +105,7 @@ else()
 
     target_compile_options(swiftnet_shared PRIVATE
         -O3
-        -flto=auto
+
         -funroll-loops
         -fomit-frame-pointer
 
