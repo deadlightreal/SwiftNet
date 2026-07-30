@@ -51,11 +51,12 @@ static inline struct PacketQueueNode* construct_node(const uint32_t data_read, v
 
 
 node_assign_values:
-    node->data = data;
-    node->data_read = data_read;
-    node->sender_address.s_addr = sender_address;
-    
-    node->next = NULL;
+    *node = (struct PacketQueueNode){
+        .data = data,
+        .data_read = data_read,
+        .sender_address = (struct in_addr){.s_addr = sender_address},
+        .next = NULL
+    };
 
     goto exit;
 
@@ -69,8 +70,8 @@ static inline void swiftnet_handle_packets(
     pthread_mutex_t* const process_packets_mtx,
     pthread_cond_t* const process_packets_cond,
     _Atomic bool *const processing_packets,
-    struct SwiftNetNetworkData network_data,
-    struct ReceiverPacketData* restrict const packet_data
+    const struct SwiftNetNetworkData* const restrict network_data,
+    const struct ReceiverPacketData packet_data
 ) {
     uint16_t addr_type;
 
@@ -78,9 +79,9 @@ static inline void swiftnet_handle_packets(
     uint8_t* restrict packet_buffer;
 
 
-    addr_type = GET_ADDR_TYPE(&network_data);
+    addr_type = GET_ADDR_TYPE(network_data);
 
-    if (unlikely(packet_data->data_len == 0)) {
+    if (unlikely(packet_data.data_len == 0)) {
         goto exit;
     }
 
@@ -89,7 +90,7 @@ static inline void swiftnet_handle_packets(
         goto exit;
     }
 
-    memcpy(packet_buffer, packet_data->data, packet_data->data_len);
+    memcpy(packet_buffer, packet_data.data, packet_data.data_len);
 
     goto get_sender_addr;
 
@@ -111,7 +112,7 @@ get_sender_addr:
 
 
 insert_node:
-    insert_queue_node(construct_node(packet_data->data_len, packet_buffer, sender_address), packet_queue);
+    insert_queue_node(construct_node(packet_data.data_len, packet_buffer, sender_address), packet_queue);
 
     goto unlock_processing_thread;
 
@@ -130,7 +131,7 @@ unlock_processing_thread:
 
 exit:
     #ifdef SWIFT_NET_BACKEND_DPDK
-        rte_pktmbuf_free(packet_data->dpdk_buf);
+        rte_pktmbuf_free(packet_data.dpdk_buf);
     #endif
 
     return;
@@ -243,7 +244,7 @@ static inline uint8_t handle_correct_receiver(const enum ConnectionType connecti
         if (atomic_load_explicit(&client_connection->initialized, memory_order_acquire) == false) {
             handle_client_init(client_connection, packet_data);
         } else {
-            swiftnet_handle_packets(&client_connection->packet_queue, &client_connection->process_packets_mtx, &client_connection->process_packets_cond, &client_connection->processing_packets, client_connection->network_data, packet_data);
+            swiftnet_handle_packets(&client_connection->packet_queue, &client_connection->process_packets_mtx, &client_connection->process_packets_cond, &client_connection->processing_packets, &client_connection->network_data, *packet_data);
         }
 
         return 1;
@@ -260,7 +261,7 @@ static inline uint8_t handle_correct_receiver(const enum ConnectionType connecti
             return 0;
         }
 
-        swiftnet_handle_packets(&server->packet_queue, &server->process_packets_mtx, &server->process_packets_cond, &server->processing_packets, server->network_data, packet_data);
+        swiftnet_handle_packets(&server->packet_queue, &server->process_packets_mtx, &server->process_packets_cond, &server->processing_packets, &server->network_data, *packet_data);
 
         return 1;
     }
