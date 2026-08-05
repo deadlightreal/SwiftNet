@@ -8,7 +8,7 @@
 
 // Set the handler for incoming packets/messages on the server or client
 static inline void swiftnet_validate_new_handler(void(*new_handler)(void)) {
-    #ifdef SWIFT_NET_ERROR
+    #ifndef SWIFT_NET_DISABLE_ERROR_CHECKING
         if(unlikely(new_handler == NULL)) {
             PRINT_ERROR("Error: Invalid arguments given");
             exit(EXIT_FAILURE);

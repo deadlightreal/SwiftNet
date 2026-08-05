@@ -9,7 +9,7 @@
 #include "internal/internal.h"
 #include <unistd.h>
 
-#ifdef SWIFT_NET_DEBUG
+#ifndef SWIFT_NET_DISABLE_DEBUGGING
     struct SwiftNetDebugger debugger = {.flags = 0};
 #endif
 
@@ -38,7 +38,7 @@ struct SwiftNetMemoryAllocator uint16_memory_allocator;
 struct SwiftNetMemoryAllocator pending_message_key_allocator;
 struct SwiftNetMemoryAllocator packet_completed_key_allocator;
 
-#ifdef SWIFT_NET_REQUESTS
+#ifndef SWIFT_NET_DISABLE_REQUESTS
     struct SwiftNetMemoryAllocator requests_sent_memory_allocator;
     struct SwiftNetHashMap requests_sent;
 #endif
@@ -50,8 +50,8 @@ pthread_t memory_cleanup_thread;
 _Atomic bool swiftnet_closing;
 
 static inline void initialize_allocators() {
-    packet_queue_node_memory_allocator = allocator_create(sizeof(struct PacketQueueNode), 40 * SWIFT_NET_MEMORY_USAGE);
-    packet_callback_queue_node_memory_allocator = allocator_create(sizeof(struct PacketCallbackQueueNode), 40 * SWIFT_NET_MEMORY_USAGE);
+    packet_queue_node_memory_allocator = allocator_create(sizeof(struct SwiftNetPacketQueueNode), 40 * SWIFT_NET_MEMORY_USAGE);
+    packet_callback_queue_node_memory_allocator = allocator_create(sizeof(struct SwiftNetPacketCallbackQueueNode), 40 * SWIFT_NET_MEMORY_USAGE);
     server_packet_data_memory_allocator = allocator_create(sizeof(struct SwiftNetServerPacketData), 40 * SWIFT_NET_MEMORY_USAGE);
     client_packet_data_memory_allocator = allocator_create(sizeof(struct SwiftNetClientPacketData), 40 * SWIFT_NET_MEMORY_USAGE);
     packet_buffer_memory_allocator = allocator_create(maximum_transmission_unit + sizeof(struct ether_header), 40 * SWIFT_NET_MEMORY_USAGE);
@@ -63,13 +63,13 @@ static inline void initialize_allocators() {
     pending_message_key_allocator = allocator_create(sizeof(struct PendingMessagesKey), 0xFF * SWIFT_NET_MEMORY_USAGE);
     packet_completed_key_allocator = allocator_create(sizeof(struct PacketCompletedKey), 0xFF * SWIFT_NET_MEMORY_USAGE);
     
-    #ifdef SWIFT_NET_REQUESTS
+    #ifndef SWIFT_NET_DISABLE_REQUESTS
     requests_sent_memory_allocator = allocator_create(sizeof(struct RequestSent), 40 * SWIFT_NET_MEMORY_USAGE);
     #endif
 }
 
 static inline void initialize_vectors() {
-    #ifdef SWIFT_NET_REQUESTS
+    #ifndef SWIFT_NET_DISABLE_REQUESTS
     requests_sent = hashmap_create(&uint16_memory_allocator);
     #endif
 

@@ -27,13 +27,13 @@ static inline struct SwiftNetServer* construct_server(const bool loopback, const
         .eth_header = eth_header,
         .server_port = server_port,
         .loopback = loopback,
-        .packet_queue = (struct PacketQueue){
+        .packet_queue = (struct SwiftNetPacketQueue){
             .first_node = NULL,
             .last_node = NULL
         },
     };
 
-    memset(&new_server->packet_callback_queue, 0x00, sizeof(struct PacketCallbackQueue));
+    memset(&new_server->packet_callback_queue, 0x00, sizeof(struct SwiftNetPacketCallbackQueue));
 
     UNLOCK_ATOMIC_DATA_TYPE(&new_server->packet_queue.locked);
     UNLOCK_ATOMIC_DATA_TYPE(&new_server->packet_callback_queue.locked);
@@ -79,7 +79,7 @@ struct SwiftNetServer* swiftnet_create_server(const uint16_t port, const bool lo
     pthread_cond_init(&new_server->process_packets_cond, NULL);
     pthread_cond_init(&new_server->execute_callback_cond, NULL);
 
-    #ifdef SWIFT_NET_DEBUG
+    #ifndef SWIFT_NET_DISABLE_DEBUGGING
         if (check_debug_flag(SWIFTNET_DEBUG_INITIALIZATION)) {
             send_debug_message("Successfully initialized server\n");
         }

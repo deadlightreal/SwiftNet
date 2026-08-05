@@ -1,7 +1,7 @@
 #include "internal/internal.h"
 #include "swift_net.h"
 
-#ifdef SWIFT_NET_REQUESTS
+#ifndef SWIFT_NET_DISABLE_REQUESTS
 
 void swiftnet_client_make_response(struct SwiftNetClientConnection* const client, struct SwiftNetClientPacketData* const packet_data, struct SwiftNetPacketBuffer* restrict const buffer) {
     #ifdef SWIFT_NET_BACKEND_DPDK

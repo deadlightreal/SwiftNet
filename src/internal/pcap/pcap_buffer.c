@@ -82,7 +82,7 @@ static inline void append_data(uint8_t* restrict * restrict const append_pointer
 }
 
 void swiftnet_append_to_buffer(const void* restrict const data, const uint32_t data_size, struct SwiftNetPacketBuffer* restrict const buffer) {
-    #ifdef SWIFT_NET_ERROR
+    #ifndef SWIFT_NET_DISABLE_ERROR_CHECKING
         validate_append_to_packet_args(data, data_size);
     #endif
 

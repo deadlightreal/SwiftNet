@@ -12,8 +12,8 @@
 #include <stddef.h>
 
 static inline void insert_queue_node(
-    struct PacketQueueNode* restrict const new_node,
-    struct PacketQueue* const packet_queue
+    struct SwiftNetPacketQueueNode* restrict const new_node,
+    struct SwiftNetPacketQueue* const packet_queue
 ) {
     if(unlikely(new_node == NULL)) {
         return;
@@ -38,8 +38,8 @@ static inline void insert_queue_node(
     return;
 }
 
-static inline struct PacketQueueNode* construct_node(const uint32_t data_read, void* restrict const data, const uint32_t sender_address) {
-    struct PacketQueueNode* restrict node;
+static inline struct SwiftNetPacketQueueNode* construct_node(const uint32_t data_read, void* restrict const data, const uint32_t sender_address) {
+    struct SwiftNetPacketQueueNode* restrict node;
 
 
     node = allocator_allocate(&packet_queue_node_memory_allocator);
@@ -51,7 +51,7 @@ static inline struct PacketQueueNode* construct_node(const uint32_t data_read, v
 
 
 node_assign_values:
-    *node = (struct PacketQueueNode){
+    *node = (struct SwiftNetPacketQueueNode){
         .data = data,
         .data_read = data_read,
         .sender_address = (struct in_addr){.s_addr = sender_address},
@@ -66,7 +66,7 @@ exit:
 }
 
 static inline void swiftnet_handle_packets(
-	struct PacketQueue* const packet_queue,
+	struct SwiftNetPacketQueue* const packet_queue,
     pthread_mutex_t* const process_packets_mtx,
     pthread_cond_t* const process_packets_cond,
     _Atomic bool *const processing_packets,
@@ -165,7 +165,7 @@ check_closing:
 
 validate_packet_size:
     if(bytes_received != PACKET_HEADER_SIZE + sizeof(struct SwiftNetServerInformation) + prepend_size) {
-        #ifdef SWIFT_NET_DEBUG
+        #ifndef SWIFT_NET_DISABLE_DEBUGGING
             if (check_debug_flag(SWIFTNET_DEBUG_INITIALIZATION)) {
                 send_debug_message("Invalid packet received from server. Expected server information: {\"bytes_received\": %u, \"expected_bytes\": %lu}\n", bytes_received, PACKET_HEADER_SIZE + sizeof(struct SwiftNetServerInformation));
             }
@@ -189,7 +189,7 @@ validate_target:
     server_information = (struct SwiftNetServerInformation*)(buffer + prepend_size+ sizeof(struct ip) + sizeof(struct SwiftNetPacketInfo));
 
     if(packet_info->port_info.destination_port != client_connection->port_info.source_port || packet_info->port_info.source_port != client_connection->port_info.destination_port) {
-        #ifdef SWIFT_NET_DEBUG
+        #ifndef SWIFT_NET_DISABLE_DEBUGGING
             if (check_debug_flag(SWIFTNET_DEBUG_INITIALIZATION)) {
                 send_debug_message("Port info does not match: {\"destination_port\": %d, \"source_port\": %d, \"source_ip_address\": \"%s\"}\n", packet_info->port_info.destination_port, packet_info->port_info.source_port, inet_ntoa(((struct ip*)(buffer + prepend_size))->ip_src));
             }
@@ -199,7 +199,7 @@ validate_target:
     }
 
     if(packet_info->packet_type != REQUEST_INFORMATION) {
-        #ifdef SWIFT_NET_DEBUG
+        #ifndef SWIFT_NET_DISABLE_DEBUGGING
             if (check_debug_flag(SWIFTNET_DEBUG_INITIALIZATION)) {
                 send_debug_message("Invalid packet type: {\"packet_type\": %d}\n", packet_info->packet_type);
             }
