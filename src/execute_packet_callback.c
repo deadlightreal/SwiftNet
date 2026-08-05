@@ -7,8 +7,8 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-static struct PacketCallbackQueueNode* wait_for_next_packet_callback(struct PacketCallbackQueue* const packet_queue) {
-    struct PacketCallbackQueueNode* restrict node_to_process;
+static struct SwiftNetPacketCallbackQueueNode* wait_for_next_packet_callback(struct SwiftNetPacketCallbackQueue* const packet_queue) {
+    struct SwiftNetPacketCallbackQueueNode* restrict node_to_process;
 
 
     LOCK_ATOMIC_DATA_TYPE(&packet_queue->locked);
@@ -48,7 +48,7 @@ static inline void remove_pending_message_from_hashmap(struct SwiftNetHashMap* c
 }
 
 void execute_packet_callback(
-    struct PacketCallbackQueue* const queue,
+    struct SwiftNetPacketCallbackQueue* const queue,
     void (*const _Atomic * const packet_handler)(void *const, void *const),
     const enum ConnectionType connection_type,
     const _Atomic bool * const closing,
@@ -61,7 +61,7 @@ void execute_packet_callback(
 ) {
     void (*packet_handler_loaded)(void *const, void *const);
 
-    struct PacketCallbackQueueNode* restrict current_node;
+    struct SwiftNetPacketCallbackQueueNode* restrict current_node;
 
     uint8_t idle_stage;
 

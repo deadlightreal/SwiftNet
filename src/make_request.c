@@ -6,7 +6,7 @@
 #include <unistd.h>
 #include <sys/time.h>
 
-#ifdef SWIFT_NET_REQUESTS
+#ifndef SWIFT_NET_DISABLE_REQUESTS
 
 static inline void delete_request_sent(struct RequestSent* restrict const request_sent) {
     LOCK_ATOMIC_DATA_TYPE(&requests_sent.atomic_lock)

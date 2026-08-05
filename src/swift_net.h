@@ -26,23 +26,13 @@ extern "C" {
 #define restrict __restrict__
 #endif
 
-#ifndef SWIFT_NET_DISABLE_ERROR_CHECKING
-#define SWIFT_NET_ERROR
-#endif
-
-#ifndef SWIFT_NET_DISABLE_REQUESTS
-#define SWIFT_NET_REQUESTS
-#endif
-
-#ifndef SWIFT_NET_DISABLE_DEBUGGING
-#define SWIFT_NET_DEBUG
-#endif
-
 #define SWIFT_NET_ALIGNED(bytes) __attribute__((aligned(bytes)))
 
 // Multiplication of memory pre allocated.
 // More memory = better performance
+#ifndef SWIFT_NET_MEMORY_USAGE
 #define SWIFT_NET_MEMORY_USAGE 5
+#endif
 
 struct SwiftNetNetworkData {
     #ifdef SWIFT_NET_BACKEND_DPDK
@@ -59,7 +49,7 @@ struct SwiftNetNetworkData {
     #endif
 } SWIFT_NET_ALIGNED(8);
 
-enum PacketType {
+enum PacketType : uint8_t {
     MESSAGE = 0x01,
     REQUEST_INFORMATION = 0x02,
     SEND_LOST_PACKETS_REQUEST = 0x03,
@@ -68,14 +58,14 @@ enum PacketType {
     #ifndef DISABLE_DYNAMIC_RATE_LIMITING 
     PACKET_DELAY_UPDATE = 0x06,
     #endif
-    #ifdef SWIFT_NET_REQUESTS
+    #ifndef SWIFT_NET_DISABLE_REQUESTS
     REQUEST = 0x07,
     RESPONSE = 0x08,
     #endif
 };
 
 #ifndef DISABLE_DYNAMIC_RATE_LIMITING
-enum PacketDelayUpdateStatus {
+enum SwiftNetPacketDelayUpdateStatus : uint8_t {
     LOWER_DELAY,
     INCREASE_DELAY
 };
@@ -87,8 +77,6 @@ enum PacketDelayUpdateStatus {
 #define unlikely(x) __builtin_expect((x), 0x00)
 #define likely(x) __builtin_expect((x), 0x01)
 #endif
-
-extern uint16_t maximum_transmission_unit;
 
 #define SWIFTNET_DEBUG_FLAGS(num) ((SwiftNetDebugFlags)(num))
 
@@ -119,7 +107,7 @@ struct SwiftNetPacketClientMetadata {
     uint32_t data_length;
     struct SwiftNetPortInfo port_info;
     uint16_t packet_id;
-    #ifdef SWIFT_NET_REQUESTS
+    #ifndef SWIFT_NET_DISABLE_REQUESTS
     bool expecting_response;
     #endif
 } SWIFT_NET_ALIGNED(4);
@@ -154,7 +142,7 @@ struct SwiftNetPacketServerMetadata {
     uint32_t data_length;
     struct SwiftNetPortInfo port_info;
     uint16_t packet_id;
-    #ifdef SWIFT_NET_REQUESTS
+    #ifndef SWIFT_NET_DISABLE_REQUESTS
     bool expecting_response;
     #endif
 } SWIFT_NET_ALIGNED(4);
@@ -163,7 +151,7 @@ struct SwiftNetServerInformation {
     uint16_t maximum_transmission_unit;
 } SWIFT_NET_ALIGNED(4);
 
-enum PacketSendingUpdated {
+enum SwiftNetPacketSendingUpdated : uint8_t {
     NO_UPDATE,
     UPDATED_LOST_CHUNKS,
     SUCCESSFULLY_RECEIVED
@@ -171,7 +159,7 @@ enum PacketSendingUpdated {
 
 struct SwiftNetPacketSending {
     uint32_t* lost_chunks;
-    _Atomic enum PacketSendingUpdated updated;
+    _Atomic enum SwiftNetPacketSendingUpdated updated;
     #ifndef DISABLE_DYNAMIC_RATE_LIMITING
     _Atomic uint32_t current_send_delay;
     #endif
@@ -199,22 +187,22 @@ struct SwiftNetPacketBuffer {
     #endif
 } SWIFT_NET_ALIGNED(8);
 
-struct PacketQueueNode {
-    struct PacketQueueNode* next;
+struct SwiftNetPacketQueueNode {
+    struct SwiftNetPacketQueueNode* next;
     uint8_t* data;
     uint32_t data_read;
     struct in_addr sender_address;   
 } SWIFT_NET_ALIGNED(8);
 
-struct PacketQueue {
-    struct PacketQueueNode* first_node;
-    struct PacketQueueNode* last_node;
+struct SwiftNetPacketQueue {
+    struct SwiftNetPacketQueueNode* first_node;
+    struct SwiftNetPacketQueueNode* last_node;
     _Atomic bool locked;
 } SWIFT_NET_ALIGNED(8);
 
-struct PacketCallbackQueueNode {
+struct SwiftNetPacketCallbackQueueNode {
     struct SwiftNetPendingMessage* pending_message;
-    struct PacketCallbackQueueNode* next;
+    struct SwiftNetPacketCallbackQueueNode* next;
     void* packet_data;
     uint16_t packet_id;
 } SWIFT_NET_ALIGNED(8);
@@ -233,9 +221,9 @@ struct SwiftNetClientPacketData {
     struct SwiftNetPacketClientMetadata metadata;
 } SWIFT_NET_ALIGNED(8);
 
-struct PacketCallbackQueue {
-    struct PacketCallbackQueueNode* first_node;
-    struct PacketCallbackQueueNode* last_node;
+struct SwiftNetPacketCallbackQueue {
+    struct SwiftNetPacketCallbackQueueNode* first_node;
+    struct SwiftNetPacketCallbackQueueNode* last_node;
     _Atomic bool locked;
 } SWIFT_NET_ALIGNED(8);
 
@@ -304,8 +292,8 @@ struct SwiftNetClientConnection {
     struct SwiftNetMemoryAllocator pending_messages_memory_allocator;
     struct SwiftNetMemoryAllocator packets_sending_memory_allocator;
     struct SwiftNetNetworkData network_data;
-    struct PacketQueue packet_queue;
-    struct PacketCallbackQueue packet_callback_queue;
+    struct SwiftNetPacketQueue packet_queue;
+    struct SwiftNetPacketCallbackQueue packet_callback_queue;
     _Atomic(void (*)(struct SwiftNetClientPacketData* const, void* const user)) packet_handler;
     _Atomic(void*) packet_handler_user_arg;
     pthread_mutex_t process_packets_mtx;
@@ -333,8 +321,8 @@ struct SwiftNetServer {
     struct SwiftNetMemoryAllocator pending_messages_memory_allocator;
     struct SwiftNetMemoryAllocator packets_sending_memory_allocator;
     struct SwiftNetNetworkData network_data;
-    struct PacketQueue packet_queue;
-    struct PacketCallbackQueue packet_callback_queue;
+    struct SwiftNetPacketQueue packet_queue;
+    struct SwiftNetPacketCallbackQueue packet_callback_queue;
     _Atomic(void (*)(struct SwiftNetServerPacketData* const, void* const user)) packet_handler;
     _Atomic(void*) packet_handler_user_arg;
     pthread_mutex_t process_packets_mtx;
@@ -451,7 +439,7 @@ extern void swiftnet_server_destroy_packet_data(
 // Clean up the entire SwiftNet library.
 extern void swiftnet_cleanup();
 
-#ifdef SWIFT_NET_REQUESTS
+#ifndef SWIFT_NET_DISABLE_REQUESTS
 
 // Make a request from a client and wait for a response.
 extern struct SwiftNetClientPacketData* swiftnet_client_make_request(
@@ -483,7 +471,7 @@ extern void swiftnet_server_make_response(
 );
 #endif
 
-#ifdef SWIFT_NET_DEBUG
+#ifndef SWIFT_NET_DISABLE_DEBUGGING
 // Adds one or more debug flags to the global debugger state.
 extern void swiftnet_add_debug_flags(const SwiftNetDebugFlags flags);
 // Removes one or more debug flags from the global debugger state.

@@ -233,7 +233,7 @@ extern uint32_t bytes_leaked;
 extern uint32_t items_leaked;
 #endif
 
-#ifdef SWIFT_NET_DEBUG
+#ifndef SWIFT_NET_DISABLE_DEBUGGING
 extern struct SwiftNetDebugger debugger;
 
 static inline ALWAYS_INLINE bool check_debug_flag(const SwiftNetDebugFlags flag) {
@@ -307,7 +307,7 @@ extern void* hashmap_get(const void* const key_data, const uint32_t data_size, s
 extern void* server_start_pcap(void* const server_void);
 extern void* client_start_pcap(void* const client_void);
 
-#ifdef SWIFT_NET_REQUESTS
+#ifndef SWIFT_NET_DISABLE_REQUESTS
 struct RequestSent {
     _Atomic(void*) packet_data;
     struct in_addr address;
@@ -317,6 +317,8 @@ struct RequestSent {
 extern struct SwiftNetMemoryAllocator requests_sent_memory_allocator;
 extern struct SwiftNetHashMap requests_sent;
 #endif
+
+extern uint16_t maximum_transmission_unit;
 
 extern void swiftnet_send_packet(
     const uint16_t target_maximum_transmission_unit,
@@ -328,7 +330,7 @@ extern void swiftnet_send_packet(
     struct SwiftNetMemoryAllocator* const packets_sending_memory_allocator,
     const struct ether_header eth_hdr,
     const struct SwiftNetNetworkData network_data
-    #ifdef SWIFT_NET_REQUESTS
+    #ifndef SWIFT_NET_DISABLE_REQUESTS
     , struct RequestSent* const request_sent
     , const bool response
     , const uint16_t request_packet_id

@@ -27,7 +27,7 @@ static inline enum RequestLostPacketsReturnType request_lost_packets_bitarray(co
 #endif 
         ) {
     uint8_t times_checked;
-    enum PacketSendingUpdated status;
+    enum SwiftNetPacketSendingUpdated status;
     
 
     goto request_lost_packets;
@@ -73,7 +73,7 @@ static inline ALWAYS_INLINE void handle_lost_packets(
     const uint32_t packet_length,
     PCAP_ONLY const uint16_t mtu,
     PCAP_ONLY uint32_t chunk_amount
-    #ifdef SWIFT_NET_REQUESTS
+    #ifndef SWIFT_NET_DISABLE_REQUESTS
         , PCAP_ONLY const uint8_t packet_type
     #endif
 ) {
@@ -113,7 +113,7 @@ static inline ALWAYS_INLINE void handle_lost_packets(
     #ifdef SWIFT_NET_BACKEND_PCAP
     resend_chunk_packet_info = construct_packet_info(
         packet_length,
-        #ifdef SWIFT_NET_REQUESTS
+        #ifndef SWIFT_NET_DISABLE_REQUESTS
         packet_type,
         #else
         MESSAGE,
@@ -263,7 +263,7 @@ void swiftnet_send_packet(
     struct SwiftNetMemoryAllocator* const packets_sending_memory_allocator,
     const struct ether_header eth_hdr,
     const struct SwiftNetNetworkData network_data
-    #ifdef SWIFT_NET_REQUESTS
+    #ifndef SWIFT_NET_DISABLE_REQUESTS
         , struct RequestSent* const request_sent
         , const bool response
         , const uint16_t request_packet_id
@@ -272,20 +272,20 @@ void swiftnet_send_packet(
     uint16_t mtu;
     uint32_t chunk_amount;
     uint16_t packet_id;
-    #ifdef SWIFT_NET_REQUESTS
+    #ifndef SWIFT_NET_DISABLE_REQUESTS
     uint8_t packet_type;
     #endif
 
 
     mtu = MIN(target_maximum_transmission_unit, maximum_transmission_unit);
 
-    #ifdef SWIFT_NET_DEBUG
+    #ifndef SWIFT_NET_DISABLE_DEBUGGING
         if (check_debug_flag(SWIFTNET_DEBUG_PACKETS_SENDING)) {
             send_debug_message("Sending packet: {\"destination_ip_address\": \"%s\", \"destination_port\": %d, \"packet_length\": %d}\n", inet_ntoa(*target_addr), port_info.destination_port, packet_length);
         }
     #endif
 
-    #ifdef SWIFT_NET_REQUESTS
+    #ifndef SWIFT_NET_DISABLE_REQUESTS
         if (response == true) {
             packet_id = request_packet_id;
         } else {
@@ -311,7 +311,7 @@ void swiftnet_send_packet(
         packet_id = (uint16_t)rand();
     #endif
 
-    #ifdef SWIFT_NET_REQUESTS
+    #ifndef SWIFT_NET_DISABLE_REQUESTS
     packet_type = response ? RESPONSE : request_sent == NULL ? MESSAGE : REQUEST;
     #endif
 
@@ -337,7 +337,7 @@ void swiftnet_send_packet(
 
         packet_info = construct_packet_info(
             packet_length,
-            #ifdef SWIFT_NET_REQUESTS
+            #ifndef SWIFT_NET_DISABLE_REQUESTS
             packet_type,
             #else
             MESSAGE,
@@ -386,7 +386,7 @@ void swiftnet_send_packet(
         for(uint32_t i = 0; ; i++) {
             current_offset = i * (mtu - PACKET_HEADER_SIZE);
 
-            #ifdef SWIFT_NET_DEBUG
+            #ifndef SWIFT_NET_DISABLE_DEBUGGING
                 if (check_debug_flag(SWIFTNET_DEBUG_PACKETS_SENDING)) {
                     send_debug_message("Sent chunk: {\"chunk_index\": %d}\n", i);
                 }
@@ -416,7 +416,7 @@ void swiftnet_send_packet(
                 memcpy(buffer_header_location, temp_data_buffer, prepend_size + PACKET_HEADER_SIZE);
 
                 handle_lost_packets(new_packet_sending, packet, eth_hdr, target_addr, port_info.source_port, port_info.destination_port, packets_sending_memory_allocator, packets_sending, &network_data, packet_length, mtu, chunk_amount
-                #ifdef SWIFT_NET_REQUESTS
+                #ifndef SWIFT_NET_DISABLE_REQUESTS
                     , packet_type
                 #endif
                 );
@@ -442,7 +442,7 @@ void swiftnet_send_packet(
 
                 current_offset = i * packet->data_len_per_packet;
 
-                #ifdef SWIFT_NET_DEBUG
+                #ifndef SWIFT_NET_DISABLE_DEBUGGING
                     if (check_debug_flag(SWIFTNET_DEBUG_PACKETS_SENDING)) {
                         send_debug_message("Sent chunk: {\"chunk_index\": %d}\n", i);
                     }
@@ -480,7 +480,7 @@ void swiftnet_send_packet(
                     current_buffer->pkt_len = old_len;
 
                     handle_lost_packets(new_packet_sending, packet, eth_hdr, target_addr, port_info.source_port, port_info.destination_port, packets_sending_memory_allocator, packets_sending, &network_data, packet_length, mtu, chunk_amount
-                    #ifdef SWIFT_NET_REQUESTS
+                    #ifndef SWIFT_NET_DISABLE_REQUESTS
                         , packet_type
                     #endif
                     );
@@ -512,7 +512,7 @@ void swiftnet_send_packet(
 
         packet_info = construct_packet_info(
             packet_length,
-            #ifdef SWIFT_NET_REQUESTS
+            #ifndef SWIFT_NET_DISABLE_REQUESTS
             packet_type,
             #else
             MESSAGE,
@@ -579,7 +579,7 @@ void swiftnet_send_packet(
 
 void swiftnet_client_send_packet(struct SwiftNetClientConnection* const client, struct SwiftNetPacketBuffer* restrict const packet, const uint32_t bytes_to_send) {
     swiftnet_send_packet(client->maximum_transmission_unit, client->port_info, packet, bytes_to_send, &client->server_addr, &client->packets_sending, &client->packets_sending_memory_allocator, client->eth_header, client->network_data
-    #ifdef SWIFT_NET_REQUESTS
+    #ifndef SWIFT_NET_DISABLE_REQUESTS
         , NULL, false, 0
     #endif
     );
@@ -598,7 +598,7 @@ void swiftnet_server_send_packet(struct SwiftNetServer* const server, struct Swi
     memcpy(&eth_hdr.ether_dhost, &target.mac_address, sizeof(eth_hdr.ether_dhost));
 
     swiftnet_send_packet(target.maximum_transmission_unit, port_info, packet, bytes_to_send, &target.sender_address, &server->packets_sending, &server->packets_sending_memory_allocator, eth_hdr, server->network_data
-    #ifdef SWIFT_NET_REQUESTS
+    #ifndef SWIFT_NET_DISABLE_REQUESTS
         , NULL, false, 0
     #endif
     );

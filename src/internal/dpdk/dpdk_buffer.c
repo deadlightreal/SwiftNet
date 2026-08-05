@@ -240,7 +240,7 @@ static inline void validate_append_to_packet_args(const void* restrict const dat
 }
 
 void swiftnet_append_to_buffer(const void* restrict const data, const uint32_t data_size, struct SwiftNetPacketBuffer* restrict const buffer) {
-    #ifdef SWIFT_NET_ERROR
+    #ifndef SWIFT_NET_DISABLE_ERROR_CHECKING
         validate_append_to_packet_args(data, data_size);
     #endif
 

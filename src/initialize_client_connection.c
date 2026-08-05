@@ -57,7 +57,7 @@ init_connection_request:
         goto exit;
     }
 
-    #ifdef SWIFT_NET_DEBUG
+    #ifndef SWIFT_NET_DISABLE_DEBUGGING
         if (check_debug_flag(SWIFTNET_DEBUG_INITIALIZATION)) {
             send_debug_message("Requested server information: {\"server_ip_address\": \"%s\"}\n", inet_ntoa(request_server_information_args->server_addr));
         }
@@ -97,7 +97,7 @@ static inline struct SwiftNetClientConnection* construct_client_connection(const
         .packets_completed = hashmap_create(&packet_completed_key_allocator),
         .packets_sending = hashmap_create(&uint16_memory_allocator),
         .pending_messages = hashmap_create(&pending_message_key_allocator),
-        .packet_queue = (struct PacketQueue){
+        .packet_queue = (struct SwiftNetPacketQueue){
             .first_node = NULL,
             .last_node = NULL
         },
@@ -112,7 +112,7 @@ static inline struct SwiftNetClientConnection* construct_client_connection(const
     atomic_store_explicit(&new_connection->initialized, false, memory_order_release);
     atomic_store_explicit(&new_connection->packet_handler_user_arg, NULL, memory_order_release);
     
-    memset(&new_connection->packet_callback_queue, 0x00, sizeof(struct PacketCallbackQueue));
+    memset(&new_connection->packet_callback_queue, 0x00, sizeof(struct SwiftNetPacketCallbackQueue));
 
     return new_connection;
 }
@@ -212,7 +212,7 @@ request_initialization:
     pthread_cond_init(&new_connection->process_packets_cond, NULL);
     pthread_cond_init(&new_connection->execute_callback_cond, NULL);
 
-    #ifdef SWIFT_NET_DEBUG
+    #ifndef SWIFT_NET_DISABLE_DEBUGGING
         if (check_debug_flag(SWIFTNET_DEBUG_INITIALIZATION)) {
             send_debug_message("Successfully initialized client\n");
         }

@@ -124,7 +124,7 @@ static inline struct SwiftNetPendingMessage* get_pending_message(struct SwiftNet
     return pending_message;
 }
 
-static inline void insert_callback_queue_node(struct PacketCallbackQueueNode* restrict const new_node, struct PacketCallbackQueue* const packet_queue) {
+static inline void insert_callback_queue_node(struct SwiftNetPacketCallbackQueueNode* restrict const new_node, struct SwiftNetPacketCallbackQueue* const packet_queue) {
     if(unlikely(new_node == NULL)) return;
 
     LOCK_ATOMIC_DATA_TYPE(&packet_queue->locked);
@@ -146,7 +146,7 @@ static inline void insert_callback_queue_node(struct PacketCallbackQueueNode* re
     return;
 }
 
-#ifdef SWIFT_NET_REQUESTS
+#ifndef SWIFT_NET_DISABLE_REQUESTS
 
 static inline void handle_request_response(uint16_t packet_id, const struct SwiftNetPendingMessage* restrict const pending_message, void* restrict const packet_data, struct SwiftNetHashMap* const pending_messages, const uint16_t source_port) {
     struct RequestSent* request_sent;
@@ -183,12 +183,12 @@ static inline void handle_request_response(uint16_t packet_id, const struct Swif
 
 #endif
 
-static inline void pass_callback_execution(void* const packet_data, struct PacketCallbackQueue* const queue, struct SwiftNetPendingMessage* restrict const pending_message, const uint16_t packet_id, pthread_mutex_t* const execute_callback_mtx, pthread_cond_t* const execute_callback_cond, _Atomic bool* const executing_packets) {
-    struct PacketCallbackQueueNode* node;
+static inline void pass_callback_execution(void* const packet_data, struct SwiftNetPacketCallbackQueue* const queue, struct SwiftNetPendingMessage* restrict const pending_message, const uint16_t packet_id, pthread_mutex_t* const execute_callback_mtx, pthread_cond_t* const execute_callback_cond, _Atomic bool* const executing_packets) {
+    struct SwiftNetPacketCallbackQueueNode* node;
 
 
     node = allocator_allocate(&packet_callback_queue_node_memory_allocator);
-    *node = (struct PacketCallbackQueueNode){.packet_data = packet_data, .next = NULL, .pending_message = pending_message, .packet_id = packet_id};
+    *node = (struct SwiftNetPacketCallbackQueueNode){.packet_data = packet_data, .next = NULL, .pending_message = pending_message, .packet_id = packet_id};
 
     insert_callback_queue_node(node, queue);
 
@@ -272,7 +272,7 @@ static inline struct SwiftNetPacketSending* get_packet_sending(struct SwiftNetHa
 }
 
 #ifndef DISABLE_DYNAMIC_RATE_LIMITING
-static inline void signal_delay_change(const enum PacketDelayUpdateStatus status, const struct ip* restrict const ip_header, const uint16_t source_port, const uint16_t destination_port, const struct ether_header* const eth_hdr, const struct SwiftNetNetworkData* const net_data) {
+static inline void signal_delay_change(const enum SwiftNetPacketDelayUpdateStatus status, const struct ip* restrict const ip_header, const uint16_t source_port, const uint16_t destination_port, const struct ether_header* const eth_hdr, const struct SwiftNetNetworkData* const net_data) {
     struct ip send_server_info_ip_header;
     struct SwiftNetPacketInfo packet_info_new;
     uint16_t prepend_size;
@@ -283,7 +283,7 @@ static inline void signal_delay_change(const enum PacketDelayUpdateStatus status
     send_server_info_ip_header = construct_ip_header(ip_header->ip_src, PACKET_HEADER_SIZE + sizeof(status), ip_header->ip_id);
 
     packet_info_new = construct_packet_info(
-        sizeof(enum PacketDelayUpdateStatus),
+        sizeof(enum SwiftNetPacketDelayUpdateStatus),
         PACKET_DELAY_UPDATE,
         1,
         0,
@@ -303,8 +303,8 @@ static inline void signal_delay_change(const enum PacketDelayUpdateStatus status
 }
 #endif
 
-struct PacketQueueNode* wait_for_next_packet(struct PacketQueue* const packet_queue) {
-    struct PacketQueueNode* node_to_process;
+struct SwiftNetPacketQueueNode* wait_for_next_packet(struct SwiftNetPacketQueue* const packet_queue) {
+    struct SwiftNetPacketQueueNode* node_to_process;
 
 
     LOCK_ATOMIC_DATA_TYPE(&packet_queue->locked);
@@ -346,8 +346,8 @@ static inline void swiftnet_process_packets(
     struct SwiftNetHashMap* const packets_completed_history,
     struct SwiftNetMemoryAllocator* const packets_completed_history_memory_allocator,
     const enum ConnectionType connection_type,
-    struct PacketQueue* const packet_queue,
-    struct PacketCallbackQueue* const packet_callback_queue,
+    struct SwiftNetPacketQueue* const packet_queue,
+    struct SwiftNetPacketCallbackQueue* const packet_callback_queue,
     _Atomic bool* const closing,
     pthread_mutex_t* const process_packets_mtx,
     pthread_cond_t* const process_packets_cond,
@@ -357,7 +357,7 @@ static inline void swiftnet_process_packets(
     _Atomic bool* const executing_packets
 ) {
     uint8_t idle_stage;
-    struct PacketQueueNode* node;
+    struct SwiftNetPacketQueueNode* node;
     uint8_t* packet_buffer;
     uint8_t* packet_data;
     struct ip ip_header;
@@ -437,7 +437,7 @@ process_packet:
 
     if(memcmp(&ip_header.ip_src, &ip_header.ip_dst, sizeof(struct in_addr)) != 0 && is_private_ip(ip_header.ip_src) == false && is_private_ip(ip_header.ip_dst)) { 
         if(ip_header.ip_sum != 0 && packet_corrupted(checksum_received, node->data_read, packet_buffer) == true) {
-            #ifdef SWIFT_NET_DEBUG
+            #ifndef SWIFT_NET_DISABLE_DEBUGGING
                 if (check_debug_flag(SWIFTNET_DEBUG_PACKETS_RECEIVING)) {
                     send_debug_message("Received corrupted packet: {\"source_ip_address\": \"%s\", \"source_port\": %d, \"packet_id\": %d, \"received_checsum\": %d, \"real_checksum\": %d}\n", inet_ntoa(ip_header.ip_src), packet_info.port_info.source_port, ip_header.ip_id, checksum_received, crc32(packet_buffer, node->data_read));
                 }
@@ -449,7 +449,7 @@ process_packet:
         }
     }
 
-    #ifdef SWIFT_NET_DEBUG
+    #ifndef SWIFT_NET_DISABLE_DEBUGGING
         if (check_debug_flag(SWIFTNET_DEBUG_PACKETS_RECEIVING)) {
             send_debug_message("Received packet: {\"source_ip_address\": \"%s\", \"source_port\": %d, \"packet_id\": %d, \"packet_type\": %d, \"packet_length\": %d, \"chunk_index\": %d, \"connection_type\": %d, \"checksum_received\": %d, \"real_checksum\": %d}\n", inet_ntoa(ip_header.ip_src), packet_info.port_info.source_port, ip_header.ip_id, packet_info.packet_type, packet_info.packet_length, packet_info.chunk_index, connection_type, checksum_received, crc32(node->data, node->data_read));
         }
@@ -637,12 +637,12 @@ process_packet:
         #ifndef DISABLE_DYNAMIC_RATE_LIMITING
         case PACKET_DELAY_UPDATE:
         {
-            enum PacketDelayUpdateStatus* status;
+            enum SwiftNetPacketDelayUpdateStatus* status;
             struct SwiftNetPacketSending* target_packet_sending;
             uint32_t current_delay;
 
 
-            status = (enum PacketDelayUpdateStatus*)packet_data;
+            status = (enum SwiftNetPacketDelayUpdateStatus*)packet_data;
 
             target_packet_sending = get_packet_sending(packets_sending, ip_header.ip_id);
 
@@ -716,12 +716,12 @@ process_packet:
                     .sender = sender,
                     .data_length = packet_info.packet_length,
                     .packet_id = ip_header.ip_id
-                    #ifdef SWIFT_NET_REQUESTS
+                    #ifndef SWIFT_NET_DISABLE_REQUESTS
                         , .expecting_response = packet_info.packet_type == REQUEST
                     #endif
                 };
 
-                #ifdef SWIFT_NET_REQUESTS
+                #ifndef SWIFT_NET_DISABLE_REQUESTS
                 if (packet_info.packet_type == RESPONSE) {
                     handle_request_response(ip_header.ip_id, NULL, new_packet_data, pending_messages, packet_info.port_info.source_port);
                 } else {
@@ -742,12 +742,12 @@ process_packet:
                     .port_info = packet_info.port_info,
                     .data_length = packet_info.packet_length,
                     .packet_id = ip_header.ip_id
-                    #ifdef SWIFT_NET_REQUESTS
+                    #ifndef SWIFT_NET_DISABLE_REQUESTS
                         , .expecting_response = packet_info.packet_type == REQUEST
                     #endif
                 };
 
-                #ifdef SWIFT_NET_REQUESTS
+                #ifndef SWIFT_NET_DISABLE_REQUESTS
                 if (packet_info.packet_type == RESPONSE) {
                     handle_request_response(ip_header.ip_id, NULL, new_packet_data, pending_messages, packet_info.port_info.source_port);
                 } else {
@@ -784,7 +784,7 @@ process_packet:
 
             chunk_received(pending_message->chunks_received, packet_info.chunk_index);
 
-            #ifdef SWIFT_NET_DEBUG
+            #ifndef SWIFT_NET_DISABLE_DEBUGGING
             {
                 uint32_t lost_chunks_buffer[chunk_data_size];
                 uint32_t lost_chunks_num;
@@ -820,12 +820,12 @@ process_packet:
                     .sender = sender,
                     .data_length = packet_info.packet_length,
                     .packet_id = ip_header.ip_id
-                    #ifdef SWIFT_NET_REQUESTS
+                    #ifndef SWIFT_NET_DISABLE_REQUESTS
                         , .expecting_response = packet_info.packet_type == REQUEST
                     #endif
                 };
 
-                #ifdef SWIFT_NET_REQUESTS
+                #ifndef SWIFT_NET_DISABLE_REQUESTS
                 if (packet_info.packet_type == RESPONSE) {
                     handle_request_response(ip_header.ip_id, pending_message, server_packet_data, pending_messages, packet_info.port_info.source_port);
                 } else {
@@ -849,12 +849,12 @@ process_packet:
                     .port_info = packet_info.port_info,
                     .data_length = packet_info.packet_length,
                     .packet_id = ip_header.ip_id
-                    #ifdef SWIFT_NET_REQUESTS
+                    #ifndef SWIFT_NET_DISABLE_REQUESTS
                         , .expecting_response = packet_info.packet_type == REQUEST
                     #endif
                 };
 
-                #ifdef SWIFT_NET_REQUESTS
+                #ifndef SWIFT_NET_DISABLE_REQUESTS
                 if (packet_info.packet_type == RESPONSE) {
                     handle_request_response(ip_header.ip_id, pending_message, client_packet_data, pending_messages, packet_info.port_info.source_port);
                 } else {
