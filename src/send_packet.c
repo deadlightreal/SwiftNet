@@ -107,8 +107,8 @@ static inline ALWAYS_INLINE void handle_lost_packets(
     );
 
     HANDLE_PACKET_CONSTRUCTION(&request_lost_packets_ip_header, &request_lost_packets_bit_array, network_data, &eth_hdr, PACKET_HEADER_SIZE + prepend_size, request_lost_packets_buffer);
- 
-    HANDLE_CHECKSUM(request_lost_packets_buffer, (uint32_t)sizeof(request_lost_packets_buffer), network_data);
+
+    HANDLE_CHECKSUM(request_lost_packets_buffer + prepend_size + sizeof(struct ip), sizeof(struct SwiftNetPacketInfo), network_data);
  
     #ifdef SWIFT_NET_BACKEND_PCAP
     resend_chunk_packet_info = construct_packet_info(
@@ -193,11 +193,11 @@ static inline ALWAYS_INLINE void handle_lost_packets(
                 new_ip_len = htons(bytes_to_complete + PACKET_HEADER_SIZE);
                 memcpy(current_buffer_header_ptr + offsetof(struct ip, ip_len), &new_ip_len, SIZEOF_FIELD(struct ip, ip_len));
                 
-                HANDLE_CHECKSUM(current_buffer_header_ptr, prepend_size + PACKET_HEADER_SIZE + bytes_to_complete, network_data);
+                HANDLE_CHECKSUM(current_buffer_header_ptr + prepend_size + sizeof(struct ip), bytes_to_complete + sizeof(struct SwiftNetPacketInfo), network_data);
     
                 SWIFTNET_SEND_PACKET(network_data, current_buffer_header_ptr, (uint32_t)(bytes_to_complete + PACKET_HEADER_SIZE + prepend_size));
             } else {
-                HANDLE_CHECKSUM(current_buffer_header_ptr, mtu + prepend_size, network_data);
+                HANDLE_CHECKSUM(current_buffer_header_ptr + prepend_size + sizeof(struct ip), mtu - sizeof(struct ip), network_data);
 
                 SWIFTNET_SEND_PACKET(network_data, current_buffer_header_ptr, mtu + prepend_size);
             }
@@ -235,14 +235,14 @@ static inline ALWAYS_INLINE void handle_lost_packets(
                 new_ip_len = htons(bytes_to_complete);
                 memcpy(buf_data + sizeof(struct ether_header) + offsetof(struct ip, ip_len), &new_ip_len, SIZEOF_FIELD(struct ip, ip_len));
                 
-                HANDLE_CHECKSUM(buf_data, bytes_to_complete, network_data);
+                HANDLE_CHECKSUM(buf_data + prepend_size + sizeof(struct ip), bytes_to_complete - prepend_size - sizeof(struct ip), network_data);
     
                 SWIFTNET_SEND_PACKET(network_data, current_buf);
 
                 current_buf->data_len = old_len;
                 current_buf->pkt_len = old_len;
             } else {
-                HANDLE_CHECKSUM(buf_data, current_buf->data_len, network_data);
+                HANDLE_CHECKSUM(buf_data + prepend_size + sizeof(struct ip), current_buf->data_len - sizeof(struct ip) - prepend_size, network_data);
 
                 SWIFTNET_SEND_PACKET(network_data, current_buf);
             }
@@ -409,7 +409,7 @@ void swiftnet_send_packet(
 
                 memcpy(buffer_header_location + prepend_size + offsetof(struct ip, ip_len), &bytes_to_send_net_order, SIZEOF_FIELD(struct ip, ip_len));
 
-                HANDLE_CHECKSUM(buffer_header_location, bytes_to_send, &network_data);
+                HANDLE_CHECKSUM(buffer_header_location + prepend_size + sizeof(struct ip), bytes_to_send - prepend_size - sizeof(struct ip), &network_data);
 
                 SWIFTNET_SEND_PACKET(&network_data, buffer_header_location, bytes_to_send);
 
@@ -425,7 +425,7 @@ void swiftnet_send_packet(
             } else {
                 bytes_to_send = prepend_size + mtu;
                 
-                HANDLE_CHECKSUM(buffer_header_location, bytes_to_send, &network_data);
+                HANDLE_CHECKSUM(buffer_header_location + prepend_size + sizeof(struct ip), bytes_to_send - prepend_size - sizeof(struct ip), &network_data);
 
                 SWIFTNET_SEND_PACKET(&network_data, buffer_header_location, bytes_to_send);
 
@@ -472,7 +472,7 @@ void swiftnet_send_packet(
                     current_buffer->data_len = bytes_to_send + prepend_size;
                     current_buffer->pkt_len = bytes_to_send + prepend_size;
 
-                    HANDLE_CHECKSUM(buf_addr, current_buffer->data_len, &network_data);
+                    HANDLE_CHECKSUM(buf_addr + prepend_size + sizeof(struct ip), current_buffer->data_len - prepend_size - sizeof(struct ip), &network_data);
 
                     SWIFTNET_SEND_PACKET(&network_data, current_buffer);
 
@@ -489,7 +489,7 @@ void swiftnet_send_packet(
                     break;
                 }
 
-                HANDLE_CHECKSUM(buf_addr, current_buffer->data_len, &network_data);
+                HANDLE_CHECKSUM(buf_addr + prepend_size + sizeof(struct ip), current_buffer->data_len - prepend_size - sizeof(struct ip), &network_data);
 
                 SWIFTNET_SEND_PACKET(&network_data, current_buffer);
 
@@ -534,7 +534,7 @@ void swiftnet_send_packet(
 
             memcpy(packet->packet_buffer_start + PACKET_HEADER_SIZE + sizeof(struct ether_header), packet->packet_data_start, packet_length);
 
-            HANDLE_CHECKSUM(packet->packet_buffer_start + sizeof(struct ether_header) - sizeof(family), final_packet_size, &network_data);
+            HANDLE_CHECKSUM(packet->packet_data_start - sizeof(struct SwiftNetPacketInfo), packet_length + sizeof(struct SwiftNetPacketInfo), &network_data);
 
             SWIFTNET_SEND_PACKET(&network_data, packet->packet_buffer_start + sizeof(struct ether_header) - sizeof(family), final_packet_size);
         } else if(GET_ADDR_TYPE(&network_data) == DLT_EN10MB) {
@@ -544,7 +544,7 @@ void swiftnet_send_packet(
 
             memcpy(packet->packet_buffer_start + PACKET_HEADER_SIZE + sizeof(struct ether_header), packet->packet_data_start, packet_length);
 
-            HANDLE_CHECKSUM(packet->packet_buffer_start, final_packet_size, &network_data);
+            HANDLE_CHECKSUM(packet->packet_data_start - sizeof(struct SwiftNetPacketInfo), packet_length + sizeof(struct SwiftNetPacketInfo), &network_data);
 
             SWIFTNET_SEND_PACKET(&network_data, packet->packet_buffer_start, final_packet_size);
         }
@@ -556,7 +556,7 @@ void swiftnet_send_packet(
             memcpy(buf_ptr + sizeof(eth_hdr), &ip_header, sizeof(ip_header));
             memcpy(buf_ptr + sizeof(eth_hdr) + sizeof(ip_header), &packet_info, sizeof(packet_info));
 
-            HANDLE_CHECKSUM(buf_ptr, final_packet_size, &network_data);
+            HANDLE_CHECKSUM(buf_ptr + sizeof(eth_hdr) + sizeof(struct ip), packet_length + sizeof(struct SwiftNetPacketInfo), &network_data);
 
             if(final_packet_size != buffer->data_len) {
                 uint16_t old_len;
