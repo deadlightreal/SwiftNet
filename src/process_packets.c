@@ -297,7 +297,7 @@ static inline void signal_delay_change(const enum SwiftNetPacketDelayUpdateStatu
 
     memcpy(buffer + prepend_size + PACKET_HEADER_SIZE, &status, sizeof(status));
 
-    HANDLE_CHECKSUM(buffer, (uint32_t)sizeof(buffer), net_data);
+    HANDLE_CHECKSUM(buffer + prepend_size + sizeof(struct ip), (uint32_t)sizeof(buffer) - prepend_size - sizeof(struct ip), net_data);
     
     SWIFTNET_SEND_INTERNAL_PACKET(net_data, buffer, (uint32_t)sizeof(buffer));
 }
@@ -435,8 +435,8 @@ process_packet:
 
     memcpy(packet_buffer + prepend_size + offsetof(struct ip, ip_len), (void*)&node->data_read, SIZEOF_FIELD(struct ip, ip_len));
 
-    if(memcmp(&ip_header.ip_src, &ip_header.ip_dst, sizeof(struct in_addr)) != 0 && is_private_ip(ip_header.ip_src) == false && is_private_ip(ip_header.ip_dst)) { 
-        if(ip_header.ip_sum != 0 && packet_corrupted(checksum_received, node->data_read, packet_buffer) == true) {
+    if(node->data_read > sizeof(struct ip) + prepend_size && memcmp(&ip_header.ip_src, &ip_header.ip_dst, sizeof(struct in_addr)) != 0 && is_private_ip(ip_header.ip_src) == false && is_private_ip(ip_header.ip_dst)) { 
+        if( ip_header.ip_sum != 0 && packet_corrupted(checksum_received, node->data_read - sizeof(struct ip) - prepend_size, packet_buffer + prepend_size + sizeof(struct ip)) == true) {
             #ifndef SWIFT_NET_DISABLE_DEBUGGING
                 if (check_debug_flag(SWIFTNET_DEBUG_PACKETS_RECEIVING)) {
                     send_debug_message("Received corrupted packet: {\"source_ip_address\": \"%s\", \"source_port\": %d, \"packet_id\": %d, \"received_checsum\": %d, \"real_checksum\": %d}\n", inet_ntoa(ip_header.ip_src), packet_info.port_info.source_port, ip_header.ip_id, checksum_received, crc32(packet_buffer, node->data_read));
@@ -451,7 +451,7 @@ process_packet:
 
     #ifndef SWIFT_NET_DISABLE_DEBUGGING
         if (check_debug_flag(SWIFTNET_DEBUG_PACKETS_RECEIVING)) {
-            send_debug_message("Received packet: {\"source_ip_address\": \"%s\", \"source_port\": %d, \"packet_id\": %d, \"packet_type\": %d, \"packet_length\": %d, \"chunk_index\": %d, \"connection_type\": %d, \"checksum_received\": %d, \"real_checksum\": %d}\n", inet_ntoa(ip_header.ip_src), packet_info.port_info.source_port, ip_header.ip_id, packet_info.packet_type, packet_info.packet_length, packet_info.chunk_index, connection_type, checksum_received, crc32(node->data, node->data_read));
+            send_debug_message("Received packet: {\"source_ip_address\": \"%s\", \"source_port\": %d, \"packet_id\": %d, \"packet_type\": %d, \"packet_length\": %d, \"chunk_index\": %d, \"connection_type\": %d, \"checksum_received\": %d, \"real_checksum\": %d}\n", inet_ntoa(ip_header.ip_src), packet_info.port_info.source_port, ip_header.ip_id, packet_info.packet_type, packet_info.packet_length, packet_info.chunk_index, connection_type, checksum_received, crc32(packet_buffer + prepend_size + sizeof(struct ip), node->data_read - sizeof(struct ip) - prepend_size));
         }
     #endif
 
@@ -480,11 +480,11 @@ process_packet:
                 .maximum_transmission_unit = maximum_transmission_unit
             };
 
-            HANDLE_PACKET_CONSTRUCTION(&send_server_info_ip_header, &packet_info_new, &network_data, &eth_hdr, prepend_size + PACKET_HEADER_SIZE + sizeof(server_info), buffer)
+            HANDLE_PACKET_CONSTRUCTION(&send_server_info_ip_header, &packet_info_new, &network_data, &eth_hdr, prepend_size + PACKET_HEADER_SIZE + sizeof(server_info), buffer);
 
             memcpy(buffer + prepend_size + PACKET_HEADER_SIZE, &server_info, sizeof(server_info));
 
-            HANDLE_CHECKSUM(buffer, (uint32_t)sizeof(buffer), &network_data);
+            HANDLE_CHECKSUM(buffer + sizeof(struct ip) + prepend_size, (uint32_t)sizeof(buffer) - sizeof(struct ip) - prepend_size, &network_data);
             
             SWIFTNET_SEND_INTERNAL_PACKET(&network_data, buffer, (uint32_t)sizeof(buffer));
 
@@ -529,7 +529,7 @@ process_packet:
 
                     HANDLE_PACKET_CONSTRUCTION(&send_packet_ip_header, &send_packet_info, &network_data, &eth_hdr, prepend_size + PACKET_HEADER_SIZE, buffer);
 
-                    HANDLE_CHECKSUM(buffer, (uint32_t)sizeof(buffer), &network_data);
+                    HANDLE_CHECKSUM(buffer + prepend_size + sizeof(struct ip), (uint32_t)sizeof(buffer) - sizeof(struct ip) - prepend_size, &network_data);
 
                     SWIFTNET_SEND_INTERNAL_PACKET(&network_data, buffer, (uint32_t)sizeof(buffer));
 
@@ -572,7 +572,7 @@ process_packet:
             memcpy(buffer + prepend_size + offsetof(struct ip, ip_len), &packet_length_net_order, SIZEOF_FIELD(struct ip, ip_len));
             memcpy(buffer + prepend_size + sizeof(struct ip) + offsetof(struct SwiftNetPacketInfo, packet_length), &lost_indexes_size, sizeof(lost_indexes_size));
 
-            HANDLE_CHECKSUM(buffer, packet_length + prepend_size, &network_data);
+            HANDLE_CHECKSUM(buffer + prepend_size + sizeof(struct ip), packet_length - sizeof(struct ip), &network_data);
 
             SWIFTNET_SEND_INTERNAL_PACKET(&network_data, buffer, packet_length + prepend_size);
 

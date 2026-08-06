@@ -173,7 +173,7 @@ request_initialization:
 
     HANDLE_PACKET_CONSTRUCTION(&request_server_info_ip_header, &request_server_information_packet_info, &net_data, &new_connection->eth_header, PACKET_HEADER_SIZE + GET_PREPEND_SIZE(&new_connection->network_data), request_server_info_buffer);
 
-    HANDLE_CHECKSUM(request_server_info_buffer, (uint32_t)sizeof(request_server_info_buffer), &net_data);
+    HANDLE_CHECKSUM(request_server_info_buffer + sizeof(struct ip) + net_data.prepend_size, (uint32_t)sizeof(request_server_info_buffer) - net_data.prepend_size - sizeof(struct ip), &net_data);
 
     thread_args = (struct RequestServerInformationArgs){
         .network_data = &net_data,
